@@ -223,7 +223,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | ID | Open question | Why it remains open |
 |---|---|---|
 | OD-01 | What detailed operational checklist and runbook are needed to implement the accepted publication, archival, rollback, and eligibility rules? | Lifecycle rules are established by L-21 and L-28; operational detail remains open |
-| OD-02 | What exact emergency verification, operator authorization, recovery-material handling, and post-recovery review steps are required? | Operational security; recovery approach is fixed by L-22 |
+| OD-02 | What exact operational runbook details, including named operators, verification evidence, recovery-material custody, emergency contacts, and review deadlines, are required before production? | Core recovery controls are established by L-22 and L-29; operational details remain open |
 | OD-03 | What exact request-initiation UI details and additional request fields are required beyond L-23? | UI/detail design remains open; core correction lifecycle is accepted |
 | OD-04 | What are the cross-version migration procedures, historical-entry editing policy, and operational publication/rollback runbook for the schema registry? | L-27 resolves schema-definition storage as JSONB; migration and operational procedures remain open |
 | OD-05 | How are concurrent pending-enrollment creation requests serialized across different templates for one email? | Duplicate invitation prevention |
@@ -236,13 +236,13 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-12 | What are the final source-approved field/validation requirements per specialty and log type? | Specialty correctness |
 | OD-13 | What detailed operational procedures are required for publication, archival, rollback, and template eligibility? | Core lifecycle policy is established by L-21 and L-28; operational detail remains open |
 | OD-14 | What is the final retention/deletion policy for expired activation-code rows? | Security and retention |
-| OD-15 | What are the exact Super Admin emergency verification, operator authorization, and post-recovery review procedures? | Avoiding administrative lockout; recovery approach is fixed by L-22 |
+| OD-15 | What remaining operational details must be specified for Super Admin emergency recovery before production? | Core recovery controls are established by L-22 and L-29; operational details remain open |
 
 ## Consistency rule
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-28; design documents remain pending final review. No implementation is claimed.**
+**Current status: decisions recorded through L-29; design documents remain pending final review. No implementation is claimed.**
 
 
 ### L-26 — Trusted Validation and Schema Publication/Rollback
@@ -340,4 +340,37 @@ When an accepted decision changes, update this register and both design document
 - These rules must be enforced through trusted backend/database controls; frontend filtering alone is insufficient.
 - The detailed operational checklist and runbook may be documented separately, but must implement these accepted lifecycle rules.
 - Cross-version migration and historical-entry editing remain open for separate review and approval.
+- This decision does not authorize migrations or backend implementation by itself.
+
+
+### L-29 — Super Admin Emergency Recovery Procedure
+**Status: Accepted**
+
+**Authorized operators and identity verification**
+- Emergency recovery may be initiated and executed only by an operator authorized in advance under a documented procedure.
+- The requester's identity and authority must be verified using a documented method independent of frontend-controlled state and user-editable role claims.
+- Supabase Auth remains the authentication mechanism. Emergency recovery must not create a parallel identity system or bypass authentication.
+
+**Authorization and approvals**
+- Emergency privilege recovery requires approval from two independently authorized persons whenever operationally available.
+- If a second approver is unavailable and delaying recovery would create a material risk of permanent administrative lockout, a narrowly scoped emergency exception may be used under the documented procedure.
+- The exception must include a recorded justification, the identity of the executing operator, the approval limitation, the actions performed, and the reason the normal approval process could not be completed.
+- An emergency exception does not waive identity verification, authentication, least-privilege requirements, or audit recording.
+- Every use of the exception requires independent post-recovery review.
+
+**Recovery materials and privilege scope**
+- Recovery materials must be stored securely and separately from the application and source-code repository, with access restricted to authorized persons.
+- Access to and use of recovery materials must be documented.
+- Recovery must grant only the minimum privileges required to restore administrative control.
+- Temporary privileges, credentials, or emergency access mechanisms must be revoked or reviewed promptly after recovery.
+
+**Audit and post-recovery review**
+- The audit record must capture the initiating request, identity-verification outcome, operator, approver or exception rationale, timestamps, actions performed, and resulting privilege changes.
+- An independent authorized reviewer who did not execute the recovery must review the outcome, relevant audit records, and privilege changes.
+- The reviewer must document the conclusion, any irregularities, and any corrective actions required.
+- Successful authentication alone does not constitute completion of the recovery procedure.
+
+**Operational requirements and scope**
+- Before production, an operational runbook must define the authorized operators, identity-verification evidence, secure recovery-material handling, emergency contact process, approval and exception steps, and post-recovery review deadline.
+- The implementation must preserve the existing authentication and authorization boundaries and must not depend on frontend-only controls.
 - This decision does not authorize migrations or backend implementation by itself.
