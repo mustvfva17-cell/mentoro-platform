@@ -200,7 +200,7 @@ Enable RLS on all private tables exposed through Supabase APIs and define SQL gr
 - Archive/deactivate referenced items instead of deleting historical evidence.
 - Preserve assignment/template identity in history.
 - Exposure does not establish competence or certification.
-- Account deletion/anonymization, retention, export, and legal policies remain open.
+- Account deletion, retention, and historical integrity principles are accepted by L-32; numeric retention periods, legal exceptions, detailed export/backup handling, and final technical mechanisms remain open.
 
 ## 8.1 Super Admin recovery (L-22)
 
@@ -242,7 +242,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 3. Correction request initiation details — resolved by L-30; remaining schema/migration and concurrency details remain open.
 4. Exact schema storage representation, cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback runbook.
 5. Pending-enrollment uniqueness across templates — resolved by L-31 at policy level; exact concurrency-safe database enforcement remains migration-design work.
-6. Account deletion, anonymization, retention, export, and legal policies.
+6. Account deletion, anonymization, retention, export, and legal policies — resolved at principles level by L-32; numeric retention periods, legal exceptions, export/backup handling, and technical mechanisms remain open.
 7. Stable target keys and cross-version mapping.
 8. Audit taxonomy, retention, and export.
 9. Historical display of inactive targets and archived assignments.
@@ -256,7 +256,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 
 Before migrations: review all three design documents together; resolve open decisions required for security/integrity; finalize exact SQL types, constraints, composite FKs, indexes, grants, and RLS; specify trusted functions; prepare version-controlled migrations and seeds; run real local/test database checks; review rollback and deployment.
 
-**Current status: CONSOLIDATED DESIGN DRAFT through L-31 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: CONSOLIDATED DESIGN DRAFT through L-32 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ### L-24 schema registry security and historical integrity
@@ -346,3 +346,12 @@ Before migrations: review all three design documents together; resolve open deci
 - At most one `PENDING` enrollment may exist for a normalized email across all specialties/template versions.
 - Reuse a pending enrollment when email and template/scope match. For a different scope, a trusted atomic workflow cancels the old pending enrollment, revokes/invalidates unused activation codes, creates the replacement enrollment/code as applicable, and writes the audit event. Never mutate the old enrollment's template/scope or cancel/reuse an activated enrollment through this workflow.
 - Concurrent create/reuse/replacement attempts must be serialized. Exact database constraints/indexes and transaction implementation remain migration-design work. L-31 is design-only and does not authorize implementation or migrations.
+
+
+## L-32 — Account deletion, retention, and historical integrity (accepted)
+
+- Separate identity from historical training records where supported by the design and applicable obligations; account closure/deletion does not automatically delete historical records.
+- Disable access through trusted server-side processes where required. Access disabling alone does not complete a data-deletion request.
+- Define documented, data-category-specific retention, deletion, anonymization, export, backup, and applicable legal-rights procedures. Avoid unnecessary retention and do not presume indefinite retention.
+- Do not silently delete or alter historical records, revision history, or audit records. Any permitted deletion/anonymization must be restricted, trusted, documented, and must not silently change historical meaning or reassign records.
+- Numeric retention periods, legal exceptions, detailed export/backup handling, final technical mechanisms, and database changes remain open. L-32 is principles-only and does not authorize implementation or migrations.
