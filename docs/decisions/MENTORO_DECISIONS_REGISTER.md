@@ -225,7 +225,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-01 | What are the detailed publication, archival, rollback, and eligibility-change procedures beyond L-21? | Template lifecycle operations |
 | OD-02 | What exact emergency verification, operator authorization, recovery-material handling, and post-recovery review steps are required? | Operational security; recovery approach is fixed by L-22 |
 | OD-03 | What exact request-initiation UI details and additional request fields are required beyond L-23? | UI/detail design remains open; core correction lifecycle is accepted |
-| OD-04 | What are the final schema-registry storage representation, cross-version migration procedures, historical-entry editing policy, and operational publication/rollback runbook? | L-26 establishes the validation boundary and rollback principles; detailed implementation and operational procedures remain open |
+| OD-04 | What are the cross-version migration procedures, historical-entry editing policy, and operational publication/rollback runbook for the schema registry? | L-27 resolves schema-definition storage as JSONB; migration and operational procedures remain open |
 | OD-05 | How are concurrent pending-enrollment creation requests serialized across different templates for one email? | Duplicate invitation prevention |
 | OD-06 | What are account deletion, anonymization, retention, export, and legal policies? | Privacy and lifecycle |
 | OD-07 | What are stable target-key and cross-version mapping rules? | Historical coverage |
@@ -242,7 +242,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-26; design documents remain pending final review. No implementation is claimed.**
+**Current status: decisions recorded through L-27; design documents remain pending final review. No implementation is claimed.**
 
 
 ### L-26 — Trusted Validation and Schema Publication/Rollback
@@ -272,4 +272,32 @@ When an accepted decision changes, update this register and both design document
 **Separation of concerns and remaining scope**
 - JSON Schema/Ajv validation does not replace authorization, relational integrity, RLS, or database constraints.
 - This decision does not finalize the physical schema-registry representation, exact backend technology, cross-version migration procedures, historical-entry editing policy, or complete operational publication/rollback runbook. Those remain open for separate review and approval.
+- This decision does not authorize migrations or backend implementation by itself.
+
+
+### L-27 — JSONB Storage for Schema Registry Definitions
+**Status: Accepted**
+
+**Storage representation**
+- Store each schema definition in a `schema_definition JSONB NOT NULL` column in the database-backed `log_entry_schema_registry`.
+- The stored representation preserves the JSON definition's data and meaning; preservation of the original textual formatting or key order is not required.
+- A separate copy of the original JSON text is not required solely for formatting preservation.
+
+**Validation and publication**
+- Schema definitions must be validated against the approved JSON Schema Draft 2020-12 requirements before publication, using the validation process established by L-25 and L-26.
+- JSONB storage does not itself establish schema validity or guarantee compatibility with the selected schema draft.
+- Failed validation or publication must preserve the previously committed schema state under L-26.
+
+**Version identity and immutability**
+- Each log entry must reference the exact schema-registry record applicable to its logbook template version and log type.
+- Published schema definitions must not be updated or replaced in place. Any change requires a new schema version and registry record.
+- Historical entries must retain their original schema references; creating a new schema version must not automatically reinterpret or migrate historical entries.
+
+**Security and integrity**
+- Schema creation, publication, and state transitions must use restricted, trusted workflows, with sensitive administrative actions audited.
+- Authorization, relational integrity, RLS, and validation remain separate controls; JSONB storage does not replace them.
+
+**Scope and remaining open decisions**
+- This decision does not require storing a duplicate copy of the original JSON text or mandate a content hash.
+- Cross-version migration, historical-entry editing, and the detailed operational publication/rollback runbook remain open for separate review and approval.
 - This decision does not authorize migrations or backend implementation by itself.
