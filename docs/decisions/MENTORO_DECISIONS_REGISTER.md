@@ -225,7 +225,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-01 | What are the detailed publication, archival, rollback, and eligibility-change procedures beyond L-21? | Template lifecycle operations |
 | OD-02 | What exact emergency verification, operator authorization, recovery-material handling, and post-recovery review steps are required? | Operational security; recovery approach is fixed by L-22 |
 | OD-03 | What exact request-initiation UI details and additional request fields are required beyond L-23? | UI/detail design remains open; core correction lifecycle is accepted |
-| OD-04 | What are the detailed schema publication/rollback and cross-version migration procedures, and what is the final storage representation? | Remaining implementation details beyond L-25 remain open |
+| OD-04 | What are the final schema-registry storage representation, cross-version migration procedures, historical-entry editing policy, and operational publication/rollback runbook? | L-26 establishes the validation boundary and rollback principles; detailed implementation and operational procedures remain open |
 | OD-05 | How are concurrent pending-enrollment creation requests serialized across different templates for one email? | Duplicate invitation prevention |
 | OD-06 | What are account deletion, anonymization, retention, export, and legal policies? | Privacy and lifecycle |
 | OD-07 | What are stable target-key and cross-version mapping rules? | Historical coverage |
@@ -242,4 +242,34 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-25; design documents remain pending final review. No implementation is claimed.**
+**Current status: decisions recorded through L-26; design documents remain pending final review. No implementation is claimed.**
+
+
+### L-26 — Trusted Validation and Schema Publication/Rollback
+**Status: Accepted**
+
+**Central validation boundary**
+- All application write paths that create, modify, or submit specialty-specific log-entry payloads must pass through a centrally defined, trusted backend validation path.
+- The validation path uses Ajv 8 with JSON Schema Draft 2020-12 and validates against the exact schema definition selected for the entry's logbook template version and log type.
+- A payload that fails validation must be rejected before the corresponding write is accepted.
+- Frontend validation is supplementary and is not a security boundary.
+- Direct or alternate write paths must not bypass required validation and authorization controls. Database-dependent integrity constraints and RLS remain separate controls.
+- The specific backend technology and deployment boundary remain subject to implementation design review.
+
+**Schema publication**
+- A schema definition must pass schema validation before publication.
+- If validation or publication fails, the operation is rejected atomically, preserving the previously committed schema state and eligibility configuration.
+- Published schema definitions remain immutable. Any change requires a new schema version.
+- Publication and eligibility changes use restricted, trusted workflows; sensitive administrative actions are audited.
+
+**Disabling an affected schema and rollback**
+- When a published schema version is identified as affected, its eligibility for new assignments or other applicable new uses may be disabled through an authorized, auditable workflow.
+- Disabling eligibility does not delete or rewrite the schema definition or change historical entries' schema references.
+- A previously published version may be selected for new use only if it is explicitly verified as compatible and eligible for the relevant template version and log type.
+- Rollback must not silently modify published schema definitions, reinterpret historical entries, or automatically migrate existing trainee assignments.
+- Any necessary trainee assignment transition remains subject to accepted assignment-transition and template-version decisions.
+
+**Separation of concerns and remaining scope**
+- JSON Schema/Ajv validation does not replace authorization, relational integrity, RLS, or database constraints.
+- This decision does not finalize the physical schema-registry representation, exact backend technology, cross-version migration procedures, historical-entry editing policy, or complete operational publication/rollback runbook. Those remain open for separate review and approval.
+- This decision does not authorize migrations or backend implementation by itself.
