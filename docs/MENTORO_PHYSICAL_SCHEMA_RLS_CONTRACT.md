@@ -319,3 +319,14 @@ Before migrations: review all three design documents together; resolve open deci
 - Archival is terminal for that record. An archived version cannot be reopened or assigned; its data and historical references remain preserved. Reuse of its content requires a new version and applicable publication checks.
 - Enforce lifecycle rules through trusted backend/database controls, not frontend filtering alone. Detailed operational runbooks must implement these rules.
 - Cross-version migration and historical-entry editing remain open. L-28 does not authorize migrations or backend implementation by itself.
+
+
+## L-29 — Super Admin emergency recovery procedure (accepted)
+
+- Restrict emergency recovery to pre-authorized operators acting under a documented procedure. Verify requester identity and authority independently of frontend state or user-editable role claims. Supabase Auth remains the authentication mechanism; no parallel identity system or authentication bypass is permitted.
+- Require approval by two independently authorized persons whenever operationally available. If the second approver is unavailable and delay risks permanent administrative lockout, permit only a narrowly scoped, documented exception recording the justification, operator, approval limitation, actions, and why normal approval was unavailable.
+- The exception does not waive identity verification, authentication, least privilege, or auditing, and requires independent post-recovery review.
+- Store recovery materials securely and separately from the application and source repository, with restricted documented access. Grant minimum necessary privileges; revoke or review temporary privileges, credentials, and emergency access promptly after recovery.
+- Audit the request, verification outcome, operator, approver or exception rationale, timestamps, actions, and resulting privilege changes. An independent authorized reviewer who did not execute recovery must review and document the outcome, irregularities, and corrective actions.
+- Before production, an operational runbook must specify operators, verification evidence, recovery-material handling, emergency contacts, approval/exception steps, and review deadline.
+- L-29 does not authorize migrations or backend implementation by itself.
