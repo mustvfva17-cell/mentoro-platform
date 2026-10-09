@@ -222,7 +222,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 
 | ID | Open question | Why it remains open |
 |---|---|---|
-| OD-01 | What are the detailed publication, archival, rollback, and eligibility-change procedures beyond L-21? | Template lifecycle operations |
+| OD-01 | What detailed operational checklist and runbook are needed to implement the accepted publication, archival, rollback, and eligibility rules? | Lifecycle rules are established by L-21 and L-28; operational detail remains open |
 | OD-02 | What exact emergency verification, operator authorization, recovery-material handling, and post-recovery review steps are required? | Operational security; recovery approach is fixed by L-22 |
 | OD-03 | What exact request-initiation UI details and additional request fields are required beyond L-23? | UI/detail design remains open; core correction lifecycle is accepted |
 | OD-04 | What are the cross-version migration procedures, historical-entry editing policy, and operational publication/rollback runbook for the schema registry? | L-27 resolves schema-definition storage as JSONB; migration and operational procedures remain open |
@@ -234,7 +234,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-10 | What mentor-review statuses are required, and does review affect entry status? | Review workflow |
 | OD-11 | Are failed transition attempts stored in `template_transitions` or only in `audit_logs`? | Audit model |
 | OD-12 | What are the final source-approved field/validation requirements per specialty and log type? | Specialty correctness |
-| OD-13 | What are the publication, archival, rollback, and template-eligibility policies? | Template lifecycle |
+| OD-13 | What detailed operational procedures are required for publication, archival, rollback, and template eligibility? | Core lifecycle policy is established by L-21 and L-28; operational detail remains open |
 | OD-14 | What is the final retention/deletion policy for expired activation-code rows? | Security and retention |
 | OD-15 | What are the exact Super Admin emergency verification, operator authorization, and post-recovery review procedures? | Avoiding administrative lockout; recovery approach is fixed by L-22 |
 
@@ -242,7 +242,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-27; design documents remain pending final review. No implementation is claimed.**
+**Current status: decisions recorded through L-28; design documents remain pending final review. No implementation is claimed.**
 
 
 ### L-26 — Trusted Validation and Schema Publication/Rollback
@@ -300,4 +300,44 @@ When an accepted decision changes, update this register and both design document
 **Scope and remaining open decisions**
 - This decision does not require storing a duplicate copy of the original JSON text or mandate a content hash.
 - Cross-version migration, historical-entry editing, and the detailed operational publication/rollback runbook remain open for separate review and approval.
+- This decision does not authorize migrations or backend implementation by itself.
+
+
+### L-28 — Template Lifecycle Operations
+**Status: Accepted**
+
+**Lifecycle states and assignment eligibility**
+- Template lifecycle states remain `DRAFT`, `PUBLISHED`, and `ARCHIVED`. Assignment eligibility is controlled separately by `is_assignable`, consistent with L-21.
+- A `DRAFT` template is never assignable.
+- A `PUBLISHED` template may receive new assignments or serve as a transition destination only when `is_assignable = TRUE`.
+- A `PUBLISHED` template with `is_assignable = FALSE` may remain in use by existing assignments but cannot receive new assignments or serve as a transition destination.
+- An `ARCHIVED` template cannot receive new assignments or serve as a transition destination.
+
+**Publication requirements**
+- Publication requires successful automated validation of schema definitions and completion of applicable publication checks.
+- Publication also requires documented administrative approval through a restricted, trusted workflow.
+- A failed validation, failed required check, or unsuccessful publication operation must not result in a partially published template or partially applied eligibility change.
+- Once published, a template version's defining content must not be modified in place. Any change to published content requires a new version.
+- Publication and sensitive lifecycle changes must be auditable, including the acting administrator, timestamp, action, and reason.
+
+**Eligibility changes and existing assignments**
+- Changing `is_assignable` must not automatically migrate, suspend, or replace existing trainee assignments.
+- Publishing, disabling eligibility, archiving, or rolling back a template must not automatically move trainees to another template version.
+- Any trainee transition remains a separate authorized operation governed by L-03 and L-21.
+
+**Rollback**
+- Rollback means disabling new use of an affected version and, where appropriate, restoring eligibility for a previously published version after verifying its validity, eligibility, and compatibility for the intended template and log-type use.
+- Rollback must not delete or rewrite template versions, alter historical records, reinterpret historical entries, or automatically migrate existing assignments.
+- A previously archived version cannot be reopened by rollback. If its content is needed again, a new version must be created and pass the applicable publication requirements.
+- Rollback-related status and eligibility changes must be authorized, auditable, and applied atomically.
+
+**Archival**
+- Archival is terminal for the archived template record. An `ARCHIVED` record cannot be returned to `DRAFT` or `PUBLISHED`.
+- Archival does not delete the template, its assignments, or its historical records.
+- If archived content is needed again, a new template version must be created and pass the applicable publication requirements.
+
+**Enforcement and scope**
+- These rules must be enforced through trusted backend/database controls; frontend filtering alone is insufficient.
+- The detailed operational checklist and runbook may be documented separately, but must implement these accepted lifecycle rules.
+- Cross-version migration and historical-entry editing remain open for separate review and approval.
 - This decision does not authorize migrations or backend implementation by itself.
