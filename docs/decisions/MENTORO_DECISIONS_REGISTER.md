@@ -179,8 +179,12 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 - Each request is tied to the record revision it was based on. If the current revision changes before application, automatic application is blocked and the request is referred for administrative review; changes are not silently rebased onto the newer revision.
 - Applying an approved correction updates the record and its affected associations, appends a complete before-and-after revision, updates the request state, and writes the audit event in one atomic transaction. A failed transaction must not leave partial correction state.
 - Only one open correction request may exist per log entry at a time. This must be enforced by trusted logic and an appropriate database-level concurrency-safe constraint/mechanism, not frontend checks alone.
-- The requesting trainee may withdraw the request before it is decided. Withdrawal changes the request state only; it does not alter the submitted record and must remain auditable.
+- The requesting trainee may withdraw a request only while it remains `PENDING` and before an administrative decision. Withdrawal changes the request state to `CANCELLED`, does not alter the submitted record, and must remain auditable.
 - Correction request states are `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`, and `APPLIED`. Approval and successful application are distinct: an approved request is not considered applied unless the atomic correction transaction succeeds.
+- Request contents and proposed values become immutable on submission; lifecycle metadata may change only through the authorized workflow. If the trainee needs to change the proposed correction before a decision, they must withdraw the pending request and submit a new request; the replacement is subject to the one-open-request-per-entry rule.
+- Attachments are excluded from correction requests in the initial release.
+- An administrator must decide the submitted proposal as-is: the administrator may approve or reject it but must not edit the trainee's proposed replacement values. A changed proposal requires a new request from the trainee.
+- A rejection must include a mandatory administrative reason, stored with the decision and included in the audit trail.
 
 ## Cross-cutting constraints accepted in the design
 
@@ -224,7 +228,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 |---|---|---|
 | OD-01 | What detailed operational checklist and runbook are needed to implement the accepted publication, archival, rollback, and eligibility rules? | Lifecycle rules are established by L-21 and L-28; operational detail remains open |
 | OD-02 | What exact operational runbook details, including named operators, verification evidence, recovery-material custody, emergency contacts, and review deadlines, are required before production? | Core recovery controls are established by L-22 and L-29; operational details remain open |
-| OD-03 | What exact request-initiation UI details and additional request fields are required beyond L-23? | UI/detail design remains open; core correction lifecycle is accepted |
+| OD-03 | What exact request-initiation UI details and additional request fields are required beyond L-23? | Resolved by accepted L-30: required reason and complete proposed values; no attachments in the initial release; immutable after submission with withdrawal/re-submission; mandatory rejection reason; administrators cannot edit the proposal. |
 | OD-04 | What are the cross-version migration procedures, historical-entry editing policy, and operational publication/rollback runbook for the schema registry? | L-27 resolves schema-definition storage as JSONB; migration and operational procedures remain open |
 | OD-05 | How are concurrent pending-enrollment creation requests serialized across different templates for one email? | Duplicate invitation prevention |
 | OD-06 | What are account deletion, anonymization, retention, export, and legal policies? | Privacy and lifecycle |
@@ -242,7 +246,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-29; design documents remain pending final review. No implementation is claimed.**
+**Current status: decisions recorded through L-30; design documents remain pending final review. No implementation is claimed.**
 
 
 ### L-26 — Trusted Validation and Schema Publication/Rollback
@@ -374,3 +378,14 @@ When an accepted decision changes, update this register and both design document
 - Before production, an operational runbook must define the authorized operators, identity-verification evidence, secure recovery-material handling, emergency contact process, approval and exception steps, and post-recovery review deadline.
 - The implementation must preserve the existing authentication and authorization boundaries and must not depend on frontend-only controls.
 - This decision does not authorize migrations or backend implementation by itself.
+
+
+### L-30 — Submitted-Record Correction Request Details
+**Status: Accepted**
+
+- A correction request is tied to one submitted log entry and the exact revision on which the request is based. It contains the trainee's mandatory correction reason and complete proposed replacement state, including every affected scalar field and target/context/procedure association. Requester identity and request timestamps are derived by trusted system logic.
+- Correction-request attachments are excluded from the initial release.
+- Once submitted, the request's content and proposed values are immutable; lifecycle metadata may change only through the authorized workflow. The trainee may withdraw it only while it is still `PENDING` and before an administrative decision. Withdrawal sets the request to `CANCELLED`, is audited, and does not change the submitted entry. To change the proposal, the trainee must withdraw the pending request and submit a new one. The one-open-request-per-entry rule in L-23 continues to apply.
+- The Super Admin must decide the proposal as submitted: approve it as-is or reject it. The administrator must not edit the trainee's proposed values. Any changed proposal must come from a new trainee-submitted request.
+- A rejection requires a non-empty administrative reason. Store the reason with the decision and include it in the audit trail. Approval and successful application remain distinct under L-23; the entry changes only through the approved atomic application workflow.
+- L-30 resolves OD-03. It is a design decision only and does not authorize migrations, backend implementation, or database changes.
