@@ -102,7 +102,7 @@ Trusted logic normalizes email and requires exact normalized match to the authen
 Each has `id`, `logbook_template_id`, `category`, `name`, `is_active`, `created_at`, plus version-scoped uniqueness and composite key `(id, logbook_template_id)`. Version-specific catalogs are the current proposal.
 
 ### 4.12 `log_entry_schema_registry` (accepted concept; physical details open)
-Database-backed registry of versioned schema definitions. Candidate fields: `id`, `logbook_template_id`, `log_type`, `schema_version`, `schema_definition` (exact representation to be finalized), `state`, `created_at`, `published_at`, `created_by`, and audit metadata as needed. Each `log_entries` row must reference the exact schema definition through a stable FK; validation must verify that it matches the entry's template version and log type. Published definitions are immutable; any change requires a new version. Schema creation, publication, and state changes must use trusted, restricted workflows and sensitive administrative actions must be audited. JSON Schema Draft 2020-12 is the schema format and Ajv 8 is the validation library under L-25. Exact storage representation and validation execution boundary remain open.
+Database-backed registry of versioned schema definitions. Candidate fields: `id`, `logbook_template_id`, `log_type`, `schema_version`, `schema_definition` (exact representation to be finalized), `state`, `created_at`, `published_at`, `created_by`, and audit metadata as needed. Each `log_entries` row must reference the exact schema definition through a stable FK; validation must verify that it matches the entry's template version and log type. Published definitions are immutable; any change requires a new version. Schema creation, publication, and state changes must use trusted, restricted workflows and sensitive administrative actions must be audited. JSON Schema Draft 2020-12 is the schema format and Ajv 8 is the validation library under L-25. Exact storage representation and specific backend technology/deployment boundary remain open; L-26 establishes the central trusted validation requirement and rollback principles.
 
 ### 4.13 `log_entries`
 `id`, `trainee_assignment_id`, `logbook_template_id`, `log_type`, `status`, `occurred_at`, `submitted_at`, `reflection_notes`, `payload JSONB NOT NULL DEFAULT '{}'::jsonb`, `schema_registry_id` FK to the exact immutable schema definition, `created_at`, `updated_at`, `revision_number`.
@@ -240,7 +240,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 
 2. Exact Super Admin emergency verification, authorized operator(s), recovery-material handling, and post-recovery review under L-22.
 3. Correction request initiation details.
-4. Exact schema storage representation and validation execution boundary, plus detailed publication/rollback workflows and cross-version migration procedures.
+4. Exact schema storage representation, cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback runbook.
 5. Concurrent pending enrollments for different templates for the same email.
 6. Account deletion, anonymization, retention, export, and legal policies.
 7. Stable target keys and cross-version mapping.
@@ -279,3 +279,20 @@ Before migrations: review all three design documents together; resolve open deci
 - Authorization, relational integrity, template-transition rules, and database-dependent constraints remain separate controls.
 - This decision does not modify published schemas or reinterpret historical records. Historical-entry editing remains open.
 - Exact schema storage representation, validation execution boundary, and publication/rollback procedures remain open for detailed design.
+
+
+## L-26 — Trusted validation and schema publication/rollback (accepted)
+
+### Validation boundary
+- All application write paths that create, modify, or submit specialty-specific payloads must pass through a centrally defined trusted backend validation path using Ajv 8 and JSON Schema Draft 2020-12.
+- Validate against the exact schema definition selected for the entry's template version and log type. Reject invalid payloads before accepting the corresponding write.
+- Frontend validation is supplementary. Alternate write paths must not bypass validation or authorization. RLS and database-dependent integrity constraints remain separate controls.
+- The specific backend technology and deployment boundary remain for implementation design review.
+
+### Publication and rollback
+- Validate schema definitions before publication. Reject failed validation/publication atomically and preserve previously committed schema state and eligibility configuration.
+- Published schema definitions are immutable; changes require a new version. Restrict publication and eligibility changes to trusted workflows and audit sensitive administrative actions.
+- An affected published version may be disabled for new assignments or other applicable new uses through an authorized, auditable workflow.
+- A prior published version may be selected for new use only after verifying compatibility and eligibility for the relevant template version and log type.
+- Rollback must not modify/delete published definitions, rewrite historical schema references, reinterpret historical entries, or automatically migrate existing assignments. Assignment transitions remain subject to accepted transition decisions.
+- Exact schema-registry storage representation, cross-version migration, historical-entry editing, and the full operational publication/rollback runbook remain open. L-26 does not authorize migrations or backend implementation by itself.
