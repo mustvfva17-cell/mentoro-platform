@@ -172,7 +172,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 
 2. Super Admin bootstrap, recovery, replacement, and break-glass process.
 3. Exact correction-request initiation fields and UX.
-4. Exact schema storage representation, validation execution boundary, and detailed publication/rollback workflow for the database-backed schema registry.
+4. Exact schema storage representation, cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback workflow for the database-backed schema registry.
 5. Concurrency/uniqueness policy for pending enrollments across different templates for the same email.
 6. Account deletion, anonymization, retention, export, and legal policies.
 7. Stable target keys and cross-version mapping.
@@ -227,3 +227,15 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Authorization, relational integrity, template-transition rules, and database-dependent constraints remain separate controls.
 - L-25 does not alter published schemas or reinterpret historical entries and does not settle historical-entry editing policy.
 - Exact storage representation, validation execution boundary, and publication/rollback details remain open.
+
+
+## L-26 — Trusted validation and schema publication/rollback (accepted)
+
+- All application write paths that create, modify, or submit specialty-specific log-entry payloads pass through a centrally defined trusted backend validation path using Ajv 8 and JSON Schema Draft 2020-12.
+- Validation uses the exact schema definition selected for the entry's template version and log type. Invalid payloads are rejected before the corresponding write is accepted. Frontend validation is supplementary.
+- Alternate write paths must not bypass validation or authorization. RLS and database-dependent integrity constraints remain separate controls.
+- Schema definitions must validate before publication. Failed validation/publication is rejected atomically and preserves the previously committed schema state and eligibility configuration.
+- Published definitions are immutable; changes require a new version. Publication and eligibility changes use restricted trusted workflows, and sensitive administrative actions are audited.
+- An affected version may be disabled for new assignments/new applicable uses. A previously published version may be selected only after compatibility and eligibility are verified for the relevant template version and log type.
+- Rollback does not delete or rewrite schema definitions, change historical schema references, reinterpret historical entries, or automatically migrate assignments. Assignment transitions remain governed by accepted transition decisions.
+- Exact schema storage representation, backend technology/deployment boundary, cross-version migration, historical-entry editing, and the full operational publication/rollback runbook remain open. L-26 does not authorize implementation or migrations by itself.
