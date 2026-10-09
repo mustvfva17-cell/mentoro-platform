@@ -6,9 +6,10 @@
 
 ## Accepted through this update
 
-- Decisions register: accepted decisions through L-25.
-- Data model and Physical Schema/RLS Contract: design drafts updated to reflect L-25.
-- L-25 selects JSON Schema Draft 2020-12 and Ajv 8 for schema definitions and trusted-backend payload validation; it requires schema validation before publication and server-side validation before accepting payload operations.
+- Decisions register: accepted decisions through L-26.
+- Data model and Physical Schema/RLS Contract: design drafts updated to reflect L-26.
+- L-25 selects JSON Schema Draft 2020-12 and Ajv 8 for schema definitions and trusted-backend payload validation.
+- L-26 requires all application write paths to use a central trusted backend validation path, rejects failed schema publication atomically, and defines safe schema eligibility/rollback principles while preserving historical schema references.
 - L-24 defines the database-backed versioned schema registry: stable schema references per template version/log type, trusted backend validation, immutable published definitions, preservation of historical schema references, and restricted/audited schema administration.
 - L-23 defines the submitted-record correction lifecycle: complete proposed correction, expected-revision check, one open request per entry, trainee withdrawal before decision, administrative decision authority, stale-request review, and atomic application with complete revision/audit state.
 
@@ -22,6 +23,8 @@
 ## Remaining review gates
 
 - Finalize the precise open-state predicate and concurrency-safe uniqueness mechanism for correction requests in the migration design.
-- Finalize schema storage representation, validation execution boundary, and detailed schema publication/rollback workflows; define cross-version migration and historical-entry editing separately.
-- Resolve other open decisions only through explicit user approval; L-23 does not approve them.
+- Finalize schema-registry storage representation, exact backend technology/deployment boundary, detailed operational publication/rollback runbook, cross-version migration, and historical-entry editing separately.
+- Resolve other open decisions only through explicit user approval; L-26 does not approve them.
 - Review all design documents together before implementation, then define migrations, grants/RLS, trusted functions, seed data, and rollback strategy.
+
+- L-26 is accepted as a design decision only. No migrations, backend implementation, or database tests have been run.
