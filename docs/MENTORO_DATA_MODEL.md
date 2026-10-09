@@ -181,7 +181,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 10. Mentor-review statuses and whether review affects entry status.
 11. Storage of failed transition attempts.
 12. Source-approved field and validation requirements per specialty/log type.
-13. Detailed template publication, archival, and rollback workflow.
+13. Detailed operational checklist and runbook for publication, archival, rollback, and template eligibility (core policy is accepted in L-21 and L-28).
 14. Retention/deletion policy for expired activation-code rows.
 
 ## 8. Approval gates
@@ -249,3 +249,15 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Historical entries retain their original schema references; new schema versions do not automatically reinterpret or migrate history.
 - Schema creation, publication, and state transitions use restricted trusted workflows, with sensitive administrative actions audited. JSONB does not replace authorization, relational integrity, RLS, or validation.
 - Cross-version migration, historical-entry editing, and the detailed operational publication/rollback runbook remain open. L-27 does not authorize implementation or migrations by itself.
+
+
+## L-28 — Template lifecycle operations (accepted)
+
+- Template states remain `DRAFT`, `PUBLISHED`, and `ARCHIVED`; assignment eligibility is separate and governed by `is_assignable` under L-21.
+- Publication requires successful automated schema validation and applicable publication checks, plus documented administrative approval through a restricted trusted workflow. Failed checks or publication must not leave partial state.
+- Published template-version content cannot be modified in place; changes require a new version. Sensitive lifecycle changes must be audited with actor, timestamp, action, and reason.
+- Eligibility changes do not automatically migrate, suspend, or replace existing assignments. Publishing, disabling eligibility, archiving, and rollback do not automatically move trainees; transitions remain separate authorized operations under L-03/L-21.
+- Rollback disables new use of the affected version and may restore eligibility to a previously published version only after checking validity, eligibility, and compatibility. Rollback does not rewrite versions or history, reinterpret entries, or automatically migrate assignments.
+- Archival is terminal for the archived record. Archived templates cannot be reopened or assigned; archival does not delete templates, assignments, or history. Reuse of archived content requires a new version and the applicable publication checks.
+- Trusted backend/database controls must enforce these rules; frontend filtering alone is insufficient. Detailed operational runbooks may be separate but must implement this decision.
+- Cross-version migration and historical-entry editing remain open. L-28 does not authorize implementation or migrations by itself.
