@@ -170,7 +170,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 
 ## 7. Open decisions — not approved
 
-2. Super Admin bootstrap, recovery, replacement, and break-glass process.
+2. Remaining operational runbook details for Super Admin bootstrap, recovery, replacement, and break-glass process (core controls are accepted in L-22 and L-29).
 3. Exact correction-request initiation fields and UX.
 4. Cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback workflow for the database-backed schema registry (schema-definition storage is resolved by L-27).
 5. Concurrency/uniqueness policy for pending enrollments across different templates for the same email.
@@ -261,3 +261,14 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Archival is terminal for the archived record. Archived templates cannot be reopened or assigned; archival does not delete templates, assignments, or history. Reuse of archived content requires a new version and the applicable publication checks.
 - Trusted backend/database controls must enforce these rules; frontend filtering alone is insufficient. Detailed operational runbooks may be separate but must implement this decision.
 - Cross-version migration and historical-entry editing remain open. L-28 does not authorize implementation or migrations by itself.
+
+
+## L-29 — Super Admin emergency recovery procedure (accepted)
+
+- Emergency recovery may be initiated and executed only by a pre-authorized operator under a documented procedure. Requester identity and authority must be verified through a documented method independent of frontend-controlled state and user-editable role claims. Supabase Auth remains the authentication mechanism; recovery must not create a parallel identity system or bypass authentication.
+- Recovery requires approval from two independently authorized persons whenever operationally available. If a second approver is unavailable and delay risks permanent administrative lockout, a narrowly scoped documented exception may be used. The exception must record its justification, operator, approval limitation, actions performed, and why normal approval was unavailable.
+- An exception does not waive identity verification, authentication, least privilege, or audit recording, and always requires independent post-recovery review.
+- Recovery materials must be stored securely and separately from the application and source repository, with restricted and documented access. Recovery grants only minimum necessary privileges; temporary privileges, credentials, and emergency access mechanisms must be revoked or reviewed promptly.
+- Audit records capture the request, verification outcome, operator, approver or exception rationale, timestamps, actions, and resulting privilege changes. An independent authorized reviewer who did not execute recovery reviews the outcome and relevant audit records, documenting conclusions, irregularities, and corrective actions.
+- Before production, an operational runbook must specify authorized operators, verification evidence, recovery-material handling, emergency contacts, approval/exception steps, and review deadline.
+- L-29 is design-only and does not authorize implementation or migrations.
