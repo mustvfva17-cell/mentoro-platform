@@ -175,7 +175,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 3. Correction-request initiation fields and UX — resolved by L-30 (required reason and complete proposed state; no attachments in the initial release; immutable after submission, withdrawal/re-submission, mandatory rejection reason, and no administrator editing of proposed values).
 4. Cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback workflow for the database-backed schema registry (schema-definition storage is resolved by L-27).
 5. Pending enrollment uniqueness across templates — resolved by L-31 at policy level (one pending enrollment per normalized email; same-scope reuse; different-scope cancel-and-replace with old unused codes invalidated). Exact database concurrency enforcement remains migration-design work.
-6. Account deletion, anonymization, retention, export, and legal policies.
+6. Account deletion, anonymization, retention, export, and legal policies — resolved at principles level by L-32; numeric retention periods, legal exceptions, export/backup handling, and technical mechanisms remain open.
 7. Stable target keys and cross-version mapping.
 8. Audit taxonomy, retention, and export.
 9. Historical dashboard behavior for inactive targets and archived assignments.
@@ -189,7 +189,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 
 Before implementation, review this model against `docs/decisions/README.md` and `docs/PHYSICAL_SCHEMA_RLS_CONTRACT.md`, finalize SQL types/constraints/FKs/indexes, define exact RLS and grants, specify trusted transaction functions, prepare version-controlled migrations, and run tests against an actual local/test database.
 
-**Current status: DESIGN DRAFT through L-31 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: DESIGN DRAFT through L-32 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ## 9. Super Admin recovery (L-22)
@@ -290,3 +290,12 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Reuse an eligible pending enrollment when normalized email and selected template/scope match. For a different scope, cancel the prior pending enrollment and create a replacement rather than editing the old scope; revoke/invalidate prior unused codes and audit the change in the same trusted atomic workflow.
 - Activated enrollments are not cancelled or reused by this replacement process. Duplicate assignments remain prohibited, and activation for a trainee with an active assignment uses the L-03/L-10 transition workflow.
 - Serialize concurrent create/reuse/replacement attempts. Exact constraints/indexes and transaction implementation remain migration-design work. L-31 resolves OD-05 policy-level only and does not authorize implementation or migrations.
+
+
+## L-32 — Account deletion and historical integrity (accepted)
+
+- Separate identity data from historical training records to the extent supported by the design and applicable obligations. Account closure/deletion does not automatically delete historical records.
+- Disable access through trusted server-side logic when required; access disabling alone does not complete a data-deletion request.
+- Define documented, data-category-specific retention, deletion, anonymization, export, backup, and applicable legal-rights procedures. Do not retain personal data unnecessarily or assume indefinite retention.
+- Do not silently delete or alter historical records, revision history, or audit records. Permitted deletion/anonymization must be restricted, trusted, and documented without silently changing historical meaning or reassigning records.
+- Numeric retention periods, legal exceptions, detailed export/backup handling, final technical mechanisms, and database changes remain open. L-32 is principles-only and does not authorize implementation or migrations.
