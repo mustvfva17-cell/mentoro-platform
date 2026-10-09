@@ -145,7 +145,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 - The exact uniqueness scope must be enforced in trusted logic and, where practical, by database constraints.
 - An already activated enrollment must not be reused to create a duplicate assignment.
 - Code issuance and replacement must be auditable.
-- The uniqueness/reuse behavior for simultaneous pending enrollments across different templates/specialties remains open unless explicitly decided later.
+- Under L-31, only one pending enrollment may exist per normalized email across all templates/specialties. A request for the same normalized email and same template/scope reuses the eligible pending enrollment under L-20. A request for a different template/scope cancels the prior pending enrollment and creates a new one; this must invalidate/revoke any unused activation code for the prior enrollment and be audited. Activated enrollments are never cancelled or reused by this replacement workflow. Concurrent requests must be serialized safely.
 
 ### L-21 — Template Assignment Eligibility
 **Status: Accepted**
@@ -230,7 +230,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-02 | What exact operational runbook details, including named operators, verification evidence, recovery-material custody, emergency contacts, and review deadlines, are required before production? | Core recovery controls are established by L-22 and L-29; operational details remain open |
 | OD-03 | What exact request-initiation UI details and additional request fields are required beyond L-23? | Resolved by accepted L-30: required reason and complete proposed values; no attachments in the initial release; immutable after submission with withdrawal/re-submission; mandatory rejection reason; administrators cannot edit the proposal. |
 | OD-04 | What are the cross-version migration procedures, historical-entry editing policy, and operational publication/rollback runbook for the schema registry? | L-27 resolves schema-definition storage as JSONB; migration and operational procedures remain open |
-| OD-05 | How are concurrent pending-enrollment creation requests serialized across different templates for one email? | Duplicate invitation prevention |
+| OD-05 | How are concurrent pending-enrollment creation requests serialized across different templates for one email? | Resolved by accepted L-31: one pending enrollment per normalized email across all templates; same-scope requests reuse it, while different-scope requests cancel and replace it through a trusted atomic workflow with prior unused codes invalidated. Concurrency-safe enforcement details remain for migration design. |
 | OD-06 | What are account deletion, anonymization, retention, export, and legal policies? | Privacy and lifecycle |
 | OD-07 | What are stable target-key and cross-version mapping rules? | Historical coverage |
 | OD-08 | What are the audit event taxonomy, retention period, and export policy? | Traceability |
@@ -246,7 +246,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-30; design documents remain pending final review. No implementation is claimed.**
+**Current status: decisions recorded through L-31; design documents remain pending final review. No implementation is claimed.**
 
 
 ### L-26 — Trusted Validation and Schema Publication/Rollback
@@ -389,3 +389,14 @@ When an accepted decision changes, update this register and both design document
 - The Super Admin must decide the proposal as submitted: approve it as-is or reject it. The administrator must not edit the trainee's proposed values. Any changed proposal must come from a new trainee-submitted request.
 - A rejection requires a non-empty administrative reason. Store the reason with the decision and include it in the audit trail. Approval and successful application remain distinct under L-23; the entry changes only through the approved atomic application workflow.
 - L-30 resolves OD-03. It is a design decision only and does not authorize migrations, backend implementation, or database changes.
+
+
+### L-31 — One Pending Enrollment Per Normalized Email
+**Status: Accepted**
+
+- At most one `PENDING` enrollment may exist for a normalized email across all specialties and template versions.
+- When an eligible pending enrollment exists for the same normalized email and the same selected template/scope, trusted logic reuses that enrollment under L-20; it does not create a duplicate.
+- When an administrator requests a different template/scope for that normalized email, the system must cancel the existing pending enrollment and create a new pending enrollment rather than mutate the old enrollment's template/scope. The operation must be performed through trusted logic and be atomic: cancel the old enrollment, revoke/invalidate its unused activation codes, create the replacement enrollment and its activation code as applicable, and record the relevant audit event. Failure must not leave a partially replaced invitation.
+- This replacement workflow never cancels or reuses an already activated enrollment and must not create duplicate assignments. If the trainee already has an active assignment, activation still follows the explicit transition workflow under L-03/L-10.
+- Concurrent create/reuse/replacement attempts for the same normalized email must be serialized and enforced through trusted logic and an appropriate database-level concurrency-safe mechanism; frontend checks alone are insufficient.
+- L-31 resolves OD-05 at the policy level. Exact constraints/indexes and transaction implementation remain migration-design work. L-31 is design-only and does not authorize migrations or backend implementation.
