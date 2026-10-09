@@ -171,7 +171,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 ## 7. Open decisions — not approved
 
 2. Remaining operational runbook details for Super Admin bootstrap, recovery, replacement, and break-glass process (core controls are accepted in L-22 and L-29).
-3. Exact correction-request initiation fields and UX.
+3. Correction-request initiation fields and UX — resolved by L-30 (required reason and complete proposed state; no attachments in the initial release; immutable after submission, withdrawal/re-submission, mandatory rejection reason, and no administrator editing of proposed values).
 4. Cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback workflow for the database-backed schema registry (schema-definition storage is resolved by L-27).
 5. Concurrency/uniqueness policy for pending enrollments across different templates for the same email.
 6. Account deletion, anonymization, retention, export, and legal policies.
@@ -188,7 +188,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 
 Before implementation, review this model against `docs/decisions/README.md` and `docs/PHYSICAL_SCHEMA_RLS_CONTRACT.md`, finalize SQL types/constraints/FKs/indexes, define exact RLS and grants, specify trusted transaction functions, prepare version-controlled migrations, and run tests against an actual local/test database.
 
-**Current status: DESIGN DRAFT — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: DESIGN DRAFT through L-30 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ## 9. Super Admin recovery (L-22)
@@ -272,3 +272,12 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Audit records capture the request, verification outcome, operator, approver or exception rationale, timestamps, actions, and resulting privilege changes. An independent authorized reviewer who did not execute recovery reviews the outcome and relevant audit records, documenting conclusions, irregularities, and corrective actions.
 - Before production, an operational runbook must specify authorized operators, verification evidence, recovery-material handling, emergency contacts, approval/exception steps, and review deadline.
 - L-29 is design-only and does not authorize implementation or migrations.
+
+
+## L-30 — Correction-request details (accepted)
+
+- A correction request contains a mandatory trainee reason, complete proposed replacement state including affected associations, and the exact expected record revision. Requester identity and timestamps are system-derived.
+- Attachments are excluded from the initial release.
+- Submitted request content and proposed values are immutable; lifecycle metadata may change only through the authorized workflow. The trainee may withdraw only a still-`PENDING` request before an administrative decision; withdrawal sets `CANCELLED`, is audited, and leaves the submitted record unchanged. A changed proposal requires withdrawal and a new request, while preserving L-23's one-open-request-per-entry rule.
+- The Super Admin approves or rejects the submitted proposal as-is and cannot edit proposed values. A rejection requires a non-empty reason recorded with the decision and audit trail.
+- L-30 resolves OD-03. It is design-only and does not authorize implementation or migrations.
