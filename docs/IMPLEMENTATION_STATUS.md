@@ -49,3 +49,7 @@
 
 - L-31 is accepted as a design decision and resolves OD-05 at the policy level: one pending enrollment per normalized email across templates; same-scope requests reuse the pending enrollment; different-scope requests cancel and replace it while invalidating unused prior codes and auditing the atomic workflow. Exact concurrency-safe database enforcement remains migration-design work.
 - L-31 is design-only. No migrations, backend implementation, or database tests have been run; other open decisions remain unapproved.
+
+
+- L-32 is accepted as a principles-level decision for account closure/deletion and historical integrity: separate identity from historical records where appropriate, disable access through trusted server-side logic, and define documented data-category-specific retention/deletion/anonymization/export and backup handling without silent historical alteration.
+- Numeric retention periods, legal exceptions, detailed export/backup handling, and final technical mechanisms remain open. L-32 is design-only. No migrations, backend implementation, or database tests have been run; other open decisions remain unapproved.
