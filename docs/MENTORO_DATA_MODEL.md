@@ -189,7 +189,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 
 Before implementation, review this model against `docs/decisions/README.md` and `docs/PHYSICAL_SCHEMA_RLS_CONTRACT.md`, finalize SQL types/constraints/FKs/indexes, define exact RLS and grants, specify trusted transaction functions, prepare version-controlled migrations, and run tests against an actual local/test database.
 
-**Current status: DESIGN DRAFT through L-30 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: DESIGN DRAFT through L-31 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ## 9. Super Admin recovery (L-22)
