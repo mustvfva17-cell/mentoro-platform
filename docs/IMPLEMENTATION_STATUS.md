@@ -32,3 +32,7 @@
 
 - L-27 is accepted as a design decision: schema definitions use `schema_definition JSONB NOT NULL`; preserving original JSON text formatting/key order is not required. Cross-version migration, historical-entry editing, and the detailed operational publication/rollback runbook remain open.
 - L-27 is design-only. No migrations, backend implementation, or database tests have been run. Other open decisions remain unapproved.
+
+
+- L-28 is accepted as a design decision covering template publication checks and approval, immutable published versions, separate assignment eligibility, rollback to a verified previously published version, and terminal archival. Detailed operational runbooks, cross-version migration, and historical-entry editing remain open.
+- L-28 is design-only. No migrations, backend implementation, or database tests have been run. Other open decisions remain unapproved.
