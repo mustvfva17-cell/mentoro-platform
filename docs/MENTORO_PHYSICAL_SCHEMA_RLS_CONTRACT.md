@@ -256,7 +256,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 
 Before migrations: review all three design documents together; resolve open decisions required for security/integrity; finalize exact SQL types, constraints, composite FKs, indexes, grants, and RLS; specify trusted functions; prepare version-controlled migrations and seeds; run real local/test database checks; review rollback and deployment.
 
-**Current status: CONSOLIDATED DESIGN DRAFT through L-25 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: CONSOLIDATED DESIGN DRAFT through L-27 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ### L-24 schema registry security and historical integrity
@@ -296,3 +296,14 @@ Before migrations: review all three design documents together; resolve open deci
 - A prior published version may be selected for new use only after verifying compatibility and eligibility for the relevant template version and log type.
 - Rollback must not modify/delete published definitions, rewrite historical schema references, reinterpret historical entries, or automatically migrate existing assignments. Assignment transitions remain subject to accepted transition decisions.
 - Exact schema-registry storage representation, cross-version migration, historical-entry editing, and the full operational publication/rollback runbook remain open. L-26 does not authorize migrations or backend implementation by itself.
+
+
+## L-27 — JSONB storage for schema registry definitions (accepted)
+
+- Add `schema_definition JSONB NOT NULL` to the database-backed `log_entry_schema_registry` as the schema-definition storage representation.
+- Original JSON text formatting and key order need not be preserved; a separate original-text copy is not required solely for formatting.
+- Validate schema definitions against JSON Schema Draft 2020-12 before publication through the validation process established by L-25/L-26. JSONB does not itself validate the schema.
+- Every log entry references the exact registry record applicable to its template version and log type. Published definitions are immutable; changes require a new schema version and registry record.
+- Preserve historical schema references; new schema versions do not automatically reinterpret or migrate historical entries.
+- Restrict schema creation, publication, and state transitions to trusted workflows and audit sensitive administrative actions. JSONB does not replace authorization, relational integrity, RLS, or payload validation.
+- Cross-version migration, historical-entry editing, and the detailed operational publication/rollback runbook remain open. L-27 does not authorize migrations or backend implementation by itself.
