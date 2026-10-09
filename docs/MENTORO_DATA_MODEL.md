@@ -172,7 +172,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 
 2. Super Admin bootstrap, recovery, replacement, and break-glass process.
 3. Exact correction-request initiation fields and UX.
-4. Exact schema storage representation, cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback workflow for the database-backed schema registry.
+4. Cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback workflow for the database-backed schema registry (schema-definition storage is resolved by L-27).
 5. Concurrency/uniqueness policy for pending enrollments across different templates for the same email.
 6. Account deletion, anonymization, retention, export, and legal policies.
 7. Stable target keys and cross-version mapping.
@@ -239,3 +239,13 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - An affected version may be disabled for new assignments/new applicable uses. A previously published version may be selected only after compatibility and eligibility are verified for the relevant template version and log type.
 - Rollback does not delete or rewrite schema definitions, change historical schema references, reinterpret historical entries, or automatically migrate assignments. Assignment transitions remain governed by accepted transition decisions.
 - Exact schema storage representation, backend technology/deployment boundary, cross-version migration, historical-entry editing, and the full operational publication/rollback runbook remain open. L-26 does not authorize implementation or migrations by itself.
+
+
+## L-27 — JSONB storage for schema registry definitions (accepted)
+
+- Store schema definitions in `log_entry_schema_registry.schema_definition JSONB NOT NULL`. Preserving the original textual formatting or key order is not required; a duplicate original-text copy is not required solely for formatting.
+- Validate definitions against JSON Schema Draft 2020-12 before publication using the validation process established by L-25/L-26. JSONB storage alone does not establish validity.
+- Each log entry references the exact schema-registry record applicable to its template version and log type. Published definitions cannot be changed in place; changes require a new schema version and registry record.
+- Historical entries retain their original schema references; new schema versions do not automatically reinterpret or migrate history.
+- Schema creation, publication, and state transitions use restricted trusted workflows, with sensitive administrative actions audited. JSONB does not replace authorization, relational integrity, RLS, or validation.
+- Cross-version migration, historical-entry editing, and the detailed operational publication/rollback runbook remain open. L-27 does not authorize implementation or migrations by itself.
