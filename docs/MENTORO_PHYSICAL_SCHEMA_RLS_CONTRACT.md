@@ -87,7 +87,7 @@ The `created_from_pending_enrollment_id` FK can be added after both related tabl
 ### 4.7 `pending_enrollments`
 `id`, `normalized_email`, `logbook_template_id`, `status`, `created_by`, `created_at`, `updated_at`, `activated_by_profile_id`, `activated_at`, `cancelled_at`. Status `PENDING/ACTIVATED/REVOKED/EXPIRED/CANCELLED`.
 
-Trusted logic normalizes email and requires exact normalized match to the authenticated, verified email. If an eligible pending enrollment already exists for the same normalized email and selected template/scope, reuse it. Serialize concurrent create/reuse attempts. Whether simultaneous pending enrollments for different templates are allowed remains open.
+Trusted logic normalizes email and requires exact normalized match to the authenticated, verified email. Under L-31, enforce at most one `PENDING` enrollment per normalized email across all templates/specialties. Reuse an eligible pending enrollment for the same email and template/scope. For a different scope, atomically cancel the existing pending enrollment, revoke/invalidate its unused activation codes, create the replacement enrollment and code as applicable, and write the audit event; do not mutate the prior enrollment's scope. Never cancel/reuse an activated enrollment through this workflow. Concurrent create/reuse/replacement attempts must be serialized safely. Exact database constraint/index design remains migration work.
 
 ### 4.8 `activation_codes`
 `id`, `pending_enrollment_id`, `code_hash UNIQUE`, `created_by`, `created_at`, `expires_at NOT NULL`, `used_at`, `used_by`, `revoked_at`, `replaced_by_code_id`. Store only a secure hash. Trusted logic sets expiry to exactly 24 hours after issuance. Replacement invalidates the previous unused code and creates a new 24-hour validity period. Validation, consumption, enrollment activation, assignment creation, and audit write are atomic; failed verification does not consume a valid code.
@@ -241,7 +241,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 2. Exact Super Admin emergency verification, authorized operator(s), recovery-material handling, and post-recovery review under L-22.
 3. Correction request initiation details — resolved by L-30; remaining schema/migration and concurrency details remain open.
 4. Exact schema storage representation, cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback runbook.
-5. Concurrent pending enrollments for different templates for the same email.
+5. Pending-enrollment uniqueness across templates — resolved by L-31 at policy level; exact concurrency-safe database enforcement remains migration-design work.
 6. Account deletion, anonymization, retention, export, and legal policies.
 7. Stable target keys and cross-version mapping.
 8. Audit taxonomy, retention, and export.
@@ -256,7 +256,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 
 Before migrations: review all three design documents together; resolve open decisions required for security/integrity; finalize exact SQL types, constraints, composite FKs, indexes, grants, and RLS; specify trusted functions; prepare version-controlled migrations and seeds; run real local/test database checks; review rollback and deployment.
 
-**Current status: CONSOLIDATED DESIGN DRAFT through L-30 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: CONSOLIDATED DESIGN DRAFT through L-31 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ### L-24 schema registry security and historical integrity
@@ -339,3 +339,10 @@ Before migrations: review all three design documents together; resolve open deci
 - Submitted request content and proposed values are immutable; lifecycle metadata may change only through the authorized workflow. The trainee may withdraw only a still-`PENDING` request before an administrative decision; withdrawal sets `CANCELLED`, is audited, and leaves the entry unchanged. A changed proposal requires withdrawal and a new request. L-23's one-open-request-per-entry rule remains in force.
 - The Super Admin approves or rejects the proposal as submitted and may not edit its proposed values. A rejection requires a non-empty `review_decision_reason` recorded in the audit trail. The entry is modified only by the approved atomic application workflow.
 - The exact open-state predicate and concurrency-safe database enforcement remain migration-design work. L-30 is design-only and does not authorize implementation or migrations.
+
+
+## L-31 — Pending-enrollment uniqueness (accepted)
+
+- At most one `PENDING` enrollment may exist for a normalized email across all specialties/template versions.
+- Reuse a pending enrollment when email and template/scope match. For a different scope, a trusted atomic workflow cancels the old pending enrollment, revokes/invalidates unused activation codes, creates the replacement enrollment/code as applicable, and writes the audit event. Never mutate the old enrollment's template/scope or cancel/reuse an activated enrollment through this workflow.
+- Concurrent create/reuse/replacement attempts must be serialized. Exact database constraints/indexes and transaction implementation remain migration-design work. L-31 is design-only and does not authorize implementation or migrations.
