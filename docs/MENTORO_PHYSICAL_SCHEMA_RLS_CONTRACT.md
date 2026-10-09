@@ -116,9 +116,9 @@ Status `DRAFT/SUBMITTED`. Shared fields use typed columns; specialty-specific fi
 `id`, `log_entry_id`, `mentor_profile_id`, `status`, `comments`, `reviewed_at`, `created_at`. Mentor identity comes from authenticated context. Trusted checks confirm the record's trainee has an eligible mentor relationship. Reviews are append-only. Status vocabulary and effect on entry status remain open.
 
 ### 4.16 `log_entry_correction_requests`
-`id`, `log_entry_id`, `requested_by`, `requested_at`, `reason NOT NULL`, `proposed_changes JSONB NOT NULL`, `expected_revision_number NOT NULL` (or an equivalent immutable revision reference), `status`, `reviewed_by`, `reviewed_at`, `review_decision_reason`, `withdrawn_at`, `applied_revision_id`. Status `PENDING/APPROVED/REJECTED/CANCELLED/APPLIED`. `proposed_changes` contains one complete correction operation, including all affected scalar fields and target/context/procedure associations.
+`id`, `log_entry_id`, `requested_by`, `requested_at`, `reason NOT NULL`, `proposed_changes JSONB NOT NULL`, `expected_revision_number NOT NULL` (or an equivalent immutable revision reference), `status`, `reviewed_by`, `reviewed_at`, `review_decision_reason`, `withdrawn_at`, `applied_revision_id`. Requester identity and timestamps are system-derived. `review_decision_reason` is mandatory for `REJECTED` decisions and is included in the audit trail. Status `PENDING/APPROVED/REJECTED/CANCELLED/APPLIED`. `proposed_changes` contains one complete correction operation, including all affected scalar fields and target/context/procedure associations.
 
-L-23 rules: submitting the request does not modify the entry; only administration may decide approval/rejection and authorize application; the trainee may withdraw only before decision; withdrawal is audited and does not change the entry. Only one open request per entry is allowed. Define the exact open-state predicate and enforce it concurrency-safely at database level in the migration. The request captures the expected current revision. If that revision is stale at application time, block application and refer the request for administrative review; do not automatically rebase. Approval and application are distinct. A successful apply transaction verifies the expected revision and atomically updates entry fields and associations, appends the full before/after revision, updates request state to `APPLIED`, and writes the audit event. Failure rolls back all changes.
+L-23/L-30 rules: submitting the request does not modify the entry; only the Super Admin may decide approval/rejection and authorize application; the trainee may withdraw only a still-`PENDING` request before decision, which sets `CANCELLED`, is audited, and does not change the entry. Submitted request content and proposed values are immutable; lifecycle metadata may change only through the authorized workflow. If the trainee needs to change a proposal, they must withdraw the pending request and submit a new request. Attachments are excluded from the initial release. The administrator must approve the proposal as-is or reject it; administrator editing of proposed values is prohibited. A rejection requires a non-empty `review_decision_reason`. Only one open request per entry is allowed. Define the exact open-state predicate and enforce it concurrency-safely at database level in the migration. The request captures the expected current revision. If that revision is stale at application time, block application and refer the request for administrative review; do not automatically rebase. Approval and application are distinct. A successful apply transaction verifies the expected revision and atomically updates entry fields and associations, appends the full before/after revision, updates request state to `APPLIED`, and writes the audit event. Failure rolls back all changes.
 
 ### 4.17 `log_entry_revisions`
 `id`, `log_entry_id`, `revision_number`, `corrected_by`, `corrected_at`, `reason NOT NULL`, `before_snapshot JSONB NOT NULL`, `after_snapshot JSONB NOT NULL`, `correction_request_id`, `created_at`. Unique `(log_entry_id, revision_number)`. Snapshots include every scalar field and all target/context/procedure associations. Compare expected revision to current revision; reject stale changes. Entry, associations, revision, request status, and audit event update atomically. Ordinary clients cannot update/delete revisions.
@@ -239,7 +239,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 ## 10. Open decisions — not approved
 
 2. Exact Super Admin emergency verification, authorized operator(s), recovery-material handling, and post-recovery review under L-22.
-3. Correction request initiation details.
+3. Correction request initiation details — resolved by L-30; remaining schema/migration and concurrency details remain open.
 4. Exact schema storage representation, cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback runbook.
 5. Concurrent pending enrollments for different templates for the same email.
 6. Account deletion, anonymization, retention, export, and legal policies.
@@ -256,7 +256,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 
 Before migrations: review all three design documents together; resolve open decisions required for security/integrity; finalize exact SQL types, constraints, composite FKs, indexes, grants, and RLS; specify trusted functions; prepare version-controlled migrations and seeds; run real local/test database checks; review rollback and deployment.
 
-**Current status: CONSOLIDATED DESIGN DRAFT through L-27 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: CONSOLIDATED DESIGN DRAFT through L-30 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ### L-24 schema registry security and historical integrity
@@ -330,3 +330,12 @@ Before migrations: review all three design documents together; resolve open deci
 - Audit the request, verification outcome, operator, approver or exception rationale, timestamps, actions, and resulting privilege changes. An independent authorized reviewer who did not execute recovery must review and document the outcome, irregularities, and corrective actions.
 - Before production, an operational runbook must specify operators, verification evidence, recovery-material handling, emergency contacts, approval/exception steps, and review deadline.
 - L-29 does not authorize migrations or backend implementation by itself.
+
+
+## L-30 — Correction-request details (accepted)
+
+- The request stores the trainee's mandatory reason, complete proposed replacement state including affected associations, and expected current revision. Requester identity and timestamps are derived by trusted logic.
+- No request attachments are supported in the initial release.
+- Submitted request content and proposed values are immutable; lifecycle metadata may change only through the authorized workflow. The trainee may withdraw only a still-`PENDING` request before an administrative decision; withdrawal sets `CANCELLED`, is audited, and leaves the entry unchanged. A changed proposal requires withdrawal and a new request. L-23's one-open-request-per-entry rule remains in force.
+- The Super Admin approves or rejects the proposal as submitted and may not edit its proposed values. A rejection requires a non-empty `review_decision_reason` recorded in the audit trail. The entry is modified only by the approved atomic application workflow.
+- The exact open-state predicate and concurrency-safe database enforcement remain migration-design work. L-30 is design-only and does not authorize implementation or migrations.
