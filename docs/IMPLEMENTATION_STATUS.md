@@ -28,3 +28,7 @@
 - Review all design documents together before implementation, then define migrations, grants/RLS, trusted functions, seed data, and rollback strategy.
 
 - L-26 is accepted as a design decision only. No migrations, backend implementation, or database tests have been run.
+
+
+- L-27 is accepted as a design decision: schema definitions use `schema_definition JSONB NOT NULL`; preserving original JSON text formatting/key order is not required. Cross-version migration, historical-entry editing, and the detailed operational publication/rollback runbook remain open.
+- L-27 is design-only. No migrations, backend implementation, or database tests have been run. Other open decisions remain unapproved.
