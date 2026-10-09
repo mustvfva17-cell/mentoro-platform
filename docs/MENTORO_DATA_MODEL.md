@@ -98,10 +98,11 @@ Proposed fields: `id`, `normalized_email`, `logbook_template_id`, `status`, `cre
 
 - Email is normalized by trusted logic.
 - Activation requires authenticated, verified email matching the invitation.
-- If an eligible pending enrollment already exists for the same normalized email and selected template/scope, reuse it rather than create a duplicate.
-- Reuse must not apply to an already activated enrollment.
-- Concurrent creation/reuse must be serialized safely.
-- Whether different templates for the same email may have simultaneous pending enrollments remains open.
+- At most one `PENDING` enrollment may exist per normalized email across all templates/specialties.
+- If an eligible pending enrollment exists for the same normalized email and selected template/scope, reuse it under L-20.
+- If the requested template/scope differs, cancel the existing pending enrollment and create a new enrollment; do not mutate the old enrollment's scope. Revoke/invalidate its unused activation codes in the same trusted atomic workflow and audit the replacement.
+- Never cancel or reuse an activated enrollment to replace an invitation; do not create duplicate assignments.
+- Concurrent create/reuse/replacement attempts for the same normalized email must be serialized safely and enforced at database level where practical. Exact migration constraints remain to be finalized under L-31.
 
 ### 4.8 `activation_codes`
 Proposed fields: `id`, `pending_enrollment_id`, `code_hash`, `created_by`, `created_at`, `expires_at`, `used_at`, `used_by`, `revoked_at`, `replaced_by_code_id`. Store only secure hashes. Codes are single-use, expire 24 hours after issue, may be revoked before use, and replacement invalidates the previous unused code. `expires_at` is mandatory and assigned by trusted logic. Validation, consumption, enrollment activation, assignment creation, and audit event are atomic. Failed verification does not consume a valid code.
@@ -173,7 +174,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 2. Remaining operational runbook details for Super Admin bootstrap, recovery, replacement, and break-glass process (core controls are accepted in L-22 and L-29).
 3. Correction-request initiation fields and UX — resolved by L-30 (required reason and complete proposed state; no attachments in the initial release; immutable after submission, withdrawal/re-submission, mandatory rejection reason, and no administrator editing of proposed values).
 4. Cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback workflow for the database-backed schema registry (schema-definition storage is resolved by L-27).
-5. Concurrency/uniqueness policy for pending enrollments across different templates for the same email.
+5. Pending enrollment uniqueness across templates — resolved by L-31 at policy level (one pending enrollment per normalized email; same-scope reuse; different-scope cancel-and-replace with old unused codes invalidated). Exact database concurrency enforcement remains migration-design work.
 6. Account deletion, anonymization, retention, export, and legal policies.
 7. Stable target keys and cross-version mapping.
 8. Audit taxonomy, retention, and export.
@@ -281,3 +282,11 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Submitted request content and proposed values are immutable; lifecycle metadata may change only through the authorized workflow. The trainee may withdraw only a still-`PENDING` request before an administrative decision; withdrawal sets `CANCELLED`, is audited, and leaves the submitted record unchanged. A changed proposal requires withdrawal and a new request, while preserving L-23's one-open-request-per-entry rule.
 - The Super Admin approves or rejects the submitted proposal as-is and cannot edit proposed values. A rejection requires a non-empty reason recorded with the decision and audit trail.
 - L-30 resolves OD-03. It is design-only and does not authorize implementation or migrations.
+
+
+## L-31 — Pending-enrollment uniqueness (accepted)
+
+- Enforce at most one `PENDING` enrollment per normalized email across all specialties/template versions.
+- Reuse an eligible pending enrollment when normalized email and selected template/scope match. For a different scope, cancel the prior pending enrollment and create a replacement rather than editing the old scope; revoke/invalidate prior unused codes and audit the change in the same trusted atomic workflow.
+- Activated enrollments are not cancelled or reused by this replacement process. Duplicate assignments remain prohibited, and activation for a trainee with an active assignment uses the L-03/L-10 transition workflow.
+- Serialize concurrent create/reuse/replacement attempts. Exact constraints/indexes and transaction implementation remain migration-design work. L-31 resolves OD-05 policy-level only and does not authorize implementation or migrations.
