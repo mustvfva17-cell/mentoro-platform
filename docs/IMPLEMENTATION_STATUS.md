@@ -53,3 +53,7 @@
 
 - L-32 is accepted as a principles-level decision for account closure/deletion and historical integrity: separate identity from historical records where appropriate, disable access through trusted server-side logic, and define documented data-category-specific retention/deletion/anonymization/export and backup handling without silent historical alteration.
 - Numeric retention periods, legal exceptions, detailed export/backup handling, and final technical mechanisms remain open. L-32 is design-only. No migrations, backend implementation, or database tests have been run; other open decisions remain unapproved.
+
+
+- L-34 is accepted as a principles-level decision: a unified audit model for sensitive events, with separate category-specific retention and controlled export policies. Exact event catalogue, numeric retention periods, export formats/permissions, backup handling, and operational safeguards remain open.
+- L-34 is design-only. No migrations, backend implementation, or database tests have been run; other open decisions remain unapproved.
