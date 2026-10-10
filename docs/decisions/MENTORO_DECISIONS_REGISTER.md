@@ -236,7 +236,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-08 | What are the audit event taxonomy, retention period, and export policy? | Resolved at principles level by accepted L-34: unified audit event model for sensitive events, with separate retention and export policies. Exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open. |
 | OD-09 | How should inactive targets and archived assignments appear in historical dashboards? | Resolved by accepted L-36: separate current dashboard and historical archive. Detailed filters, historical metric calculations, visual comparison, and handling of unavailable retained data remain open. |
 | OD-10 | What mentor-review statuses are required, and does review affect entry status? | Resolved by accepted L-37: mentor review is an independent workflow and does not itself change log-entry status or constitute formal approval. Review-cycle granularity, reopening, trainee responses, and repeated-cycle history remain open. |
-| OD-11 | Are failed transition attempts stored in `template_transitions` or only in `audit_logs`? | Audit model |
+| OD-11 | Are failed transition attempts stored in `template_transitions` or only in `audit_logs`? | **Resolved by accepted L-38:** `template_transitions` records only successful transitions; failed/rejected attempts are recorded in `audit_logs`. Operational handling of audit-write failure, detailed failure taxonomy, and retention specifics remain open. |
 | OD-12 | What are the final source-approved field/validation requirements per specialty and log type? | Specialty correctness |
 | OD-13 | What detailed operational procedures are required for publication, archival, rollback, and template eligibility? | Core lifecycle policy is established by L-21 and L-28; operational detail remains open |
 | OD-14 | What is the final retention/deletion policy for expired activation-code rows? | Security and retention |
@@ -465,3 +465,16 @@ L-35 is design-only. It does not authorize database migrations, schema changes, 
 5. **Authorization and auditability:** Mentors may review only records for trainees assigned to them, subject to existing authorization rules. Review status changes and feedback must be traceable, including trusted actor identity and timestamp. Client-supplied identity or role is not authoritative.
 6. **Open details:** Whether review attaches to each entry or each entry revision; whether a completed review can be reopened; how trainee responses and feedback resolution are represented; whether separate open/resolved feedback states are needed; and how repeated review cycles preserve prior history remain open.
 7. **Implementation boundary:** L-37 is design-only and does not authorize migrations, database changes, backend changes, or UI implementation.
+
+
+### L-38 — Failed Assignment Transitions and Audit Logging
+**Status: Accepted**
+
+1. **Successful transitions:** `template_transitions` records only assignment/template transitions that actually completed successfully. Each successful transition is also recorded in `audit_logs`.
+2. **Atomic success:** The assignment-state change, successful transition record, and associated audit event must commit atomically. A partially completed transition must not be represented as successful.
+3. **Failed or rejected attempts:** Failed/rejected attempts are recorded in `audit_logs` only. They must not create a `template_transitions` row representing a transition that did not occur. Logging an attempt does not change assignment state.
+4. **Audit information:** Where applicable, record trusted actor identity, timestamp, operation type, target assignment, outcome, and failure/rejection reason. Minimize collected data and do not include secrets or unnecessary sensitive details.
+5. **Authorization and integrity:** Existing authorization and transition rules, including L-03 and L-21, continue to apply. Client-supplied identity or role claims are not authoritative.
+6. **Retention:** Audit events follow L-34 audit retention/export principles and L-32 data-management and retention principles.
+7. **Open operational details:** Handling audit-write failures; final failure/rejection taxonomy; detailed retention for failed attempts; repeated or suspicious attempt handling; and technical atomicity/consistency mechanisms remain open.
+8. **Implementation boundary:** L-38 is design-only. It does not authorize migrations, database changes, backend changes, or UI implementation.
