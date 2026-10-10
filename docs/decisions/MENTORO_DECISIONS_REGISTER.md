@@ -233,7 +233,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-05 | How are concurrent pending-enrollment creation requests serialized across different templates for one email? | Resolved by accepted L-31: one pending enrollment per normalized email across all templates; same-scope requests reuse it, while different-scope requests cancel and replace it through a trusted atomic workflow with prior unused codes invalidated. Concurrency-safe enforcement details remain for migration design. |
 | OD-06 | What are account deletion, anonymization, retention, export, and legal policies? | Resolved at principles level by accepted L-32: separate identity from historical records, disable access, and apply documented data-category-specific retention/deletion/anonymization rules without silent historical alteration. Numeric retention periods, legal exceptions, export procedure, backup handling, and technical mechanisms remain open. |
 | OD-07 | What are stable target-key and cross-version mapping rules? | Historical coverage |
-| OD-08 | What are the audit event taxonomy, retention period, and export policy? | Traceability |
+| OD-08 | What are the audit event taxonomy, retention period, and export policy? | Resolved at principles level by accepted L-34: unified audit event model for sensitive events, with separate retention and export policies. Exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open. |
 | OD-09 | How should inactive targets and archived assignments appear in historical dashboards? | Historical interpretation |
 | OD-10 | What mentor-review statuses are required, and does review affect entry status? | Review workflow |
 | OD-11 | Are failed transition attempts stored in `template_transitions` or only in `audit_logs`? | Audit model |
@@ -246,7 +246,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-32; design documents remain pending final review. No implementation is claimed.**
+**Current status: decisions recorded through L-34; design documents remain pending final review. No implementation is claimed.**
 
 
 ### L-26 — Trusted Validation and Schema Publication/Rollback
@@ -413,3 +413,15 @@ When an accepted decision changes, update this register and both design document
 - Account deletion or anonymization must not silently change the meaning of historical records, reassign them to another person, or make them appear to be new records.
 - Before production, operational and legal policies must define retention periods, deletion/anonymization/export handling, responsible permissions, and effects on records and backups.
 - L-32 establishes principles only. Numeric retention periods, specific legal exceptions, final technical deletion/anonymization mechanisms, and database changes remain open. L-32 does not authorize implementation or migrations.
+
+
+### L-34 — Audit Taxonomy, Retention, and Export
+**Status: Accepted**
+
+- Use a unified audit model for sensitive security, administrative, and training-record events across the platform.
+- Where applicable, event records include trusted actor identity, event type, affected entity/type, timestamp, outcome, required reason, and a reference to the related revision or decision.
+- Ordinary users cannot modify or delete audit records through normal application operations. Writes must use restricted trusted paths; client-supplied actor identity or role is not authoritative.
+- Organize sensitive events into categories including authentication/security, enrollment/activation, assignment/transition, correction/revision, template/schema lifecycle, administrative emergency recovery, and audit export. The detailed event catalogue remains open.
+- Define a separate documented retention policy by event category, purpose, and applicable legal obligations, including relevant deletion/anonymization and backup handling. L-34 does not establish numeric retention periods or require indefinite retention.
+- Restrict audit export to authorized roles and purposes. The export policy must define scope, privacy controls, file handling, and recording of export requests and outcomes.
+- Exact event types, database schema, retention periods, export formats/permissions, and operational safeguards remain open. L-34 establishes principles only and does not authorize migrations or backend implementation.
