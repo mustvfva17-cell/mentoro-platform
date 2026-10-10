@@ -405,3 +405,13 @@ Before migrations: review all three design documents together; resolve open deci
 - Existing authorization and transition rules, including L-03 and L-21, remain applicable; client-supplied identity or role claims are not authoritative.
 - Audit retention/export follows L-34; broader data-management and retention principles follow L-32.
 - Audit-write failure handling, detailed failure taxonomy and retention, repeated/suspicious attempt handling, and exact technical atomicity/consistency mechanisms remain open. L-38 is design-only; no migrations or implementation are authorized.
+
+
+## L-39 — Source-first specialty requirements and validation (accepted)
+
+- Requirements for each MVP specialty and log type must be based on identified, approved sources, including source/version details where applicable. Unsupported assumptions are not approved medical requirements.
+- Maintain traceability from each requirement to a supporting source or a documented platform design decision, distinguishing approved requirements from design decisions and items awaiting verification.
+- Document required/optional fields, data types, allowed values, validation constraints, and source/rationale before approving a log type's requirements. Technical schema validity alone does not establish medical correctness or completeness.
+- Medical content must be reviewed and approved through the trusted workflow before being treated as final. L-24 through L-28 remain applicable.
+- Unverified requirements remain open; no field list or final schema is approved merely by L-39. Source selection, detailed field review, approval responsibilities, and final schemas remain open.
+- L-39 is design-only and authorizes no migrations, database changes, backend changes, or UI implementation.
