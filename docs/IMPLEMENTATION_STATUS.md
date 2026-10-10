@@ -4,6 +4,8 @@
 **Phase:** Final policy review complete; preparing implementation design
 **Implementation status:** Documentation only. No migrations, application implementation, or database tests are claimed.
 
+- Added `docs/MENTORO_EXECUTABLE_DB_DESIGN_MATRIX.md` as a table-by-table review matrix for `profiles`, `user_roles`, `pending_enrollments`, `activation_codes`, and `trainee_assignments`. It lists candidate uniqueness predicates, trusted write boundaries, RLS/grant review items, activation atomicity, and minimum test gates. It is design-only; the Super Admin global uniqueness strategy, exact role grants/RLS, FK/check constraints, RPC signature, and lock/isolation design remain open. No migrations or tests were run.
+
 ## Accepted executable-design choices (design only)
 
 - Correction requests: `PENDING` is the only decision-pending state; one `PENDING` request per entry. An `APPROVED` request that awaits application also blocks creation of a new request. `REJECTED`, `CANCELLED`, and `APPLIED` do not block a new request. The candidate partial-index predicate and state-transition/locking implementation remain to be finalized.
