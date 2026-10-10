@@ -245,6 +245,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 6. Account deletion, anonymization, retention, export, and legal policies — resolved at principles level by L-32; numeric retention periods, legal exceptions, export/backup handling, and technical mechanisms remain open.
 7. Stable target keys and cross-version mapping.
 8. Audit taxonomy, retention, and export — resolved at principles level by L-34; exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open.
+9. Stable target identity and cross-version mapping — resolved by L-35: stable target identifiers and explicit version mappings; key format, approval authority, multi-target representation, reporting calculations, and conflict handling remain open.
 9. Historical display of inactive targets and archived assignments.
 10. Mentor-review statuses and effect on entry status.
 11. Failed-transition audit storage.
@@ -256,7 +257,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 
 Before migrations: review all three design documents together; resolve open decisions required for security/integrity; finalize exact SQL types, constraints, composite FKs, indexes, grants, and RLS; specify trusted functions; prepare version-controlled migrations and seeds; run real local/test database checks; review rollback and deployment.
 
-**Current status: CONSOLIDATED DESIGN DRAFT through L-34 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: CONSOLIDATED DESIGN DRAFT through L-35 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ### L-24 schema registry security and historical integrity
@@ -364,3 +365,12 @@ Before migrations: review all three design documents together; resolve open deci
 - Classify events into authentication/security, enrollment/activation, assignment/transition, correction/revision, template/schema lifecycle, administrative emergency recovery, and audit export. The exact event catalogue remains open.
 - Define separate documented retention and export policies. Retention is category-specific and purpose/legal-obligation aware, not indefinite by default. Export is limited to authorized roles and purposes, includes privacy safeguards and file-handling rules, and records export requests/outcomes.
 - Exact event types, schema, numeric retention periods, export formats/permissions, backup handling, and operational safeguards remain open. L-34 is principles-only and does not authorize migrations or implementation.
+
+
+## L-35 — Stable target identity and cross-version mapping (accepted)
+
+- Each training target has a stable identifier independent of its name or description. Version-specific target definitions remain independently preserved as historical content.
+- Cross-version target relationships must be explicit and must not be inferred from name/description similarity. Supported types: `SAME_TARGET`, `REPLACED_BY`, `SPLIT_INTO`, `MERGED_INTO`, and `NO_EQUIVALENT`.
+- Historical trainee records remain attached to the original template version. Mapping does not itself migrate records or assignments. Historical coverage is not automatically transferred or aggregated into targets in a newer version; reporting may use explicit approved mappings only when the applicable rules permit it.
+- Mappings must be traceable and reviewable. Define an authorized approval authority before using mappings in cross-version reporting.
+- Exact key format, approval authority, multi-target representation, reporting calculations, and incomplete/conflicting mapping handling remain open. L-35 is design-only; no migrations or implementation are authorized.
