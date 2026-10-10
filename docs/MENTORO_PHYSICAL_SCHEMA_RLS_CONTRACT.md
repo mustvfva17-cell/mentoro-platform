@@ -50,10 +50,25 @@ Template lifecycle status and assignment eligibility are separate; L-21 defines 
 All primary keys are proposed UUIDs; event timestamps use `TIMESTAMPTZ`. Exact SQL migration syntax and delete behavior require final review.
 
 ### 4.1 `profiles`
-`id UUID PK REFERENCES auth.users(id) ON DELETE RESTRICT`, `full_name TEXT`, `created_at`, `updated_at`. Profile identity derives from authenticated Supabase Auth. Account deletion/anonymization policy remains open.
+Proposed columns: `id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE RESTRICT`, `full_name TEXT`, `created_at TIMESTAMPTZ NOT NULL`, `updated_at TIMESTAMPTZ NOT NULL`.
+
+**Accepted identity contract (design-only):**
+- `profiles.id` is the same UUID as the corresponding `auth.users.id`; the client cannot choose or change it.
+- The trusted Vercel Node.js backend is the selected profile-provisioning path after Supabase Auth registration; a database trigger is not the selected default.
+- Provisioning must be idempotent and handle partial failure (Auth account exists but profile creation fails) through a defined retry/reconciliation path. Do not silently create duplicate profiles or report full enrollment success while required provisioning is incomplete.
+- Profile updates are limited to explicitly permitted profile fields. A user cannot write identity, role, or administrative fields through a general profile update.
+- Account deletion/anonymization remains governed by L-32; the FK delete behavior and retention implementation must be reviewed against that policy before migration.
 
 ### 4.2 `user_roles`
-`id`, `user_id FK profiles`, `role CHECK IN ('SUPER_ADMIN','TRAINEE','MENTOR')`, `created_at`, `granted_by`, `revoked_at`. Roles are server-managed. Initial release has one Super Admin with platform-wide scope. A constraint/index must prevent duplicate active grants while preserving revoked history. Recovery approach is Supabase Auth plus a secured emergency procedure (L-22); exact operational controls remain open.
+Proposed columns: `id UUID PRIMARY KEY`, `user_id UUID NOT NULL REFERENCES profiles(id)`, `role TEXT NOT NULL CHECK (role IN ('SUPER_ADMIN','TRAINEE','MENTOR'))`, `created_at TIMESTAMPTZ NOT NULL`, `granted_by UUID`, `revoked_at TIMESTAMPTZ NULL`. Final FK/delete behavior and whether the bootstrap grant uses a separately documented null-free mechanism remain migration-design details.
+
+**Accepted role-integrity contract (design-only):**
+- Roles are server-managed. Client-supplied role labels and client writes to this table are never authoritative.
+- Enforce at most one active grant for each `(user_id, role)` while preserving revoked rows; candidate enforcement is a partial unique index where `revoked_at IS NULL`.
+- The initial release has one platform-wide Super Admin. Database-level concurrency-safe protection must prevent granting a second active Super Admin and must prevent ordinary role-management operations from revoking or disabling the last active Super Admin.
+- Initial Super Admin bootstrap is a separate, documented, restricted operation—not a general exception that permits users or ordinary application flows to self-grant roles. Emergency recovery follows L-41.
+- Role grants and revocations require trusted authorization and corresponding audit events in the same transaction. Audit failure rolls back the role change.
+- Exact bootstrap operator/materials, grantor FK behavior, constraint/index implementation, and the last-admin locking strategy remain executable-design/runbook work.
 
 ### 4.3 `specialties`
 `id`, unique `name`, unique `slug`, `description`, `is_active`, `created_at`. Seed all three required specialties.
@@ -134,7 +149,10 @@ Required:
 - Composite foreign keys for entry-target/context/procedure template compatibility.
 - Unique code hash and mandatory code expiry.
 - Unique `(log_entry_id, revision_number)`.
-- Active role grant uniqueness.
+- Active role grant uniqueness per `(user_id, role)`; candidate partial unique index predicate is `revoked_at IS NULL`.
+- Enforce at most one active `SUPER_ADMIN` grant platform-wide and prevent ordinary operations from removing the last active Super Admin. This must be concurrency-safe, not an application-only pre-check.
+- Profile provisioning uses the trusted Vercel backend, must be idempotent, and must define reconciliation/retry for Auth/profile partial failure.
+- Role grant/revoke changes and required audit events commit atomically; audit-write failure rolls back the role change.
 - Mentor assignment uniqueness/lifecycle constraints after final review.
 - Enrollment reuse serialized with transaction/lock and appropriate uniqueness constraint where compatible with the open cross-template policy.
 - Correction requests: enforce at most one `PENDING` decision request per entry and prohibit a new `PENDING` request while an `APPROVED` request awaits application. A partial unique index covering both `PENDING` and `APPROVED` states is a candidate enforcement mechanism; finalize the exact index/predicate with the schema and state-transition design. `REJECTED`, `CANCELLED`, and `APPLIED` do not block a new request.
