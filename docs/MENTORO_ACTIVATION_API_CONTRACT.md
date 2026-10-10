@@ -1,0 +1,124 @@
+# MENTORO MVP — Enrollment & Activation API Contract
+
+**Status:** Design draft for review; not implemented.
+**Scope:** Minimum trusted API/database contract for issuing/replacing activation invitations and redeeming a single-use activation code.
+**Architecture:** Vercel Node.js API, Supabase Auth, Supabase PostgreSQL, RLS/grants, narrowly scoped atomic database operations.
+**Explicit boundary:** This document does not authorize code, migrations, database changes, deployment, or claims of passing tests.
+
+## 1. Non-negotiable invariants
+
+1. The authenticated actor is derived from a verified Supabase Auth session; never trust client-supplied actor/profile IDs, roles, email-verification claims, or assignment ownership.
+2. Activation requires the Supabase Auth email to be verified and to match the trusted normalized invitation email.
+3. At most one `PENDING` enrollment exists per normalized email across templates/specialties.
+4. Same email and same selected scope/template reuses the eligible pending enrollment. A different scope cancels/replaces only a pending enrollment and revokes its unused code(s) atomically.
+5. Each pending enrollment has at most one unconsumed, unrevoked activation code. Codes are single-use, expire 24 hours after issuance, and only a secure hash is stored.
+6. Activation creates at most one assignment from an enrollment, and the trainee has at most one `ACTIVE` assignment platform-wide.
+7. The destination template must be `PUBLISHED` and `is_assignable = TRUE`.
+8. Code consumption, enrollment activation, assignment creation, and required audit writes commit in one transaction. Any failure, including audit failure, rolls back the whole operation.
+9. Concurrent requests cannot bypass uniqueness by racing. Database constraints remain the final defense; trusted locking/transaction design coordinates the workflow.
+10. Do not include plaintext codes, passwords, bearer tokens, service-role secrets, or patient-identifying information in logs or audit metadata.
+
+## 2. Minimum API operations
+
+Exact route names are intentionally not fixed until repository routing conventions are inspected. The operations below are logical contracts, not implemented endpoints.
+
+### A. Create or replace an activation invitation (restricted admin operation)
+
+**Input**
+- Selected template ID/scope.
+- Trainee email address.
+- Optional operator-supplied reason if required by the admin workflow.
+
+**Trusted processing**
+1. Verify Supabase Auth session and derive the actor.
+2. Authorize the platform-wide Super Admin role from trusted state.
+3. Normalize the email using one documented canonical rule.
+4. Serialize work for that normalized email.
+5. If a pending enrollment exists for the same selected scope/template, reuse it; do not create a duplicate enrollment.
+6. If a pending enrollment exists for a different scope/template, cancel it and revoke its unused code(s).
+7. Verify the selected template is eligible for new assignment.
+8. Create/reuse the pending enrollment and issue a new code; persist only its hash and a trusted 24-hour expiry.
+9. Write required audit event(s) in the same transaction as state changes.
+10. Return the plaintext code only through the authorized issuance response/channel after the transaction succeeds; never persist it. If secure delivery is not yet designed, return it only to the authorized administrator once and explicitly treat delivery as a separate pending design item.
+
+**Failure behavior**
+- Invalid authorization: deny without changing state.
+- Invalid/ineligible template: deny without changing state.
+- Transaction/audit failure: rollback all enrollment/code changes.
+- Do not reveal whether an unrelated account exists beyond what the authorized workflow requires.
+
+### B. Redeem an activation code
+
+**Input**
+- Activation code.
+- Authenticated Supabase session; no client-supplied profile ID or email-verification flag is accepted as authority.
+
+**Trusted processing**
+1. Verify session; derive authenticated user ID and email/verification status from trusted Auth state.
+2. Reject unverified email.
+3. Compute the code hash using the same documented secure hashing scheme as issuance; never log the raw code.
+4. Begin the atomic database operation and serialize/lock the relevant enrollment/code and assignment invariant.
+5. Verify code exists, is unexpired, unused, and unrevoked; enrollment is `PENDING`; normalized email matches; template is `PUBLISHED` and assignable; and the user has no active assignment.
+6. Atomically mark the code used, activate the enrollment, create exactly one assignment, and insert required audit events.
+7. Commit before reporting success.
+
+**Failure behavior**
+- Invalid, expired, used, revoked, mismatched-email, ineligible-template, or already-assigned cases produce a generic safe failure response.
+- Failed validation does not consume a code that otherwise remains valid.
+- If any write or required audit insert fails, roll back all state changes.
+- Concurrent redemption of the same code results in at most one successful transaction.
+
+## 3. Response contract
+
+Use a consistent JSON response envelope; exact HTTP status mapping is a later API implementation detail. Responses must not leak whether a code belongs to another email, whether another user's account exists, raw database errors, SQL details, tokens, or stored hashes.
+
+Minimum logical outcomes:
+- `success`: activation completed and assignment exists.
+- `invalid_or_unavailable_code`: code is invalid, expired, used, revoked, or no longer eligible.
+- `email_verification_required`: session email is not verified.
+- `scope_not_assignable`: requested enrollment target is no longer eligible.
+- `already_has_active_assignment`: account already has an active assignment; no new assignment is created.
+- `temporarily_unavailable`: safe generic response for transactional/infrastructure failure; operation is not reported successful.
+
+Do not rely on client-side messages or status checks for authorization. Server logs must use a request/correlation ID and omit secrets.
+
+## 4. Transaction and concurrency requirements
+
+The exact RPC signatures, SQL locks, isolation level, and partial-index syntax are not finalized here. The implementation design must prove all of the following:
+- Unique pending enrollment per normalized email across scopes.
+- Unique active assignment per profile.
+- At most one active usable code per enrollment.
+- Same-code concurrent redemption is single-winner.
+- Different-scope replacement cannot race with another create/replacement and leave two pending enrollments.
+- The transaction is idempotent or safely retryable where appropriate; a client retry must not create a second assignment.
+- Required audit rows are part of the same transaction as state changes.
+- A failed transaction leaves enrollment, code, assignment, and audit state consistent.
+
+Candidate database constraints described in the Physical Schema/RLS Contract are proposals only until migration review. Never implement these guarantees using UI checks alone.
+
+## 5. Minimal test matrix required before release
+
+- Verified matching email + valid code + eligible template → one assignment, enrollment activated, code consumed, audit event present.
+- Unverified email → denied; no state change.
+- Email mismatch → denied; no code consumption.
+- Expired/used/revoked/invalid code → denied; no assignment.
+- Unassignable or archived template → denied; no assignment.
+- Existing active assignment → denied; no second assignment.
+- Two simultaneous redemptions of the same code → exactly one success.
+- Two simultaneous invitations for the same normalized email → at most one pending enrollment.
+- Concurrent different-scope replacement → one final pending enrollment and only its current unused code remains usable.
+- Injected audit-write failure → full rollback.
+- Retry after ambiguous network response → no duplicate assignment.
+- Responses/logs contain no plaintext activation code or other secret.
+
+Tests must run against a real local/test PostgreSQL or Supabase environment before migrations or production writes are considered ready. No such tests are claimed by this document.
+
+## 6. Explicitly deferred
+
+To keep the MVP narrow, this contract does not specify:
+- Detailed `mentor_assignments` and `template_transitions` RPCs.
+- General API routing conventions, frontend screens, email/SMS delivery provider, rate-limit thresholds, alerting, or observability stack.
+- Production retention periods for expired/revoked code rows.
+- Specialty log-entry schemas and logbook submission/correction workflows.
+
+These items remain subject to their previously accepted security and policy decisions when their implementation becomes necessary.
