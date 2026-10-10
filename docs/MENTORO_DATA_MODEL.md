@@ -67,10 +67,27 @@ MENTORO is a centralized medical training platform. The first release supports G
 ## 4. Entity definitions and rules
 
 ### 4.1 `profiles`
-Proposed fields: `id UUID PK REFERENCES auth.users(id)`, `full_name`, `created_at`, `updated_at`. Identity is derived from authenticated Supabase Auth identity. Account deletion/anonymization remains open.
+Proposed fields: `id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE RESTRICT`, `full_name TEXT`, `created_at TIMESTAMPTZ NOT NULL`, `updated_at TIMESTAMPTZ NOT NULL`.
+
+Accepted identity contract (design-only):
+- `profiles.id` equals the corresponding `auth.users.id`; clients cannot choose or change it.
+- The trusted Vercel Node.js backend provisions the profile after Supabase Auth registration; a database trigger is not the selected default.
+- Provisioning must be idempotent and include a retry/reconciliation path for partial failure where Auth succeeds but profile creation does not. Required provisioning failure must not be reported as complete success.
+- General profile updates may change only explicitly permitted profile fields, never identity or administrative data.
+- Account deletion/anonymization remains governed by L-32; final FK/delete behavior remains migration-design work.
 
 ### 4.2 `user_roles`
-Proposed fields: `id`, `user_id`, `role`, `created_at`, `granted_by`, `revoked_at`. Allowed roles for the initial model: `SUPER_ADMIN`, `TRAINEE`, `MENTOR`. Only trusted workflows grant/revoke roles. The initial release has one Super Admin with platform-wide scope. Recovery uses Supabase Auth plus a secured emergency procedure (L-22, L-29, L-41): pre-authorized operators, independent identity/authority verification, two approvers when operationally available, a documented narrow exception for material lockout risk, least privilege, secure recovery-material custody, audit logging, and independent post-recovery review. Environment-specific operator names, contacts, verification evidence, custody details, and review deadline must be completed in the production runbook. A uniqueness rule must prevent duplicate active grants while retaining revocation history.
+Proposed fields: `id UUID PRIMARY KEY`, `user_id UUID NOT NULL`, `role TEXT NOT NULL`, `created_at TIMESTAMPTZ NOT NULL`, `granted_by UUID`, `revoked_at TIMESTAMPTZ NULL`. Allowed roles: `SUPER_ADMIN`, `TRAINEE`, `MENTOR`.
+
+Accepted role-integrity contract (design-only):
+- Only trusted workflows grant/revoke roles; client-supplied roles are not authorization evidence.
+- Enforce at most one active grant per `(user_id, role)`, while retaining revoked history. A partial unique index with `revoked_at IS NULL` is the candidate implementation.
+- The initial release has one platform-wide Super Admin. A concurrency-safe database rule must prevent a second active Super Admin and prevent ordinary operations from removing the last active Super Admin.
+- Initial Super Admin bootstrap is a separate documented restricted operation, not a general self-grant exception. Emergency recovery follows L-22/L-29/L-41.
+- Role grant/revoke and required audit event must commit atomically; audit-write failure rolls back the role change.
+- Exact bootstrap mechanics, grantor FK behavior, index/locking implementation, and production recovery details remain open.
+
+Recovery uses Supabase Auth plus a secured emergency procedure: pre-authorized operators, independent identity/authority verification, two approvers when operationally available, a documented narrow exception for material lockout risk, least privilege, secure recovery-material custody, audit logging, and independent post-recovery review. Environment-specific operator names, contacts, verification evidence, custody details, and review deadline must be completed in the production runbook.
 
 ### 4.3 `specialties`
 Proposed fields: `id`, `name`, `slug`, `description`, `is_active`, `created_at`. Seed General Surgery, Neurology, and Anaesthesia & Critical Care. Deactivation must not invalidate history.
