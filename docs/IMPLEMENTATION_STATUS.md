@@ -61,3 +61,7 @@
 
 - L-35 is accepted: stable target identity plus explicit, traceable mapping between template versions. Historical records remain linked to their original template version; no automatic reinterpretation, coverage transfer, or assignment migration. Exact key format, mapping approval authority, multi-target representation, reporting rules, and conflict handling remain open.
 - L-35 is design-only. No migrations, schema changes, backend implementation, or database tests have been run as a result of this decision.
+
+
+- L-36 is accepted: current progress is shown separately from a historical archive for inactive/archived assignments. Historical records retain original assignment/template context; no automatic contribution to current progress or transfer between assignments. Cross-version comparisons require explicit approved mappings under L-35.
+- Detailed filters, historical metric calculations, visual comparisons, retired/replaced/split target display, and unavailable-data handling remain open. L-36 is design-only. No migrations, database/backend changes, UI implementation, or database tests have been run as a result of this decision.
