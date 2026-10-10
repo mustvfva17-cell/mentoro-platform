@@ -183,7 +183,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 11. Mentor review workflow and statuses — resolved by L-37: independent review lifecycle (`NOT_REVIEWED`, `IN_REVIEW`, `FEEDBACK_PROVIDED`, `REVIEWED`) that does not change entry status or constitute formal approval. Review granularity, reopening, trainee responses, feedback resolution, and repeated-cycle history remain open.
 9. Historical dashboard behavior for inactive targets and archived assignments.
 10. Mentor-review statuses and whether review affects entry status.
-11. Storage of failed transition attempts.
+11. Operational handling of failed assignment transitions, including audit-write failures, final failure taxonomy, detailed retention, and repeated/suspicious attempts (policy established by L-38).
 12. Source-approved field and validation requirements per specialty/log type.
 13. Detailed operational checklist and runbook for publication, archival, rollback, and template eligibility (core policy is accepted in L-21 and L-28).
 14. Retention/deletion policy for expired activation-code rows.
@@ -339,3 +339,14 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Formal approval and correction authorization/application remain governed by prior decisions, including L-17, L-23, and L-30. Mentors may provide educational feedback within their permissions but cannot directly edit submitted entries or apply corrections. Feedback alone is not formal rejection and does not imply trainee agreement.
 - Mentors may review only records for trainees assigned to them. Review status changes and feedback must be traceable with trusted actor identity and timestamp; client-supplied identity/role is not authoritative.
 - Review granularity (entry vs revision), reopening, trainee responses, feedback-resolution states, and repeated-cycle history remain open. L-37 is design-only and does not authorize migrations or implementation.
+
+
+## L-38 — Failed assignment transitions and audit logging (accepted)
+
+- `template_transitions` records only transitions that actually completed successfully; each successful transition is also represented in `audit_logs`.
+- Assignment-state changes, the successful transition row, and its associated audit event must commit atomically.
+- Failed or rejected attempts are recorded in `audit_logs` only, not as successful transition rows. Recording an attempt does not change assignment state.
+- Where applicable, audit events capture trusted actor identity, timestamp, operation type, target assignment, outcome, and failure/rejection reason, while minimizing sensitive data and excluding secrets.
+- Existing authorization and transition rules, including L-03 and L-21, remain in force. Client-supplied identity or role claims are not authoritative.
+- Audit retention/export follows L-34 and data-management/retention principles follow L-32.
+- Audit-write failure handling, final failure taxonomy, detailed retention for failed attempts, suspicious/repeated attempt handling, and technical atomicity details remain open. L-38 is design-only and does not authorize migrations or implementation.
