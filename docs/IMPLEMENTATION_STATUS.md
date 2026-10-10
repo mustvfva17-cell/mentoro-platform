@@ -65,3 +65,7 @@
 
 - L-36 is accepted: current progress is shown separately from a historical archive for inactive/archived assignments. Historical records retain original assignment/template context; no automatic contribution to current progress or transfer between assignments. Cross-version comparisons require explicit approved mappings under L-35.
 - Detailed filters, historical metric calculations, visual comparisons, retired/replaced/split target display, and unavailable-data handling remain open. L-36 is design-only. No migrations, database/backend changes, UI implementation, or database tests have been run as a result of this decision.
+
+
+- L-37 is accepted: mentor review is independent of log-entry status and formal approval, with review states `NOT_REVIEWED`, `IN_REVIEW`, `FEEDBACK_PROVIDED`, and `REVIEWED`. Mentors may provide feedback but cannot directly edit submitted entries or apply corrections; formal approval/correction authority remains governed by prior decisions.
+- Review granularity, reopening, trainee responses, feedback-resolution states, and repeated-cycle history remain open. L-37 is design-only. No migrations, database/backend changes, UI implementation, or database tests have been run as a result of this decision.
