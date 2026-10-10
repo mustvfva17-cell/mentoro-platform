@@ -39,7 +39,7 @@ Exact route names are intentionally not fixed until repository routing conventio
 7. Verify the selected template is eligible for new assignment.
 8. Create/reuse the pending enrollment and issue a new code; persist only its hash and a trusted 24-hour expiry.
 9. Write required audit event(s) in the same transaction as state changes.
-10. Return the plaintext code only through the authorized issuance response/channel after the transaction succeeds; never persist it. If secure delivery is not yet designed, return it only to the authorized administrator once and explicitly treat delivery as a separate pending design item.
+10. After commit, return the plaintext code once in the authenticated Super Admin response over HTTPS so the administrator can deliver it through their chosen channel. Do not add email/SMS delivery in this MVP slice. Never store the plaintext code. If the response is lost, do not attempt to reconstruct the code from its hash: the administrator must request a replacement, which revokes the prior unused code and issues a new one through the same audited workflow. The UI must warn that the code is shown once and should be shared only with the intended trainee.
 
 **Failure behavior**
 - Invalid authorization: deny without changing state.
@@ -59,8 +59,9 @@ Exact route names are intentionally not fixed until repository routing conventio
 3. Compute the code hash using the same documented secure hashing scheme as issuance; never log the raw code.
 4. Begin the atomic database operation and serialize/lock the relevant enrollment/code and assignment invariant.
 5. Verify code exists, is unexpired, unused, and unrevoked; enrollment is `PENDING`; normalized email matches; template is `PUBLISHED` and assignable; and the user has no active assignment.
-6. Atomically mark the code used, activate the enrollment, create exactly one assignment, and insert required audit events.
-7. Commit before reporting success.
+6. If the code is already used, permit an idempotent success response only when the same authenticated profile is the recorded activation profile and the unique assignment created from that enrollment exists. Return the existing assignment summary; do not create or mutate a second assignment. Otherwise treat the code as unavailable.
+7. For a first successful redemption, atomically mark the code used, activate the enrollment, record the activating profile/time, create exactly one assignment linked to the source enrollment, and insert required audit events.
+8. Commit before reporting success.
 
 **Failure behavior**
 - Invalid, expired, used, revoked, mismatched-email, ineligible-template, or already-assigned cases produce a generic safe failure response.
@@ -90,7 +91,8 @@ The exact RPC signatures, SQL locks, isolation level, and partial-index syntax a
 - At most one active usable code per enrollment.
 - Same-code concurrent redemption is single-winner.
 - Different-scope replacement cannot race with another create/replacement and leave two pending enrollments.
-- The transaction is idempotent or safely retryable where appropriate; a client retry must not create a second assignment.
+- A retry after a committed activation but lost response returns the existing result only to the same authenticated profile, using the used-code/enrollment/assignment linkage; all other reuse attempts fail safely.
+- Enforce at most one assignment per source enrollment with a unique constraint/index on non-null `created_from_pending_enrollment_id`, in addition to at most one active assignment per profile.
 - Required audit rows are part of the same transaction as state changes.
 - A failed transaction leaves enrollment, code, assignment, and audit state consistent.
 
@@ -108,7 +110,9 @@ Candidate database constraints described in the Physical Schema/RLS Contract are
 - Two simultaneous invitations for the same normalized email → at most one pending enrollment.
 - Concurrent different-scope replacement → one final pending enrollment and only its current unused code remains usable.
 - Injected audit-write failure → full rollback.
-- Retry after ambiguous network response → no duplicate assignment.
+- Retry after ambiguous network response from the same authenticated profile → same activation result and no duplicate assignment.
+- Reuse of a consumed code by a different profile → generic failure and no information disclosure.
+- Activation response is lost after issuance → prior plaintext cannot be recovered; replacement revokes the previous code and audits the new issuance.
 - Responses/logs contain no plaintext activation code or other secret.
 
 Tests must run against a real local/test PostgreSQL or Supabase environment before migrations or production writes are considered ready. No such tests are claimed by this document.
