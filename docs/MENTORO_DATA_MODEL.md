@@ -128,15 +128,6 @@ MVP integrity rules:
 - Same-email, same-scope requests reuse an eligible pending enrollment. A different-scope request serializes on normalized email, cancels the prior pending enrollment, revokes unused codes, and creates the replacement enrollment/code in one audited transaction. Do not mutate the prior scope.
 - Activated enrollments are never reused/cancelled to create duplicate assignments.
 - Exact normalization rules, lock strategy, FK behavior, and status/check/index details remain migration design.
-Proposed fields: `id`, `normalized_email`, `logbook_template_id`, `status`, `created_by`, `created_at`, `updated_at`, `activated_by_profile_id`, `activated_at`, `cancelled_at`. Status values: `PENDING`, `ACTIVATED`, `REVOKED`, `EXPIRED`, `CANCELLED`.
-
-- Email is normalized by trusted logic.
-- Activation requires authenticated, verified email matching the invitation.
-- At most one `PENDING` enrollment may exist per normalized email across all templates/specialties.
-- If an eligible pending enrollment exists for the same normalized email and selected template/scope, reuse it under L-20.
-- If the requested template/scope differs, cancel the existing pending enrollment and create a new enrollment; do not mutate the old enrollment's scope. Revoke/invalidate its unused activation codes in the same trusted atomic workflow and audit the replacement.
-- Never cancel or reuse an activated enrollment to replace an invitation; do not create duplicate assignments.
-- Concurrent create/reuse/replacement attempts for the same normalized email must be serialized safely and enforced at database level where practical. Exact migration constraints remain to be finalized under L-31.
 
 ### 4.8 `activation_codes`
 Proposed fields: `id UUID PRIMARY KEY`, `pending_enrollment_id UUID NOT NULL`, `code_hash TEXT NOT NULL UNIQUE`, `created_by UUID`, `created_at TIMESTAMPTZ NOT NULL`, `expires_at TIMESTAMPTZ NOT NULL`, `used_at TIMESTAMPTZ NULL`, `used_by UUID NULL`, `revoked_at TIMESTAMPTZ NULL`, `replaced_by_code_id UUID NULL`.
@@ -147,7 +138,6 @@ MVP integrity rules:
 - At most one unconsumed, unrevoked code per enrollment; a partial unique index on `pending_enrollment_id` where `used_at IS NULL AND revoked_at IS NULL` is the candidate. Expired unused codes are revoked before issuing replacements.
 - Redemption, enrollment activation, assignment creation, and audit writes commit atomically. Concurrent redemption of one code can succeed at most once; failed validation must not consume a valid code.
 - Hashing/entropy, rate limits, error contracts, lock strategy, and FK actions remain implementation-design work.
-Proposed fields: `id`, `pending_enrollment_id`, `code_hash`, `created_by`, `created_at`, `expires_at`, `used_at`, `used_by`, `revoked_at`, `replaced_by_code_id`. Store only secure hashes. Codes are single-use, expire 24 hours after issue, may be revoked before use, and replacement invalidates the previous unused code. `expires_at` is mandatory and assigned by trusted logic. Validation, consumption, enrollment activation, assignment creation, and audit event are atomic. Failed verification does not consume a valid code.
 
 ### Immediate scope and deferred design
 The immediate executable-design scope is `pending_enrollments`, `activation_codes`, and `trainee_assignments`. Detailed executable contracts for `mentor_assignments` and `template_transitions` are deferred until those workflows are in the immediate implementation scope. Their accepted authorization/history/atomicity policies remain in force; deferral is not permission to bypass them.
