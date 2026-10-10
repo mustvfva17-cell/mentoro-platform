@@ -12,6 +12,8 @@
 - RPC security: `SECURITY INVOKER` by default. Any `SECURITY DEFINER` exception needs explicit justification and review of ownership, safe `search_path`, execute grants, and RLS interaction.
 - Identity provisioning: the trusted Vercel Node.js backend is the selected profile-provisioning path after Supabase Auth registration (not a database trigger by default); provisioning must be idempotent and define retry/reconciliation for partial failure.
 - Role integrity: role grants/revocations are trusted, audited, and atomic; prevent duplicate active grants per user/role, prevent a second active platform-wide Super Admin, and prevent ordinary operations from removing the last active Super Admin. Initial Super Admin bootstrap is a separate restricted documented operation.
+- MVP enrollment/activation: one pending enrollment per normalized email; same-scope requests reuse it; scope replacement cancels the old pending enrollment and revokes unused codes atomically; one unconsumed/unrevoked code per enrollment; redemption, enrollment activation, assignment creation, and required audit writes are atomic.
+- MVP assignment integrity: a partial unique index enforces at most one active assignment per profile; activation can create at most one assignment from a pending enrollment and only for an assignable published template. Exact constraints/locking remain migration design.
 
 ## Accepted through this update
 
@@ -38,11 +40,13 @@
    - Identity/role-specific gates: settle Auth/profile partial-failure recovery, initial Super Admin bootstrap details, grantor FK behavior, and concurrency-safe last-Super-Admin protection before migration.
 2. ADR-01 has selected the trusted backend/deployment boundary (Vercel Node.js API, Supabase Auth, PostgreSQL RLS/grants, and atomic RPC/transactions). Final API/session and executable database contracts remain to be reviewed before migrations.
 3. The correction-request policy is defined: one `PENDING` request per entry, and no new request while an `APPROVED` request awaits application. Exact partial-index predicate, state-transition locking, and concurrent enforcement remain migration-design blockers.
-4. Define concurrency-safe enrollment/activation enforcement consistent with L-08/L-10/L-31.
+4. Enrollment/activation policy is now specified for the MVP: pending-enrollment uniqueness per normalized email, serialized scope replacement, one usable code per enrollment, single-use redemption, and atomic assignment creation. Exact partial indexes, locking, FK constraints, and race-condition tests remain migration-design blockers.
 5. Approve source-traceable medical requirements and final schemas for each specialty/log type before enabling that specialty/log type. Shared infrastructure may be developed in parallel.
 6. Implement and run the required security, integrity, concurrency, validation, history, and privacy tests against a real local/test PostgreSQL or Supabase environment.
 
 ### Deferred until the relevant feature or production gate
+
+- Detailed executable schema/RLS/RPC contracts for `mentor_assignments` and `template_transitions`; their accepted policy rules remain binding and must be implemented before those features are enabled.
 
 - Cross-version migration tooling and historical-entry editing beyond preserving historical references.
 - Detailed historical-dashboard filters/visual comparisons and additional mentor-feedback cycles beyond L-36/L-37.
