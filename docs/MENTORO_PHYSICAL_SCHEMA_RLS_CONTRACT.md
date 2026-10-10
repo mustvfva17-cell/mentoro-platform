@@ -86,7 +86,9 @@ Assignment eligibility is separate from lifecycle status:
 Trusted transactions must check both status and `is_assignable`. Add a database check constraint preventing `DRAFT` or `ARCHIVED` rows from having `is_assignable = TRUE`. Detailed publication, archival, and rollback workflows remain open.
 
 ### 4.5 `trainee_assignments`
-`id`, `profile_id`, `logbook_template_id`, `status`, `enrolled_at`, `ended_at`, `created_at`, `updated_at`, `created_from_pending_enrollment_id`. Status `ACTIVE/SUSPENDED/COMPLETED`. Add partial unique index:
+Proposed columns: `id UUID PRIMARY KEY`, `profile_id UUID NOT NULL`, `logbook_template_id UUID NOT NULL`, `status TEXT NOT NULL CHECK (status IN ('ACTIVE','SUSPENDED','COMPLETED'))`, `enrolled_at TIMESTAMPTZ NOT NULL`, `ended_at TIMESTAMPTZ NULL`, `created_at TIMESTAMPTZ NOT NULL`, `updated_at TIMESTAMPTZ NOT NULL`, `created_from_pending_enrollment_id UUID NULL`.
+
+Required invariant: at most one active assignment per profile platform-wide. Candidate enforcement:
 
 ```sql
 CREATE UNIQUE INDEX one_active_assignment_per_profile
@@ -94,18 +96,35 @@ ON public.trainee_assignments (profile_id)
 WHERE status = 'ACTIVE';
 ```
 
-The `created_from_pending_enrollment_id` FK can be added after both related tables exist. Transition must atomically suspend old and activate destination; rollback on any failure.
+Add a composite unique key on `(id, logbook_template_id)` to support entry/template consistency. The pending-enrollment FK is added after both tables exist; its uniqueness/cardinality must prevent one activation enrollment from creating multiple assignments. Trusted activation verifies the destination template is `PUBLISHED` and `is_assignable = TRUE`. Assignment creation and enrollment/code state changes commit atomically. Any later assignment switch must preserve L-03/L-21 and be atomic; detailed transition execution is deferred until needed.
 
 ### 4.6 `mentor_assignments`
 `id`, `mentor_profile_id`, `trainee_profile_id`, `status`, `assigned_by`, `assigned_at`, `ended_at`, `created_at`. Status `ACTIVE/ENDED/REVOKED`. Relationship is trainee-wide, not assignment-scoped. Only the Super Admin manages these relationships in the initial release. A mentor may access permitted records for the trainee while the relationship is eligible.
 
 ### 4.7 `pending_enrollments`
-`id`, `normalized_email`, `logbook_template_id`, `status`, `created_by`, `created_at`, `updated_at`, `activated_by_profile_id`, `activated_at`, `cancelled_at`. Status `PENDING/ACTIVATED/REVOKED/EXPIRED/CANCELLED`.
+Proposed columns: `id UUID PRIMARY KEY`, `normalized_email TEXT NOT NULL`, `logbook_template_id UUID NOT NULL`, `status TEXT NOT NULL`, `created_by UUID`, `created_at TIMESTAMPTZ NOT NULL`, `updated_at TIMESTAMPTZ NOT NULL`, `activated_by_profile_id UUID NULL`, `activated_at TIMESTAMPTZ NULL`, `cancelled_at TIMESTAMPTZ NULL`. Status is restricted to `PENDING/ACTIVATED/REVOKED/EXPIRED/CANCELLED`; exact FK actions and check constraints are migration-design work.
+
+**Core enrollment contract (design-only):**
+- Trusted backend normalizes the invitation email consistently and activation requires the authenticated Supabase email to be verified and match that normalized value.
+- At most one row with status `PENDING` may exist per normalized email across all templates/specialties. A partial unique index on `normalized_email` for `status = 'PENDING'` is the candidate database enforcement.
+- For the same normalized email and same selected template/scope, reuse the eligible pending enrollment rather than creating a duplicate.
+- For a different selected template/scope, serialize the request by normalized email, cancel the prior pending enrollment, revoke its still-unused activation code(s), create the replacement enrollment/code, and write audit events in one transaction. Do not mutate the previous enrollment's scope.
+- An activated enrollment is never reused or cancelled to create a duplicate assignment. Failed replacement must roll back all changes.
+- Exact email normalization rules, per-email lock mechanism, FK behavior, and the final status/check/index design remain migration-review items.`id`, `normalized_email`, `logbook_template_id`, `status`, `created_by`, `created_at`, `updated_at`, `activated_by_profile_id`, `activated_at`, `cancelled_at`. Status `PENDING/ACTIVATED/REVOKED/EXPIRED/CANCELLED`.
 
 Trusted logic normalizes email and requires exact normalized match to the authenticated, verified email. Under L-31, enforce at most one `PENDING` enrollment per normalized email across all templates/specialties. Reuse an eligible pending enrollment for the same email and template/scope. For a different scope, atomically cancel the existing pending enrollment, revoke/invalidate its unused activation codes, create the replacement enrollment and code as applicable, and write the audit event; do not mutate the prior enrollment's scope. Never cancel/reuse an activated enrollment through this workflow. Concurrent create/reuse/replacement attempts must be serialized safely. Exact database constraint/index design remains migration work.
 
 ### 4.8 `activation_codes`
-`id`, `pending_enrollment_id`, `code_hash UNIQUE`, `created_by`, `created_at`, `expires_at NOT NULL`, `used_at`, `used_by`, `revoked_at`, `replaced_by_code_id`. Store only a secure hash. Trusted logic sets expiry to exactly 24 hours after issuance. Replacement invalidates the previous unused code and creates a new 24-hour validity period. Validation, consumption, enrollment activation, assignment creation, and audit write are atomic; failed verification does not consume a valid code.
+Proposed columns: `id UUID PRIMARY KEY`, `pending_enrollment_id UUID NOT NULL`, `code_hash TEXT NOT NULL UNIQUE`, `created_by UUID`, `created_at TIMESTAMPTZ NOT NULL`, `expires_at TIMESTAMPTZ NOT NULL`, `used_at TIMESTAMPTZ NULL`, `used_by UUID NULL`, `revoked_at TIMESTAMPTZ NULL`, `replaced_by_code_id UUID NULL`.
+
+**Core activation-code contract (design-only):**
+- Store only a secure one-way hash; the plaintext code must not be persisted in database rows, audit metadata, logs, or repository files.
+- Code issuance sets `expires_at` to 24 hours after issue using trusted server logic. Validation also checks that the code is not expired, used, or revoked.
+- At most one unconsumed, unrevoked code may exist per pending enrollment. A candidate partial unique index covers `pending_enrollment_id` where `used_at IS NULL AND revoked_at IS NULL`. Before replacement/issuance, any expired unused code must be revoked so it does not block the invariant; expiry is still checked at use time.
+- Replacing a code revokes the prior unused code before creating its replacement. The previous code must immediately become unusable.
+- Activation must verify code, verified-email match, enrollment state, template eligibility, and absence of an existing active assignment; then consume the code, activate the enrollment, create the assignment, and write required audit events atomically.
+- Failed validation must not consume a valid code or leave partial enrollment/assignment state. Concurrent attempts to redeem the same code must result in at most one successful activation.
+- Exact hashing algorithm/entropy, API rate limits, response/error contracts, lock strategy, and FK actions remain detailed implementation design; never return secrets in errors or logs.`id`, `pending_enrollment_id`, `code_hash UNIQUE`, `created_by`, `created_at`, `expires_at NOT NULL`, `used_at`, `used_by`, `revoked_at`, `replaced_by_code_id`. Store only a secure hash. Trusted logic sets expiry to exactly 24 hours after issuance. Replacement invalidates the previous unused code and creates a new 24-hour validity period. Validation, consumption, enrollment activation, assignment creation, and audit write are atomic; failed verification does not consume a valid code.
 
 ### 4.9 `template_transitions`
 `id`, `profile_id`, `from_assignment_id`, `to_assignment_id`, `from_template_id`, `to_template_id`, `initiated_by`, `transitioned_at`, `reason`, `mapping_summary JSONB`, `status`. Per L-38, this table records only transitions that actually completed successfully; the successful transition row, assignment changes, and associated audit event commit atomically. Failed/rejected attempts are recorded in `audit_logs` only, not as successful transition rows. Historical entries are not reassigned.
@@ -164,13 +183,19 @@ Required:
 
 Suggested query indexes: assignments by profile/date; entries by assignment/date; association rows by referenced item; revisions by entry/revision; correction requests by entry/status; pending enrollments by normalized email/status; activation codes by enrollment/expiry; mentor assignments by mentor/trainee/status.
 
+## Current implementation scope and deferred contracts
+
+**Prioritize now:** `pending_enrollments`, `activation_codes`, and `trainee_assignments`, because they are required for the first trainee activation path and enforce single-use invitations, one active assignment, and atomic enrollment.
+
+**Defer for now (policy remains in force):** detailed executable column/index/RLS/RPC contracts for `mentor_assignments` and `template_transitions`. Their already accepted authorization, history, and atomicity rules are not cancelled; only their detailed implementation design is deferred until mentor onboarding or assignment switching is in the immediate build scope. Do not implement those workflows through an ad-hoc path in the meantime.
+
 ## 6. Trusted transactional workflows
 
-### Activation
-Authenticate; verify email; normalize and match email; lock/validate enrollment and code; verify expiry/revocation/use state and template/assignment eligibility; serialize code consumption; then atomically consume code, activate enrollment, create assignment, and write audit event. Failed checks must not consume a valid code or create partial state.
+### Activation — MVP critical path
+Authenticate through Supabase Auth; require verified email; normalize and match the enrollment email; serialize access to the normalized email, enrollment, and code; verify that the enrollment is `PENDING`, the code is unexpired/unused/unrevoked, the template is `PUBLISHED` and assignable, and the user has no active assignment. Then atomically consume the code, activate the enrollment, create the assignment, and write required audit events. Unique constraints remain the final defense against concurrent duplicate activation or active assignments. Audit failure rolls back the whole operation. Failed checks must not consume a valid code or create partial state.
 
-### Pending enrollment reuse and code replacement
-Find an eligible pending enrollment by normalized email and selected template/scope. Reuse it rather than create a duplicate. Under lock, revoke the prior unused code, issue/store only a hash for a new code, set a fresh 24-hour expiry, and write audit history. Already activated enrollment is not reusable for duplicate assignment creation. Cross-template concurrency policy remains open.
+### Enrollment creation/replacement — MVP critical path
+Under a concurrency-safe per-normalized-email serialization mechanism, inspect the current pending enrollment. Reuse it when the selected scope/template matches. If scope differs, cancel it and revoke its unused codes, create the replacement enrollment and code, and write required audit events in one transaction. Do not cancel an activated enrollment. If any step fails, roll back the complete replacement.
 
 ### Assignment/template transition
 Authorized Super Admin selects keep-current or transition. If transition: validate destination template, create/activate destination assignment, suspend prior active assignment, write transition and audit records in one transaction. Roll back all on failure.
