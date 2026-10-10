@@ -360,3 +360,14 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - L-24 through L-28 continue to apply. Technical schema validity does not establish medical correctness or completeness; medical content must be reviewed and approved through the trusted workflow before being treated as final.
 - Unverified requirements remain open and must not be filled by guessing. L-39 does not mean that all requirements for General Surgery, Neurology, or Anaesthesia & Critical Care are already defined.
 - Source selection, field extraction/review, detailed approval responsibilities, and final schemas remain open. L-39 is design-only and does not authorize migrations or implementation.
+
+
+## L-40 — Template lifecycle operational safeguards (accepted)
+
+- L-40 defines operational safeguards for publication, eligibility changes, archival, and rollback; L-21 and L-28 remain authoritative for lifecycle states, assignment eligibility, and publication rules.
+- Before publication, a trusted workflow verifies schema validity and applicable checks, confirms documented restricted administrative approval, and ensures unresolved medical requirements are not treated as approved final requirements under L-39. Failed required checks must not leave partial publication or eligibility changes.
+- Eligibility changes to `is_assignable` must validate template state/rules, use a trusted workflow, and be audited. Frontend filtering alone is insufficient. Eligibility changes do not automatically migrate, suspend, or replace existing assignments.
+- Archival is validated and audited. Archived versions cannot receive new assignments or be transition destinations; historical records remain linked to their original versions and are not deleted, transferred, or reinterpreted. Archived versions are not reopened; future use requires a new version and applicable checks.
+- Rollback disables new use of the affected version. A previously published version may regain eligibility only after validity and compatibility checks. Rollback must not rewrite versions or historical data, change historical schema references, or automatically migrate trainees. Trainee transitions remain separate authorized operations under L-03/L-21.
+- Lifecycle operations must prevent partially applied/inconsistent committed states; failures must not be treated as success. Audit sensitive changes through trusted workflows, following L-34; client-supplied identity/role is not authoritative.
+- Detailed production runbooks, recovery/retry procedures, audit-write failure handling, operational responsibilities, and technical consistency mechanisms remain open. L-40 is design/operational policy only and authorizes no migrations or implementation.
