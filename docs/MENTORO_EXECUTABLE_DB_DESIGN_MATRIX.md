@@ -45,6 +45,19 @@ This matrix translates accepted decisions into a reviewable implementation check
 | RLS/grants | No ordinary user role-table writes or self-granting; role reads only as required by trusted authorization design | Exact policy/function boundary remains open |
 | Atomicity | Role grant/revoke + required audit event in one transaction | Required test: audit failure rolls back role change |
 
+#### Platform-wide Super Admin concurrency guard
+
+**Recommended design proposal:** keep `user_roles` as the role-grant history and enforce at most one active platform-wide Super Admin with a partial unique index on a constant expression:
+
+```sql
+CREATE UNIQUE INDEX one_active_super_admin_platform
+ON public.user_roles ((role))
+WHERE role = 'SUPER_ADMIN' AND revoked_at IS NULL;
+```
+
+This is a candidate predicate, not approved migration SQL. The constant-expression uniqueness rule prevents two active Super Admin rows even if two grant requests race. It does not, by itself, prevent revocation of the last active Super Admin.
+
+All Super Admin grant, revoke, and recovery operations must therefore use one trusted transaction boundary that acquires the same transaction-scoped serialization lock before checking or changing the active Super Admin set. A revoke must fail if it would leave zero active Super Admins, except through the separately documented L-41 emergency recovery procedure. The exact lock primitive/key, lock ordering, recovery exception, and audit event contract must be reviewed and tested together. Never implement a check-then-write sequence without serialization.
 ### 2.3 `pending_enrollments`
 
 **Purpose:** one pending invitation/enrollment per normalized email across all templates.
@@ -115,6 +128,15 @@ WHERE revoked_at IS NULL;
 
 The one-platform-wide-Super-Admin invariant needs its own concurrency-safe design; the per-user role index above does not enforce it.
 
+## 3.1 Trusted Vercel-to-PostgreSQL privilege boundary
+
+**Recommended direction for review:** do not assume that `SECURITY INVOKER` alone makes an RPC least-privileged. Its effective access is that of the database role executing it; a Supabase service-role credential is privileged and bypasses RLS.
+
+Before implementation, choose and document the actual backend connection model:
+- Preferred if supported and operationally viable: a dedicated server-only PostgreSQL role for the Vercel API, with no `BYPASSRLS`, minimal table privileges, and explicit execute grants for reviewed RPCs; keep the Supabase service-role key out of the ordinary application data path.
+- If the deployment instead uses the Supabase service-role client for a protected operation, treat the API's server-side authorization checks as mandatory because RLS is not the effective boundary for that role; limit this client to server-only code and tightly scope the callable operations. Do not claim that invoker rights restore RLS protection for a bypass-RLS role.
+
+In either case, verify the real Supabase/Vercel connection and pooling options, grants, RLS behavior, transaction support, and actor propagation in an isolated test project before choosing final RPC signatures. A privileged function must not infer the actor from an untrusted argument. Every protected operation must bind the supplied profile ID to the verified session-derived actor in the trusted API boundary, and record that actor in the audit event.
 ## 4. Activation transaction contract
 
 The trusted backend verifies session state and email verification, derives the profile UUID, and computes the code hash. The database transaction must then:
