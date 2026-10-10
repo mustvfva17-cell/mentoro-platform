@@ -464,3 +464,24 @@ Do not open new policy decisions unless implementation reveals a genuine conflic
 - Trusted audit records capture the request, verification, operator, approver(s) or exception, timestamps, actions, and resulting privileges, excluding secrets and unnecessary sensitive data. An authorized reviewer independent of the operator documents the review, conclusion, irregularities, and corrective actions.
 - Before production, the operational runbook must define operators, acceptable verification evidence, recovery-material custody, emergency contacts, approval/exception steps, and independent-review deadline. Actual environment-specific values remain to be populated. L-41 resolves OD-02 and OD-15 at policy level.
 - L-41 is design/operational policy only. No migrations, database changes, backend implementation, or UI implementation are authorized.
+
+
+## ADR-01 — Trusted backend and atomic write boundary (accepted)
+
+### Required contract
+- Vercel-hosted Node.js API is the trusted boundary for protected application writes and server-side schema validation.
+- Authenticate through Supabase Auth; derive actor identity from verified session/token state. Client-supplied user IDs, roles, ownership, and permission claims are not authoritative.
+- Enforce object-level authorization in the backend and keep PostgreSQL RLS enabled for protected data. Specify explicit grants and constraints; backend checks do not replace RLS.
+- Validate specialty payloads in trusted backend code with Ajv 8 and JSON Schema Draft 2020-12 against the exact schema selected by template version and log type. Frontend validation is supplementary.
+- Use reviewed PostgreSQL transactions/RPC functions for multi-row operations requiring atomicity. State changes and required audit/revision/transition records must commit together or roll back together. Failed operations must not leave partial state or be reported as successful.
+- No alternate write path may bypass authorization, validation, lifecycle rules, or required audit behavior. Enforce concurrency-sensitive invariants in database/transaction design.
+- Never expose service-role credentials or privileged secrets to browser code, client bundles, public assets, logs, or repository files. Privileged server-side use, if any, must be explicitly justified and least-privilege; it cannot substitute for authorization.
+- Any SECURITY DEFINER function needs explicit review of search_path, execute grants, ownership/privileges, and RLS interaction.
+
+### Design work still required before migrations
+- Concrete API routing/session propagation and trusted backend deployment details.
+- Exact SQL types, keys, foreign/composite keys, uniqueness/check constraints, indexes, grants, and RLS policies.
+- RPC/function signatures, transaction boundaries, locking/isolation, audit-write failure behavior, and failure/error contracts.
+- Review of the full design against accepted decisions and the implementation-blocker checklist.
+
+ADR-01 is design-only. No migrations, database changes, backend/frontend code, secrets, deployment, or tests are created or claimed by this update.
