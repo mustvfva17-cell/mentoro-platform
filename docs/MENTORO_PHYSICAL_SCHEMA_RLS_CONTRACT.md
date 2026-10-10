@@ -137,6 +137,10 @@ Required:
 - Active role grant uniqueness.
 - Mentor assignment uniqueness/lifecycle constraints after final review.
 - Enrollment reuse serialized with transaction/lock and appropriate uniqueness constraint where compatible with the open cross-template policy.
+- Correction requests: enforce at most one `PENDING` decision request per entry and prohibit a new `PENDING` request while an `APPROVED` request awaits application. A partial unique index covering both `PENDING` and `APPROVED` states is a candidate enforcement mechanism; finalize the exact index/predicate with the schema and state-transition design. `REJECTED`, `CANCELLED`, and `APPLIED` do not block a new request.
+- Required audit events for a sensitive write must be inserted in the same transaction as that write; audit insertion failure rolls back the complete transaction.
+- RPC functions use `SECURITY INVOKER` by default. Any `SECURITY DEFINER` exception requires documented necessity and explicit review of ownership, safe `search_path`, grants, and RLS interaction.
+- Only sensitive/multi-step writes are mandated through trusted API/RPC workflows. Any allowed simple direct write must have an explicit reviewed GRANTS/RLS/constraint contract; unclassified direct writes are not implicitly allowed.
 - All multi-row operations use trusted atomic transactions.
 - Foreign keys/indexes are reviewed for query performance; PostgreSQL does not automatically index every referencing FK.
 
@@ -159,8 +163,8 @@ Trainee can create/edit draft under own eligible active assignment. Validate com
 ### Mentor review
 Authenticate mentor, check active trainee-wide mentor relationship, verify record belongs to assigned trainee, then append a review event. Mentor cannot approve correction requests.
 
-### Correction (L-04, L-07, L-17, L-23)
-The trainee submits a complete proposed correction with mandatory reason and expected current revision; submission does not mutate the entry. Enforce one open request per entry. Trainee withdrawal is allowed only before decision and is audited. Only administration can approve/reject and authorize application. Approval alone does not apply the change. At apply time, compare expected revision with current revision; if stale, block application and refer to administration for review without automatic rebasing. Otherwise snapshot complete before/after state, including associations, update current row and associations, append revision, update request status to `APPLIED`, and audit in one transaction. Any failure rolls back all changes.
+### Correction (L-04, L-07, L-17, L-23, L-30; executable enforcement design)
+The trainee submits a complete proposed correction with mandatory reason and expected current revision; submission does not mutate the entry. `PENDING` is the only state awaiting an administrative decision. Enforce at most one `PENDING` request per entry. If a request is `APPROVED` but not yet applied, it blocks creation of another request even though it is no longer awaiting a decision. A new request is permitted only after the prior request is `REJECTED`, `CANCELLED`, or `APPLIED`. A partial unique index spanning `PENDING` and `APPROVED` is a candidate way to enforce the no-overlap invariant; finalize its exact predicate and state-transition enforcement in the migration design. Trainee withdrawal is allowed only before decision and is audited. Only administration can approve/reject and authorize application. Approval alone does not apply the change. At apply time, compare expected revision with current revision; if stale, block application and refer to administration for review without automatic rebasing. Otherwise snapshot complete before/after state, including associations, update current row and associations, append revision, update request status to `APPLIED`, and write the required audit event in the same transaction. Any failure, including audit-write failure, rolls back all changes. This is the accepted contract; no index, RPC, or migration has been implemented yet.
 
 ## 7. RLS and grants contract
 
@@ -187,11 +191,13 @@ Enable RLS on all private tables exposed through Supabase APIs and define SQL gr
 ### Security implementation requirements
 - Derive actor identity from authenticated Supabase context.
 - Never trust client-provided role, actor, owner, or assignment identifiers.
-- Review `SECURITY DEFINER` functions for fixed safe `search_path`, narrow privileges, explicit execution grants, and privilege-escalation risks.
+- `SECURITY INVOKER` is the default for RPC functions. Any `SECURITY DEFINER` exception must be justified and reviewed for owner privileges, fixed safe `search_path`, narrow explicit execute grants, and RLS interaction.
 - Avoid recursive RLS helper policies.
-- Service-role secret remains server-side.
+- Service-role secret remains server-side and is never exposed to browser code.
 - Ordinary clients cannot update/delete revision and audit history.
 - Activation hashes are not readable by trainees or mentors.
+- For a sensitive write requiring an audit event, write the event in the same transaction. Audit failure must roll back the protected state change; do not report success without the required event.
+- Direct writes are limited to explicitly approved simple operations with documented GRANTS, RLS, and database constraints. Sensitive or multi-step operations must use the trusted API and reviewed atomic database boundary.
 
 ## 8. Privacy and historical integrity
 
@@ -266,8 +272,8 @@ This review does not supersede accepted decisions. It separates work that must b
 ### Blockers before migrations or production writes
 
 1. **Executable database/security design:** define exact SQL types, primary/foreign/composite keys, uniqueness and check constraints, indexes, grants, RLS policies, and trusted transaction functions. Validate that client-controlled identifiers/roles cannot bypass authorization. This is a required implementation-design gate, not a new policy decision.
-2. **Trusted write and validation boundary:** select and document the concrete backend/deployment boundary that enforces authentication, authorization, template/assignment rules, JSON Schema Draft 2020-12 validation with Ajv 8, and atomic writes. No alternate client write path may bypass these controls.
-3. **Correction-request concurrency:** define the precise set of open correction-request states and enforce one open request per log entry with concurrency-safe database enforcement. Preserve the accepted L-23/L-30 workflow and stale-revision protection.
+2. **Trusted write and validation boundary:** ADR-01 selects Vercel Node.js API, Supabase Auth, PostgreSQL RLS/grants, Ajv 8 with JSON Schema Draft 2020-12, and atomic RPC/transaction workflows. The concrete API routing, session propagation, RPC contracts, privilege grants, and executable policies still require review before migrations. Sensitive writes use the trusted path; direct simple writes require explicit approval and a complete GRANTS/RLS/constraint contract.
+3. **Correction-request concurrency:** the policy contract is now defined: one `PENDING` request per entry, and no new request while an `APPROVED` request awaits application; `REJECTED`, `CANCELLED`, and `APPLIED` do not block a new request. The exact partial-index predicate/state-transition enforcement, transaction locking, and stale-revision protection remain migration-design blockers.
 4. **Enrollment/activation concurrency:** translate L-08/L-10/L-31 into database constraints and trusted atomic workflows so codes cannot be reused and a normalized email cannot acquire conflicting pending enrollments under concurrent requests.
 5. **Source-approved specialty schemas before enabling each specialty/log type:** choose authoritative sources, review required/optional fields and constraints, record traceability, and approve final schemas under L-39. Shared platform scaffolding may proceed in parallel, but a specialty/log type must not be treated as ready for use without its approved schema.
 6. **Pre-release verification:** implement and execute the security, integrity, concurrency, validation, history, and privacy tests in the Physical Schema/RLS Contract against a real local/test PostgreSQL or Supabase environment. Test definitions alone are not evidence of passing tests.
