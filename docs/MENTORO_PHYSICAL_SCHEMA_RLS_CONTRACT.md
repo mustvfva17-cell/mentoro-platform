@@ -247,6 +247,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 8. Audit taxonomy, retention, and export — resolved at principles level by L-34; exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open.
 9. Stable target identity and cross-version mapping — resolved by L-35: stable target identifiers and explicit version mappings; key format, approval authority, multi-target representation, reporting calculations, and conflict handling remain open.
 10. Historical dashboards for inactive targets and archived assignments — resolved by L-36: current progress is scoped to the active assignment, with a separate historical archive preserving original assignment/template links. Detailed filters, historical metrics, visual comparisons, and unavailable-data handling remain open.
+11. Mentor review workflow and statuses — resolved by L-37: independent review lifecycle (`NOT_REVIEWED`, `IN_REVIEW`, `FEEDBACK_PROVIDED`, `REVIEWED`) that does not change entry status or constitute formal approval. Review granularity, reopening, trainee responses, feedback resolution, and repeated-cycle history remain open.
 9. Historical display of inactive targets and archived assignments.
 10. Mentor-review statuses and effect on entry status.
 11. Failed-transition audit storage.
@@ -258,7 +259,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 
 Before migrations: review all three design documents together; resolve open decisions required for security/integrity; finalize exact SQL types, constraints, composite FKs, indexes, grants, and RLS; specify trusted functions; prepare version-controlled migrations and seeds; run real local/test database checks; review rollback and deployment.
 
-**Current status: CONSOLIDATED DESIGN DRAFT through L-36 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: CONSOLIDATED DESIGN DRAFT through L-37 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ### L-24 schema registry security and historical integrity
@@ -385,3 +386,12 @@ Before migrations: review all three design documents together; resolve open deci
 - Cross-version comparison requires explicit approved mappings under L-35; such mappings do not automatically make historical achievements satisfy current requirements.
 - Current and historical views follow existing authorization rules and confer no additional mentor access. Data availability follows L-32 retention/data-management policy.
 - Filters, historical metric calculations, retired/replaced/split target display, visual comparison, and unavailable-data handling remain open. L-36 is design-only; no migrations or implementation are authorized.
+
+
+## L-37 — Mentor review workflow and statuses (accepted)
+
+- Mentor review is a separate lifecycle from log-entry status and formal approval. Review-state changes do not automatically change entry status and do not constitute formal approval.
+- Review states are `NOT_REVIEWED`, `IN_REVIEW`, `FEEDBACK_PROVIDED`, and `REVIEWED` (the current review cycle is complete with no outstanding feedback within that cycle).
+- Mentors may provide educational feedback within assigned-trainee permissions but cannot directly edit submitted entries or apply corrections. Formal approval and correction authority remain governed by L-17, L-23, and L-30. Feedback is not formal rejection and does not imply trainee agreement.
+- Record review-state changes and feedback in a traceable manner with trusted actor identity and timestamp. Client-supplied identity/role is not authoritative. Existing mentor scope restrictions apply.
+- Entry-versus-revision review granularity, reopening, trainee responses, feedback-resolution states, and repeated-cycle history remain open. L-37 is design-only; no migrations or implementation are authorized.
