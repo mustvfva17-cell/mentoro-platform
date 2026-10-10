@@ -74,3 +74,8 @@
 - L-38 is accepted: `template_transitions` records only successful assignment transitions; failed/rejected attempts are recorded in `audit_logs` only. Successful assignment-state changes, transition records, and associated audit events must commit atomically. Audit events capture the minimum relevant trusted actor, operation, target, outcome, and reason details without secrets or unnecessary sensitive data.
 - OD-11 is resolved by L-38 at policy level. Audit-write failure handling, detailed failure taxonomy and retention, repeated/suspicious attempt handling, and exact technical atomicity/consistency mechanisms remain open.
 - L-38 is design-only. No migrations, database changes, backend implementation, UI implementation, or database tests have been run as a result of this decision.
+
+
+- L-39 is accepted: source-first policy for specialty/log-type requirements. Requirements must be traceable to approved sources or documented platform design decisions; distinguish source-supported requirements, design decisions, and items awaiting verification. Technical schema validity alone does not establish medical correctness or completeness.
+- OD-12 is resolved at policy level by L-39. Approved source selection, actual field extraction/review, detailed approval responsibilities, and final specialty/log-type schemas remain open.
+- L-39 is design-only. No migrations, database changes, backend implementation, UI implementation, or database tests have been run as a result of this decision.
