@@ -350,3 +350,13 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Existing authorization and transition rules, including L-03 and L-21, remain in force. Client-supplied identity or role claims are not authoritative.
 - Audit retention/export follows L-34 and data-management/retention principles follow L-32.
 - Audit-write failure handling, final failure taxonomy, detailed retention for failed attempts, suspicious/repeated attempt handling, and technical atomicity details remain open. L-38 is design-only and does not authorize migrations or implementation.
+
+
+## L-39 — Source-first specialty requirements and validation (accepted)
+
+- Medical requirements for each MVP specialty and log type must be grounded in identified, approved sources, with source/version details where applicable. Unsupported assumptions must not be presented as approved medical requirements.
+- Each requirement must be traceable to a supporting source or documented platform design decision. Separate source-supported requirements, platform design decisions, and requirements awaiting verification/approval.
+- Before approving a log type's requirements, document applicable required/optional fields, data types, allowed values, validation constraints, and their source or rationale. Do not make a medical validation rule mandatory merely for implementation convenience.
+- L-24 through L-28 continue to apply. Technical schema validity does not establish medical correctness or completeness; medical content must be reviewed and approved through the trusted workflow before being treated as final.
+- Unverified requirements remain open and must not be filled by guessing. L-39 does not mean that all requirements for General Surgery, Neurology, or Anaesthesia & Critical Care are already defined.
+- Source selection, field extraction/review, detailed approval responsibilities, and final schemas remain open. L-39 is design-only and does not authorize migrations or implementation.
