@@ -178,6 +178,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 6. Account deletion, anonymization, retention, export, and legal policies — resolved at principles level by L-32; numeric retention periods, legal exceptions, export/backup handling, and technical mechanisms remain open.
 7. Stable target keys and cross-version mapping.
 8. Audit taxonomy, retention, and export — resolved at principles level by L-34: unified model for sensitive events, with separate retention and export policies. Exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open.
+9. Stable target identity and cross-version mapping — resolved by L-35: stable target identifiers plus explicit mappings between template versions; exact key format, mapping approval authority, multi-target relationship representation, reporting rules, and conflict handling remain open.
 9. Historical dashboard behavior for inactive targets and archived assignments.
 10. Mentor-review statuses and whether review affects entry status.
 11. Storage of failed transition attempts.
@@ -189,7 +190,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 
 Before implementation, review this model against `docs/decisions/README.md` and `docs/PHYSICAL_SCHEMA_RLS_CONTRACT.md`, finalize SQL types/constraints/FKs/indexes, define exact RLS and grants, specify trusted transaction functions, prepare version-controlled migrations, and run tests against an actual local/test database.
 
-**Current status: DESIGN DRAFT through L-34 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: DESIGN DRAFT through L-35 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ## 9. Super Admin recovery (L-22)
@@ -308,3 +309,12 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Classify events into authentication/security, enrollment/activation, assignment/transition, correction/revision, template/schema lifecycle, administrative emergency recovery, and audit export. Exact event catalogue remains open.
 - Establish separate documented retention and export policies. Retention must be category-specific and purpose/legal-obligation aware; export is restricted to authorized roles and purposes, protects personal data, and records export requests/outcomes.
 - Numeric retention periods, detailed event types, export formats/permissions, backup handling, and operational safeguards remain open. L-34 is principles-only and does not authorize implementation or migrations.
+
+
+## L-35 — Stable target identity and cross-version mapping (accepted)
+
+- Every training target has a stable identifier independent of its name/description. Preserve each version-specific target definition as historical content.
+- Record cross-version relationships explicitly; never infer equivalence from similar names/descriptions. Supported relationships: `SAME_TARGET`, `REPLACED_BY`, `SPLIT_INTO`, `MERGED_INTO`, and `NO_EQUIVALENT`.
+- Keep trainee records linked to their original template version. Do not automatically reinterpret historical records or transfer/aggregate coverage to new-version targets. Cross-version reports may use only explicit, approved mappings where applicable reporting rules permit.
+- Mappings must be traceable and reviewable. The approval authority must be defined before mappings are used for cross-version reporting.
+- Exact key format, approval authority, multi-target mapping representation, reporting calculations, and incomplete/conflicting mapping handling remain open. L-35 is design-only and does not authorize migrations or implementation.
