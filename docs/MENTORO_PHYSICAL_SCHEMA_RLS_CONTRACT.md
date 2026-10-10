@@ -244,7 +244,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 5. Pending-enrollment uniqueness across templates — resolved by L-31 at policy level; exact concurrency-safe database enforcement remains migration-design work.
 6. Account deletion, anonymization, retention, export, and legal policies — resolved at principles level by L-32; numeric retention periods, legal exceptions, export/backup handling, and technical mechanisms remain open.
 7. Stable target keys and cross-version mapping.
-8. Audit taxonomy, retention, and export.
+8. Audit taxonomy, retention, and export — resolved at principles level by L-34; exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open.
 9. Historical display of inactive targets and archived assignments.
 10. Mentor-review statuses and effect on entry status.
 11. Failed-transition audit storage.
@@ -256,7 +256,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 
 Before migrations: review all three design documents together; resolve open decisions required for security/integrity; finalize exact SQL types, constraints, composite FKs, indexes, grants, and RLS; specify trusted functions; prepare version-controlled migrations and seeds; run real local/test database checks; review rollback and deployment.
 
-**Current status: CONSOLIDATED DESIGN DRAFT through L-32 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: CONSOLIDATED DESIGN DRAFT through L-34 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ### L-24 schema registry security and historical integrity
@@ -355,3 +355,12 @@ Before migrations: review all three design documents together; resolve open deci
 - Define documented, data-category-specific retention, deletion, anonymization, export, backup, and applicable legal-rights procedures. Avoid unnecessary retention and do not presume indefinite retention.
 - Do not silently delete or alter historical records, revision history, or audit records. Any permitted deletion/anonymization must be restricted, trusted, documented, and must not silently change historical meaning or reassign records.
 - Numeric retention periods, legal exceptions, detailed export/backup handling, final technical mechanisms, and database changes remain open. L-32 is principles-only and does not authorize implementation or migrations.
+
+
+## L-34 — Audit model, retention, and export (accepted)
+
+- Use a unified audit model for sensitive security, administrative, and training-record events. Capture trusted actor identity, event type, affected entity/type, timestamp, outcome, required reason, and relevant revision/decision reference where applicable.
+- Ordinary users cannot alter or delete audit records through normal application operations. Writes use restricted trusted paths; client-supplied actor identity or role is not authoritative.
+- Classify events into authentication/security, enrollment/activation, assignment/transition, correction/revision, template/schema lifecycle, administrative emergency recovery, and audit export. The exact event catalogue remains open.
+- Define separate documented retention and export policies. Retention is category-specific and purpose/legal-obligation aware, not indefinite by default. Export is limited to authorized roles and purposes, includes privacy safeguards and file-handling rules, and records export requests/outcomes.
+- Exact event types, schema, numeric retention periods, export formats/permissions, backup handling, and operational safeguards remain open. L-34 is principles-only and does not authorize migrations or implementation.
