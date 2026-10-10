@@ -25,7 +25,7 @@
 
 - Finalize the precise open-state predicate and concurrency-safe uniqueness mechanism for correction requests in the migration design.
 - Finalize schema-registry storage representation, exact backend technology/deployment boundary, detailed operational publication/rollback runbook, cross-version migration, and historical-entry editing separately.
-- Resolve other open decisions only through explicit user approval; L-30 resolves OD-03 only and does not approve unrelated open decisions.
+- Resolve other open decisions only through explicit user approval; accepted decisions resolve only the specific scope they address.
 - Review all design documents together before implementation, then define migrations, grants/RLS, trusted functions, seed data, and rollback strategy.
 
 - L-26 is accepted as a design decision only. No migrations, backend implementation, or database tests have been run.
@@ -69,3 +69,8 @@
 
 - L-37 is accepted: mentor review is independent of log-entry status and formal approval, with review states `NOT_REVIEWED`, `IN_REVIEW`, `FEEDBACK_PROVIDED`, and `REVIEWED`. Mentors may provide feedback but cannot directly edit submitted entries or apply corrections; formal approval/correction authority remains governed by prior decisions.
 - Review granularity, reopening, trainee responses, feedback-resolution states, and repeated-cycle history remain open. L-37 is design-only. No migrations, database/backend changes, UI implementation, or database tests have been run as a result of this decision.
+
+
+- L-38 is accepted: `template_transitions` records only successful assignment transitions; failed/rejected attempts are recorded in `audit_logs` only. Successful assignment-state changes, transition records, and associated audit events must commit atomically. Audit events capture the minimum relevant trusted actor, operation, target, outcome, and reason details without secrets or unnecessary sensitive data.
+- OD-11 is resolved by L-38 at policy level. Audit-write failure handling, detailed failure taxonomy and retention, repeated/suspicious attempt handling, and exact technical atomicity/consistency mechanisms remain open.
+- L-38 is design-only. No migrations, database changes, backend implementation, UI implementation, or database tests have been run as a result of this decision.
