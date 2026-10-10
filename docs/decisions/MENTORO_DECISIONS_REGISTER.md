@@ -232,7 +232,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-04 | What are the cross-version migration procedures, historical-entry editing policy, and operational publication/rollback runbook for the schema registry? | L-27 resolves schema-definition storage as JSONB; migration and operational procedures remain open |
 | OD-05 | How are concurrent pending-enrollment creation requests serialized across different templates for one email? | Resolved by accepted L-31: one pending enrollment per normalized email across all templates; same-scope requests reuse it, while different-scope requests cancel and replace it through a trusted atomic workflow with prior unused codes invalidated. Concurrency-safe enforcement details remain for migration design. |
 | OD-06 | What are account deletion, anonymization, retention, export, and legal policies? | Resolved at principles level by accepted L-32: separate identity from historical records, disable access, and apply documented data-category-specific retention/deletion/anonymization rules without silent historical alteration. Numeric retention periods, legal exceptions, export procedure, backup handling, and technical mechanisms remain open. |
-| OD-07 | What are stable target-key and cross-version mapping rules? | Historical coverage |
+| OD-07 | What are stable target-key and cross-version mapping rules? | Resolved by accepted L-35: stable target identity plus explicit mapping between template versions. Exact key format, mapping approval authority, multi-target relationship representation, reporting rules, and conflict handling remain open. |
 | OD-08 | What are the audit event taxonomy, retention period, and export policy? | Resolved at principles level by accepted L-34: unified audit event model for sensitive events, with separate retention and export policies. Exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open. |
 | OD-09 | How should inactive targets and archived assignments appear in historical dashboards? | Historical interpretation |
 | OD-10 | What mentor-review statuses are required, and does review affect entry status? | Review workflow |
@@ -246,7 +246,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-34; design documents remain pending final review. No implementation is claimed.**
+**Current status: decisions recorded through L-35; design documents remain pending final review. No implementation is claimed.**
 
 
 ### L-26 — Trusted Validation and Schema Publication/Rollback
@@ -425,3 +425,19 @@ When an accepted decision changes, update this register and both design document
 - Define a separate documented retention policy by event category, purpose, and applicable legal obligations, including relevant deletion/anonymization and backup handling. L-34 does not establish numeric retention periods or require indefinite retention.
 - Restrict audit export to authorized roles and purposes. The export policy must define scope, privacy controls, file handling, and recording of export requests and outcomes.
 - Exact event types, database schema, retention periods, export formats/permissions, and operational safeguards remain open. L-34 establishes principles only and does not authorize migrations or backend implementation.
+
+
+### L-35 — Stable Target Identity & Cross-Version Mapping
+**Status: Accepted**
+
+1. **Stable identity:** Every training target must have a stable identifier independent of its name or description, remaining distinct across changes and template versions.
+2. **Version-specific definitions:** A target's definition within each template version remains independently preserved as historical content, including its name, description, and version-specific properties.
+3. **Explicit mapping:** Relationships between targets in different versions must be recorded explicitly. Equivalence must not be inferred from name or description similarity alone.
+4. **Supported relationship types:** `SAME_TARGET` (same target continues), `REPLACED_BY` (an old target is replaced), `SPLIT_INTO` (an old target splits into multiple targets), `MERGED_INTO` (multiple old targets merge into a new target), and `NO_EQUIVALENT` (no equivalent target exists in the new version).
+5. **Historical integrity:** Trainee records remain linked to their original template version and are not automatically reinterpreted or changed when a new version is published.
+6. **Coverage and reporting:** Historical target coverage is not automatically transferred to or aggregated into new-version targets. Cross-version reporting may use only explicit, approved mappings and only where the applicable reporting rules permit it.
+7. **Mapping governance:** Mappings must be reviewable and traceable, and an authorized approval authority must be defined before mappings are used in cross-version coverage reports. The exact authority remains open.
+8. **No implicit migration:** A mapping does not itself migrate historical records, change existing assignments, or automatically transfer trainee data.
+9. **Open details:** Stable-key format and naming rules, approval authority, representation of multi-target mappings, exact reporting calculations, and handling of incomplete or conflicting mappings remain open.
+
+L-35 is design-only. It does not authorize database migrations, schema changes, or implementation.
