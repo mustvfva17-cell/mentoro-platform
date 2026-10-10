@@ -409,3 +409,15 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - A trusted audit trail records request, verification, operator, approver(s) or exception, timestamps, actions, and resulting privileges without secrets or unnecessary sensitive data. An authorized reviewer independent of the operator documents the review, conclusion, irregularities, and corrective actions.
 - Before production, the runbook must specify authorized operators, acceptable verification evidence, recovery-material custody, emergency contacts, approval/exception steps, and review deadline. Actual environment-specific values remain to be populated; L-41 resolves OD-02 and OD-15 at policy level only.
 - L-41 is design/operational policy only and authorizes no migrations, database changes, backend implementation, or UI implementation.
+
+
+## ADR-01 — Trusted backend and atomic write boundary (accepted)
+
+- Protected write workflows use a Vercel-hosted Node.js API. The API verifies Supabase Auth session/token and derives actor identity from verified authentication, not client-supplied IDs or role claims.
+- The backend enforces object-level authorization and validates specialty payloads with Ajv 8 / JSON Schema Draft 2020-12 against the exact schema selected for template version and log type. Frontend validation is supplementary.
+- Supabase PostgreSQL remains protected by RLS, explicit grants, and database constraints. Backend authorization supplements rather than replaces RLS.
+- Multi-row workflows requiring all-or-nothing behavior (including activation/enrollment, assignment transitions, correction application, and template/schema lifecycle changes) use a reviewed transaction/RPC boundary. State changes and required audit/revision/transition records must commit atomically; failures must not leave partial state or be reported as success.
+- Never expose the service-role key or privileged secrets to browser code, client bundles, public assets, logs, or repository files. Any privileged server-side use must be explicitly justified, isolated to server configuration, and least-privilege; it must not replace authorization checks.
+- No alternate write path may bypass authorization, schema validation, lifecycle rules, or required audit behavior. Concurrency invariants must be enforced by database/transaction design, not only by UI checks.
+- Exact SQL types, constraints, indexes, RLS/grants, RPC signatures, locking/isolation choices, API routing, error contracts, and audit-write failure behavior remain implementation-design tasks. Any SECURITY DEFINER function requires explicit review of search_path, execute grants, and privilege scope.
+- ADR-01 is design-only: no migrations, database changes, application code, secrets, deployment, or tests are authorized or claimed.
