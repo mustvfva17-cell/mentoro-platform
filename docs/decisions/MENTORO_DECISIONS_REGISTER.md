@@ -234,7 +234,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-06 | What are account deletion, anonymization, retention, export, and legal policies? | Resolved at principles level by accepted L-32: separate identity from historical records, disable access, and apply documented data-category-specific retention/deletion/anonymization rules without silent historical alteration. Numeric retention periods, legal exceptions, export procedure, backup handling, and technical mechanisms remain open. |
 | OD-07 | What are stable target-key and cross-version mapping rules? | Resolved by accepted L-35: stable target identity plus explicit mapping between template versions. Exact key format, mapping approval authority, multi-target relationship representation, reporting rules, and conflict handling remain open. |
 | OD-08 | What are the audit event taxonomy, retention period, and export policy? | Resolved at principles level by accepted L-34: unified audit event model for sensitive events, with separate retention and export policies. Exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open. |
-| OD-09 | How should inactive targets and archived assignments appear in historical dashboards? | Historical interpretation |
+| OD-09 | How should inactive targets and archived assignments appear in historical dashboards? | Resolved by accepted L-36: separate current dashboard and historical archive. Detailed filters, historical metric calculations, visual comparison, and handling of unavailable retained data remain open. |
 | OD-10 | What mentor-review statuses are required, and does review affect entry status? | Review workflow |
 | OD-11 | Are failed transition attempts stored in `template_transitions` or only in `audit_logs`? | Audit model |
 | OD-12 | What are the final source-approved field/validation requirements per specialty and log type? | Specialty correctness |
@@ -246,7 +246,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-35; design documents remain pending final review. No implementation is claimed.**
+**Current status: decisions recorded through L-36; design documents remain pending final review. No implementation is claimed.**
 
 
 ### L-26 — Trusted Validation and Schema Publication/Rollback
@@ -441,3 +441,15 @@ When an accepted decision changes, update this register and both design document
 9. **Open details:** Stable-key format and naming rules, approval authority, representation of multi-target mappings, exact reporting calculations, and handling of incomplete or conflicting mappings remain open.
 
 L-35 is design-only. It does not authorize database migrations, schema changes, or implementation.
+
+
+### L-36 — Historical Dashboards for Inactive Targets and Archived Assignments
+**Status: Accepted**
+
+1. **Current dashboard:** The primary dashboard displays progress for the active assignment only, against the logbook template version linked to that assignment. Current metrics are calculated from targets and records in that assignment's scope under its applicable calculation rules. Historical assignments do not automatically contribute to current progress.
+2. **Historical archive:** Provide a separate historical view for inactive and archived assignments, accessible subject to authorization and applicable data-retention policies. Display each historical record against its original assignment and template version, preserving historical target definitions.
+3. **Historical integrity:** Archiving an assignment does not delete its historical records or automatically transfer them to another assignment. Historical progress remains distinct from current progress.
+4. **Cross-version comparison:** Comparisons may be shown where explicit, approved mappings exist under L-35. Such comparison does not mean an old achievement automatically satisfies a current-version requirement; equivalence must not be inferred from names alone.
+5. **Authorization:** Current and historical views remain subject to existing authorization rules. Historical views do not grant additional access to mentors or other roles. Availability of historical data remains subject to applicable retention and data-management policy, consistent with L-32.
+6. **Open details:** Archive filters by specialty, date range, and template version; display behavior for retired, replaced, or split targets; historical metric calculations; visual comparison details; and handling of data unavailable under retention policy remain open.
+7. **Implementation boundary:** L-36 is design-only and does not authorize migrations, database changes, backend changes, or UI implementation.
