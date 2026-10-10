@@ -227,7 +227,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | ID | Open question | Why it remains open |
 |---|---|---|
 | OD-01 | What detailed operational checklist and runbook are needed to implement the accepted publication, archival, rollback, and eligibility rules? | **Resolved at policy level by accepted L-40:** pre-publication checks and approval, eligibility-change safeguards, archival, rollback, failure handling, and auditability are established. Detailed production runbooks, technical recovery procedures, and operational responsibilities remain open. |
-| OD-02 | What exact operational runbook details, including named operators, verification evidence, recovery-material custody, emergency contacts, and review deadlines, are required before production? | Core recovery controls are established by L-22 and L-29; operational details remain open |
+| OD-02 | What exact operational runbook details, including named operators, verification evidence, recovery-material custody, emergency contacts, and review deadlines, are required before production? | **Resolved at policy level by accepted L-41.** The actual operators, verification evidence, custody details, emergency contacts, and review deadline must be populated in the production runbook before launch. |
 | OD-03 | What exact request-initiation UI details and additional request fields are required beyond L-23? | Resolved by accepted L-30: required reason and complete proposed values; no attachments in the initial release; immutable after submission with withdrawal/re-submission; mandatory rejection reason; administrators cannot edit the proposal. |
 | OD-04 | What are the cross-version migration procedures, historical-entry editing policy, and operational publication/rollback runbook for the schema registry? | L-27 resolves schema-definition storage as JSONB; migration and operational procedures remain open |
 | OD-05 | How are concurrent pending-enrollment creation requests serialized across different templates for one email? | Resolved by accepted L-31: one pending enrollment per normalized email across all templates; same-scope requests reuse it, while different-scope requests cancel and replace it through a trusted atomic workflow with prior unused codes invalidated. Concurrency-safe enforcement details remain for migration design. |
@@ -240,13 +240,13 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-12 | What are the final source-approved field/validation requirements per specialty and log type? | **Resolved at policy level by accepted L-39:** source-first requirements with traceable sources/design rationale; unsupported medical requirements remain unapproved. Selecting sources, extracting/reviewing actual fields, assigning detailed approval responsibilities, and final schemas remain open. |
 | OD-13 | What detailed operational procedures are required for publication, archival, rollback, and template eligibility? | **Resolved at policy level by accepted L-40:** lifecycle safeguards and required operational principles are defined. Detailed runbooks, audit-write failure handling, technical recovery procedures, and production responsibilities remain open. |
 | OD-14 | What is the final retention/deletion policy for expired activation-code rows? | Security and retention |
-| OD-15 | What remaining operational details must be specified for Super Admin emergency recovery before production? | Core recovery controls are established by L-22 and L-29; operational details remain open |
+| OD-15 | What remaining operational details must be specified for Super Admin emergency recovery before production? | **Resolved at policy level by accepted L-41.** Populate environment-specific operator names, contact details, verification evidence, recovery-material custody, and review deadline in the production runbook. |
 
 ## Consistency rule
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-37; design documents remain pending final review. No implementation is claimed.**
+**Current status: decisions recorded through L-41; design documents remain pending final review. No implementation is claimed.**
 
 
 ### L-26 — Trusted Validation and Schema Publication/Rollback
@@ -504,3 +504,34 @@ L-35 is design-only. It does not authorize database migrations, schema changes, 
 7. **Auditability:** Sensitive lifecycle changes are recorded through trusted workflows, including actor, timestamp, action, reason, and outcome where applicable. L-34 governs audit principles. Client-supplied identity or role claims are not authoritative.
 8. **Open operational details:** Detailed production checklists/runbooks; technical recovery and retry procedures; handling audit-write failure; precise operational responsibilities and review steps; and technical consistency mechanisms remain open for production readiness.
 9. **Implementation boundary:** L-40 is design/operational policy only. It does not authorize migrations, database changes, backend changes, or UI implementation.
+
+
+### L-41 — Super Admin Emergency Recovery Runbook (accepted)
+**Status: Accepted**
+
+**Authorized operators and identity verification**
+- Emergency recovery is limited to people pre-authorized under a documented procedure.
+- The requester's identity and authority must be verified independently of frontend state and user-editable role claims.
+- Supabase Auth remains the authentication mechanism; recovery must not create a parallel identity system or bypass authentication.
+
+**Approval process**
+- Two independent authorized approvers are required whenever operationally available.
+- If a second approver is unavailable and delay creates a material risk of permanent administrative lockout, a narrowly scoped, documented exception is permitted.
+- Record the exception rationale, executing operator, approval limitation, why the normal process was unavailable, and actions performed.
+- An exception does not waive identity verification, authentication, least privilege, or audit requirements.
+
+**Recovery materials and privilege scope**
+- Store recovery materials securely, separately from the application and source-code repository, with access limited to authorized people; document access and use.
+- Grant only the minimum privileges required to restore administrative control.
+- Revoke or promptly review temporary privileges, credentials, and emergency access mechanisms when no longer needed.
+
+**Audit and independent review**
+- A trusted audit trail records the request, verification, operator, approver(s) or exception, timestamps, actions, and resulting privileges, without exposing secrets or unnecessary sensitive data.
+- An authorized reviewer independent of the recovery operator reviews the recovery, documents the conclusion, and records irregularities and corrective actions.
+
+**Production readiness**
+- Before production, the operational runbook must name authorized operators, define acceptable verification evidence, recovery-material custody, emergency contacts, approval and exception steps, and the deadline for independent review.
+- L-41 resolves OD-02 and OD-15 at the policy level. Actual names, contact details, evidence choices, and deadlines must be filled into the operational runbook before production; this decision does not invent those operational facts.
+
+**Implementation boundary**
+- L-41 is a design and operational-policy decision only. It authorizes no migrations, database changes, backend implementation, or UI implementation.
