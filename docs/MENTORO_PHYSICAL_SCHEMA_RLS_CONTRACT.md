@@ -415,3 +415,14 @@ Before migrations: review all three design documents together; resolve open deci
 - Medical content must be reviewed and approved through the trusted workflow before being treated as final. L-24 through L-28 remain applicable.
 - Unverified requirements remain open; no field list or final schema is approved merely by L-39. Source selection, detailed field review, approval responsibilities, and final schemas remain open.
 - L-39 is design-only and authorizes no migrations, database changes, backend changes, or UI implementation.
+
+
+## L-40 — Template lifecycle operational safeguards (accepted)
+
+- L-21 and L-28 remain authoritative for lifecycle states and eligibility. L-40 adds operational safeguards for publication, eligibility changes, archival, and rollback.
+- Publication requires schema validation, applicable checks, documented restricted administrative approval, and alignment with L-39; failure must not commit a partially published or partially eligible state.
+- Eligibility changes use trusted enforcement of template state and eligibility rules, with audit records; frontend filtering alone is insufficient. Existing assignments are not automatically migrated, suspended, or replaced.
+- Archival blocks new assignment/transition destinations while preserving historical links and meaning. Archived versions are not reopened; future use requires a new version.
+- Rollback disables new use of an affected version. A previous published version may regain eligibility only after validity and compatibility checks. No in-place published-content edits, historical rewrites/reinterpretation, schema-reference changes, or automatic trainee migration are allowed.
+- Failed lifecycle operations must not be represented as successful or leave partially committed publication/eligibility state. Sensitive changes use trusted, auditable workflows; client-supplied identity/role is not authoritative.
+- Detailed runbooks, technical recovery/retry mechanisms, audit-write failure handling, operational responsibilities, and exact consistency mechanisms remain open. L-40 is design/operational policy only; no migrations or implementation are authorized.
