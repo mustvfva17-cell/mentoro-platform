@@ -57,3 +57,7 @@
 
 - L-34 is accepted as a principles-level decision: a unified audit model for sensitive events, with separate category-specific retention and controlled export policies. Exact event catalogue, numeric retention periods, export formats/permissions, backup handling, and operational safeguards remain open.
 - L-34 is design-only. No migrations, backend implementation, or database tests have been run; other open decisions remain unapproved.
+
+
+- L-35 is accepted: stable target identity plus explicit, traceable mapping between template versions. Historical records remain linked to their original template version; no automatic reinterpretation, coverage transfer, or assignment migration. Exact key format, mapping approval authority, multi-target representation, reporting rules, and conflict handling remain open.
+- L-35 is design-only. No migrations, schema changes, backend implementation, or database tests have been run as a result of this decision.
