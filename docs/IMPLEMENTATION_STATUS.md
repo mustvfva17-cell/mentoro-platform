@@ -4,6 +4,13 @@
 **Phase:** Final policy review complete; preparing implementation design
 **Implementation status:** Documentation only. No migrations, application implementation, or database tests are claimed.
 
+## Accepted executable-design choices (design only)
+
+- Correction requests: `PENDING` is the only decision-pending state; one `PENDING` request per entry. An `APPROVED` request that awaits application also blocks creation of a new request. `REJECTED`, `CANCELLED`, and `APPLIED` do not block a new request. The candidate partial-index predicate and state-transition/locking implementation remain to be finalized.
+- Write boundary: sensitive and multi-step writes use the trusted Vercel Node.js API and reviewed atomic database/RPC boundary. A simple direct write is permitted only when its table/operation has an explicitly reviewed GRANTS/RLS/constraint contract.
+- Required audit: the event is written in the same transaction as the sensitive state change; audit-write failure rolls back the operation.
+- RPC security: `SECURITY INVOKER` by default. Any `SECURITY DEFINER` exception needs explicit justification and review of ownership, safe `search_path`, execute grants, and RLS interaction.
+
 ## Accepted through this update
 
 - Decisions register: accepted decisions through L-41; final policy-level review completed, with implementation blockers and deferred work classified.
@@ -26,8 +33,8 @@
 ### Blockers before migrations or production writes
 
 1. Finalize SQL types, constraints, primary/foreign/composite keys, indexes, grants, RLS, and trusted transaction functions.
-2. Select the concrete trusted backend/deployment boundary enforcing authentication, authorization, specialty schema validation with Ajv 8/JSON Schema Draft 2020-12, and atomic writes.
-3. Define the open correction-request states and concurrency-safe one-open-request-per-entry enforcement.
+2. ADR-01 has selected the trusted backend/deployment boundary (Vercel Node.js API, Supabase Auth, PostgreSQL RLS/grants, and atomic RPC/transactions). Final API/session and executable database contracts remain to be reviewed before migrations.
+3. The correction-request policy is defined: one `PENDING` request per entry, and no new request while an `APPROVED` request awaits application. Exact partial-index predicate, state-transition locking, and concurrent enforcement remain migration-design blockers.
 4. Define concurrency-safe enrollment/activation enforcement consistent with L-08/L-10/L-31.
 5. Approve source-traceable medical requirements and final schemas for each specialty/log type before enabling that specialty/log type. Shared infrastructure may be developed in parallel.
 6. Implement and run the required security, integrity, concurrency, validation, history, and privacy tests against a real local/test PostgreSQL or Supabase environment.
@@ -107,6 +114,6 @@ Do not create new policy decisions unless implementation reveals a genuine confl
 
 ## Final review through L-41
 
-The policy-level design review is complete. The project is not yet migration-ready: the executable SQL/RLS/grants/trusted-function design, concrete backend validation boundary, concurrency-safe correction and enrollment/activation enforcement, approved specialty schemas, and actual database-backed test results remain required gates. Shared non-destructive scaffolding may proceed while source-approved specialty schemas are completed, but no specialty/log type should be enabled without its approved schema.
+The policy-level design review is complete. The project is not yet migration-ready: executable SQL/RLS/grants/trusted-function design, detailed API/session and RPC contracts, concurrency-safe correction and enrollment/activation enforcement, approved specialty schemas, and actual database-backed test results remain required gates. Shared non-destructive scaffolding may proceed while source-approved specialty schemas are completed, but no specialty/log type should be enabled without its approved schema.
 
 Deferred work is limited to features or production-specific details not required for the current implementation slice; see the Implementation blockers vs. deferred work section above. No migrations, database changes, backend/UI implementation, or database tests are claimed by this documentation update.
