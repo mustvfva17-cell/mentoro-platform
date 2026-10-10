@@ -10,6 +10,8 @@
 - Write boundary: sensitive and multi-step writes use the trusted Vercel Node.js API and reviewed atomic database/RPC boundary. A simple direct write is permitted only when its table/operation has an explicitly reviewed GRANTS/RLS/constraint contract.
 - Required audit: the event is written in the same transaction as the sensitive state change; audit-write failure rolls back the operation.
 - RPC security: `SECURITY INVOKER` by default. Any `SECURITY DEFINER` exception needs explicit justification and review of ownership, safe `search_path`, execute grants, and RLS interaction.
+- Identity provisioning: the trusted Vercel Node.js backend is the selected profile-provisioning path after Supabase Auth registration (not a database trigger by default); provisioning must be idempotent and define retry/reconciliation for partial failure.
+- Role integrity: role grants/revocations are trusted, audited, and atomic; prevent duplicate active grants per user/role, prevent a second active platform-wide Super Admin, and prevent ordinary operations from removing the last active Super Admin. Initial Super Admin bootstrap is a separate restricted documented operation.
 
 ## Accepted through this update
 
@@ -33,6 +35,7 @@
 ### Blockers before migrations or production writes
 
 1. Finalize SQL types, constraints, primary/foreign/composite keys, indexes, grants, RLS, and trusted transaction functions.
+   - Identity/role-specific gates: settle Auth/profile partial-failure recovery, initial Super Admin bootstrap details, grantor FK behavior, and concurrency-safe last-Super-Admin protection before migration.
 2. ADR-01 has selected the trusted backend/deployment boundary (Vercel Node.js API, Supabase Auth, PostgreSQL RLS/grants, and atomic RPC/transactions). Final API/session and executable database contracts remain to be reviewed before migrations.
 3. The correction-request policy is defined: one `PENDING` request per entry, and no new request while an `APPROVED` request awaits application. Exact partial-index predicate, state-transition locking, and concurrent enforcement remain migration-design blockers.
 4. Define concurrency-safe enrollment/activation enforcement consistent with L-08/L-10/L-31.
