@@ -190,9 +190,37 @@ The initial release has one Super Admin with platform-wide administrative scope.
 
 ## 8. Approval gates
 
-Before implementation, review this model against `docs/decisions/README.md` and `docs/PHYSICAL_SCHEMA_RLS_CONTRACT.md`, finalize SQL types/constraints/FKs/indexes, define exact RLS and grants, specify trusted transaction functions, prepare version-controlled migrations, and run tests against an actual local/test database.
+The policy-level final review is complete through L-41. Before migrations or production writes, complete the executable database/security design: exact SQL types, constraints, composite foreign keys, indexes, grants, RLS, trusted transaction functions, and the concrete trusted backend/validation boundary. Define concurrency-safe enforcement for correction requests and enrollment/activation. Prepare reviewed, version-controlled migrations only after those details are consistent with the accepted decisions, then run tests against an actual local/test database.
 
-**Current status: DESIGN DRAFT through L-37 — NOT APPROVED FOR IMPLEMENTATION.**
+## Final design review — implementation blockers vs. deferred work (reviewed through L-41)
+
+This review does not supersede accepted decisions. It separates work that must be resolved before the relevant implementation gate from work that can safely wait until the corresponding feature is in scope.
+
+### Blockers before migrations or production writes
+
+1. **Executable database/security design:** define exact SQL types, primary/foreign/composite keys, uniqueness and check constraints, indexes, grants, RLS policies, and trusted transaction functions. Validate that client-controlled identifiers/roles cannot bypass authorization. This is a required implementation-design gate, not a new policy decision.
+2. **Trusted write and validation boundary:** select and document the concrete backend/deployment boundary that enforces authentication, authorization, template/assignment rules, JSON Schema Draft 2020-12 validation with Ajv 8, and atomic writes. No alternate client write path may bypass these controls.
+3. **Correction-request concurrency:** define the precise set of open correction-request states and enforce one open request per log entry with concurrency-safe database enforcement. Preserve the accepted L-23/L-30 workflow and stale-revision protection.
+4. **Enrollment/activation concurrency:** translate L-08/L-10/L-31 into database constraints and trusted atomic workflows so codes cannot be reused and a normalized email cannot acquire conflicting pending enrollments under concurrent requests.
+5. **Source-approved specialty schemas before enabling each specialty/log type:** choose authoritative sources, review required/optional fields and constraints, record traceability, and approve final schemas under L-39. Shared platform scaffolding may proceed in parallel, but a specialty/log type must not be treated as ready for use without its approved schema.
+6. **Pre-release verification:** implement and execute the security, integrity, concurrency, validation, history, and privacy tests in the Physical Schema/RLS Contract against a real local/test PostgreSQL or Supabase environment. Test definitions alone are not evidence of passing tests.
+
+### Deferred until the corresponding feature or production gate
+
+- Cross-version migration tooling and historical-entry editing beyond preserving immutable historical references; do not implement migration or reinterpretation implicitly.
+- Detailed historical-dashboard filters, comparison visuals, and nonessential metrics; the active-assignment scope and historical archive behavior from L-36 remain mandatory.
+- Additional mentor-feedback cycles, trainee responses, and reopening rules beyond the accepted L-37 statuses and permissions.
+- Exact audit export format, event catalogue refinements, numeric retention periods, and backup-specific handling; required privacy, auditability, and applicable legal review must still be completed before production where relevant.
+- Expired activation-code row retention/deletion policy (OD-14): decide and document before production, while preserving the existing single-use, expiry, revocation, and no-secret-logging controls during development.
+- Environment-specific Super Admin recovery operator names, verification evidence, material custody details, emergency contacts, and independent-review deadline: populate the runbook before production as required by L-41.
+- Operational publication/rollback runbooks and technical recovery/retry/audit-write-failure procedures: complete before enabling the relevant production operations.
+
+### Exit rule
+
+Do not open new policy decisions unless implementation reveals a genuine conflict with an accepted decision or a material security/data-integrity gap. Record non-blocking work as deferred tasks. This review does not itself authorize migrations or claim that any code, database change, or test has been executed.
+
+
+**Current status: consolidated design draft through L-41. Final policy-level review is complete; implementation still requires the explicit database/security and validation design gates below. No migrations are authorized by this status.**
 
 
 ## 9. Super Admin recovery (L-22)
