@@ -191,8 +191,20 @@ Suggested query indexes: assignments by profile/date; entries by assignment/date
 
 ## 6. Trusted transactional workflows
 
-### Activation — MVP critical path
-Authenticate through Supabase Auth; require verified email; normalize and match the enrollment email; serialize access to the normalized email, enrollment, and code; verify that the enrollment is `PENDING`, the code is unexpired/unused/unrevoked, the template is `PUBLISHED` and assignable, and the user has no active assignment. Then atomically consume the code, activate the enrollment, create the assignment, and write required audit events. Unique constraints remain the final defense against concurrent duplicate activation or active assignments. Audit failure rolls back the whole operation. Failed checks must not consume a valid code or create partial state.
+### Activation — MVP critical path (design-only)
+The trusted Vercel API verifies the Supabase Auth session and derives the actor/profile; activation requires a verified email matching the trusted normalized invitation email. The browser never supplies authoritative profile ID, role, or email-verification state.
+
+Proposed narrow atomic operation: `redeem_pending_enrollment(activation_code_hash, authenticated_user_id)`. This is a logical contract name/signature only, not an implemented function. The trusted API derives `authenticated_user_id` from verified authentication state and computes the hash server-side; it must not accept a client-selected user ID. The operation must:
+1. Resolve and lock the code and enrollment, and serialize the profile's active-assignment invariant.
+2. Verify code expiry/use/revocation, enrollment `PENDING`, normalized verified email match, template `PUBLISHED` plus `is_assignable = TRUE`, provisioned profile existence, and no conflicting active assignment.
+3. Atomically consume the code, mark enrollment `ACTIVATED` with activating profile/time, create one assignment linked through `created_from_pending_enrollment_id`, and write required audit events.
+4. Enforce uniqueness in the database, including at most one active assignment per profile and at most one assignment sourced from a given pending enrollment. Candidate source-enrollment enforcement: unique partial index on `created_from_pending_enrollment_id` where non-null.
+5. Return an existing success result on a retry only if the code is already used and the same authenticated profile is the recorded activating profile and the corresponding assignment exists. Any other reuse fails safely.
+6. Roll back all writes if any protected write or required audit insert fails; failed validation does not consume a still-valid code.
+
+RPC security is not presumed: `SECURITY INVOKER` is the default. If the final transaction boundary requires `SECURITY DEFINER`, document the justification and explicitly review owner privileges, fixed safe `search_path`, minimal execute grants, RLS behavior, and identity binding. The function must not trust a caller-supplied user ID without independently binding it to trusted authentication context. Exact signature, locking, isolation, grants, and SQL constraints require migration review.
+
+The API returns the plaintext invitation code once to the authorized Super Admin after the issuance transaction commits; it is never stored. No email/SMS delivery integration is included in this MVP slice. If the response is lost, the plaintext cannot be recovered; issue a replacement, revoke the old code, and audit the change.
 
 ### Enrollment creation/replacement — MVP critical path
 Under a concurrency-safe per-normalized-email serialization mechanism, inspect the current pending enrollment. Reuse it when the selected scope/template matches. If scope differs, cancel it and revoke its unused codes, create the replacement enrollment and code, and write required audit events in one transaction. Do not cancel an activated enrollment. If any step fails, roll back the complete replacement.
