@@ -5,6 +5,7 @@
 **Implementation status:** Documentation only. No migrations, application implementation, or database tests are claimed.
 
 - Added `docs/MENTORO_EXECUTABLE_DB_DESIGN_MATRIX.md` as a table-by-table review matrix for `profiles`, `user_roles`, `pending_enrollments`, `activation_codes`, and `trainee_assignments`. It lists candidate uniqueness predicates, trusted write boundaries, RLS/grant review items, activation atomicity, and minimum test gates. It is design-only; the Super Admin global uniqueness strategy, exact role grants/RLS, FK/check constraints, RPC signature, and lock/isolation design remain open. No migrations or tests were run.
+- Added `docs/MENTORO_ROLE_SECURITY_CONTRACT.md` to define role grant/revocation behavior, the global Super Admin concurrency guard, emergency recovery constraints, and the Vercel/PostgreSQL privilege-boundary review. It is design-only; the connection model, lock primitive, exact grants/RLS/RPC SQL, and tests remain open.
 - Expanded the matrix with a candidate global uniqueness index for one active platform-wide Super Admin, a serialized last-admin revoke guard, and an explicit warning that Supabase service-role access bypasses RLS even for `SECURITY INVOKER` RPCs. The actual Vercel database role/connection model remains a pre-migration decision; no credentials or deployment configuration were changed.
 
 ## Accepted executable-design choices (design only)
