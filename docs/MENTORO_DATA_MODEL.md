@@ -180,6 +180,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 8. Audit taxonomy, retention, and export — resolved at principles level by L-34: unified model for sensitive events, with separate retention and export policies. Exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open.
 9. Stable target identity and cross-version mapping — resolved by L-35: stable target identifiers plus explicit mappings between template versions; exact key format, mapping approval authority, multi-target relationship representation, reporting rules, and conflict handling remain open.
 10. Historical dashboards for inactive targets and archived assignments — resolved by L-36: separate current dashboard and historical archive, with progress separated and historical records preserved against their original assignment/template version. Detailed filters, historical metric calculations, visual comparison, and unavailable-data handling remain open.
+11. Mentor review workflow and statuses — resolved by L-37: independent review lifecycle (`NOT_REVIEWED`, `IN_REVIEW`, `FEEDBACK_PROVIDED`, `REVIEWED`) that does not change entry status or constitute formal approval. Review granularity, reopening, trainee responses, feedback resolution, and repeated-cycle history remain open.
 9. Historical dashboard behavior for inactive targets and archived assignments.
 10. Mentor-review statuses and whether review affects entry status.
 11. Storage of failed transition attempts.
@@ -191,7 +192,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 
 Before implementation, review this model against `docs/decisions/README.md` and `docs/PHYSICAL_SCHEMA_RLS_CONTRACT.md`, finalize SQL types/constraints/FKs/indexes, define exact RLS and grants, specify trusted transaction functions, prepare version-controlled migrations, and run tests against an actual local/test database.
 
-**Current status: DESIGN DRAFT through L-36 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: DESIGN DRAFT through L-37 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ## 9. Super Admin recovery (L-22)
@@ -329,3 +330,12 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Cross-version comparison is allowed only where explicit approved mappings exist under L-35 and applicable rules permit it; historical achievements do not automatically satisfy current-version requirements.
 - Both views follow existing authorization rules and grant no additional mentor access. Data availability remains subject to L-32 retention/data-management policy.
 - Detailed filters, retired/replaced/split target display, historical metric calculations, visual comparison, and unavailable-data handling remain open. L-36 is design-only; no migrations or implementation are authorized.
+
+
+## L-37 — Mentor review workflow and statuses (accepted)
+
+- Mentor review is independent of log-entry status and formal approval. Review status changes do not automatically change entry status and are not formal approval.
+- Review statuses: `NOT_REVIEWED`, `IN_REVIEW`, `FEEDBACK_PROVIDED`, and `REVIEWED` (current review cycle complete with no outstanding feedback within that cycle). These statuses describe review only.
+- Formal approval and correction authorization/application remain governed by prior decisions, including L-17, L-23, and L-30. Mentors may provide educational feedback within their permissions but cannot directly edit submitted entries or apply corrections. Feedback alone is not formal rejection and does not imply trainee agreement.
+- Mentors may review only records for trainees assigned to them. Review status changes and feedback must be traceable with trusted actor identity and timestamp; client-supplied identity/role is not authoritative.
+- Review granularity (entry vs revision), reopening, trainee responses, feedback-resolution states, and repeated-cycle history remain open. L-37 is design-only and does not authorize migrations or implementation.
