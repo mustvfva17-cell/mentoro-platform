@@ -105,12 +105,29 @@ Lifecycle status and assignment eligibility are separate:
 Enforce eligibility in trusted workflows and database constraints/transaction checks, not only in the UI. Detailed publication/archival/rollback procedures remain open. Unique `(specialty_id, version_label)` and composite key `(id, specialty_id)` are proposed.
 
 ### 4.5 `trainee_assignments`
+Proposed fields: `id UUID PRIMARY KEY`, `profile_id UUID NOT NULL`, `logbook_template_id UUID NOT NULL`, `status TEXT NOT NULL`, `enrolled_at TIMESTAMPTZ NOT NULL`, `ended_at TIMESTAMPTZ NULL`, `created_at TIMESTAMPTZ NOT NULL`, `updated_at TIMESTAMPTZ NOT NULL`, `created_from_pending_enrollment_id UUID NULL`. Status values: `ACTIVE`, `SUSPENDED`, `COMPLETED`.
+
+MVP integrity rules:
+- A partial unique index must enforce at most one `ACTIVE` assignment per profile across all specialties.
+- The assignment must reference an eligible `PUBLISHED` template with `is_assignable = TRUE` when created or selected as a transition destination.
+- Activation must not create more than one assignment from the same pending enrollment; enforce this with a reviewed unique/FK design.
+- Assignment creation and the corresponding enrollment/code activation changes are one atomic operation.
+- A composite unique key on `(id, logbook_template_id)` supports template-version consistency for log entries.
+- Historical assignments and their entries remain linked to the original template version. A switch remains governed by L-03/L-21 and must be atomic; detailed switching implementation is deferred until required by the immediate build scope.
 Proposed fields: `id`, `profile_id`, `logbook_template_id`, `status`, `enrolled_at`, `ended_at`, `created_at`, `updated_at`, `created_from_pending_enrollment_id`. Status values: `ACTIVE`, `SUSPENDED`, `COMPLETED`. A partial unique index enforces at most one active assignment per profile. A successful switch suspends the previous assignment and activates the destination in one transaction. The destination template must be eligible. Historical logs remain attached to their original assignment.
 
 ### 4.6 `mentor_assignments`
 Proposed fields: `id`, `mentor_profile_id`, `trainee_profile_id`, `status`, `assigned_by`, `assigned_at`, `ended_at`, `created_at`. Status values: `ACTIVE`, `ENDED`, `REVOKED`. Mentor scope is trainee-wide, not assignment-specific. In the initial release, only the Super Admin creates/ends/revokes these relationships. A mentor may read permitted records only for currently assigned trainees and may create mentor reviews within that scope.
 
 ### 4.7 `pending_enrollments`
+Proposed fields: `id UUID PRIMARY KEY`, `normalized_email TEXT NOT NULL`, `logbook_template_id UUID NOT NULL`, `status TEXT NOT NULL`, `created_by UUID`, `created_at TIMESTAMPTZ NOT NULL`, `updated_at TIMESTAMPTZ NOT NULL`, `activated_by_profile_id UUID NULL`, `activated_at TIMESTAMPTZ NULL`, `cancelled_at TIMESTAMPTZ NULL`. Status values: `PENDING`, `ACTIVATED`, `REVOKED`, `EXPIRED`, `CANCELLED`.
+
+MVP integrity rules:
+- Trusted backend normalizes email consistently; activation requires an authenticated, verified email that matches the normalized invitation email.
+- At most one `PENDING` enrollment may exist per normalized email across all templates/specialties. A partial unique index on `normalized_email` where `status = 'PENDING'` is the candidate enforcement.
+- Same-email, same-scope requests reuse an eligible pending enrollment. A different-scope request serializes on normalized email, cancels the prior pending enrollment, revokes unused codes, and creates the replacement enrollment/code in one audited transaction. Do not mutate the prior scope.
+- Activated enrollments are never reused/cancelled to create duplicate assignments.
+- Exact normalization rules, lock strategy, FK behavior, and status/check/index details remain migration design.
 Proposed fields: `id`, `normalized_email`, `logbook_template_id`, `status`, `created_by`, `created_at`, `updated_at`, `activated_by_profile_id`, `activated_at`, `cancelled_at`. Status values: `PENDING`, `ACTIVATED`, `REVOKED`, `EXPIRED`, `CANCELLED`.
 
 - Email is normalized by trusted logic.
@@ -122,7 +139,18 @@ Proposed fields: `id`, `normalized_email`, `logbook_template_id`, `status`, `cre
 - Concurrent create/reuse/replacement attempts for the same normalized email must be serialized safely and enforced at database level where practical. Exact migration constraints remain to be finalized under L-31.
 
 ### 4.8 `activation_codes`
+Proposed fields: `id UUID PRIMARY KEY`, `pending_enrollment_id UUID NOT NULL`, `code_hash TEXT NOT NULL UNIQUE`, `created_by UUID`, `created_at TIMESTAMPTZ NOT NULL`, `expires_at TIMESTAMPTZ NOT NULL`, `used_at TIMESTAMPTZ NULL`, `used_by UUID NULL`, `revoked_at TIMESTAMPTZ NULL`, `replaced_by_code_id UUID NULL`.
+
+MVP integrity rules:
+- Store only a secure one-way hash; never persist plaintext codes in database rows, audit metadata, logs, or source files.
+- Trusted logic sets expiry to 24 hours after issuance and checks expiry/use/revocation on redemption.
+- At most one unconsumed, unrevoked code per enrollment; a partial unique index on `pending_enrollment_id` where `used_at IS NULL AND revoked_at IS NULL` is the candidate. Expired unused codes are revoked before issuing replacements.
+- Redemption, enrollment activation, assignment creation, and audit writes commit atomically. Concurrent redemption of one code can succeed at most once; failed validation must not consume a valid code.
+- Hashing/entropy, rate limits, error contracts, lock strategy, and FK actions remain implementation-design work.
 Proposed fields: `id`, `pending_enrollment_id`, `code_hash`, `created_by`, `created_at`, `expires_at`, `used_at`, `used_by`, `revoked_at`, `replaced_by_code_id`. Store only secure hashes. Codes are single-use, expire 24 hours after issue, may be revoked before use, and replacement invalidates the previous unused code. `expires_at` is mandatory and assigned by trusted logic. Validation, consumption, enrollment activation, assignment creation, and audit event are atomic. Failed verification does not consume a valid code.
+
+### Immediate scope and deferred design
+The immediate executable-design scope is `pending_enrollments`, `activation_codes`, and `trainee_assignments`. Detailed executable contracts for `mentor_assignments` and `template_transitions` are deferred until those workflows are in the immediate implementation scope. Their accepted authorization/history/atomicity policies remain in force; deferral is not permission to bypass them.
 
 ### 4.9 `template_transitions`
 Proposed fields: `id`, `profile_id`, `from_assignment_id`, `to_assignment_id`, `from_template_id`, `to_template_id`, `initiated_by`, `transitioned_at`, `reason`, `mapping_summary`, `status`. Successful transition record and assignment changes commit atomically. Cross-version mapping must be explicit, reviewed, and auditable. Failed-attempt storage remains open.
