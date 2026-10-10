@@ -235,7 +235,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-07 | What are stable target-key and cross-version mapping rules? | Resolved by accepted L-35: stable target identity plus explicit mapping between template versions. Exact key format, mapping approval authority, multi-target relationship representation, reporting rules, and conflict handling remain open. |
 | OD-08 | What are the audit event taxonomy, retention period, and export policy? | Resolved at principles level by accepted L-34: unified audit event model for sensitive events, with separate retention and export policies. Exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open. |
 | OD-09 | How should inactive targets and archived assignments appear in historical dashboards? | Resolved by accepted L-36: separate current dashboard and historical archive. Detailed filters, historical metric calculations, visual comparison, and handling of unavailable retained data remain open. |
-| OD-10 | What mentor-review statuses are required, and does review affect entry status? | Review workflow |
+| OD-10 | What mentor-review statuses are required, and does review affect entry status? | Resolved by accepted L-37: mentor review is an independent workflow and does not itself change log-entry status or constitute formal approval. Review-cycle granularity, reopening, trainee responses, and repeated-cycle history remain open. |
 | OD-11 | Are failed transition attempts stored in `template_transitions` or only in `audit_logs`? | Audit model |
 | OD-12 | What are the final source-approved field/validation requirements per specialty and log type? | Specialty correctness |
 | OD-13 | What detailed operational procedures are required for publication, archival, rollback, and template eligibility? | Core lifecycle policy is established by L-21 and L-28; operational detail remains open |
@@ -246,7 +246,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-36; design documents remain pending final review. No implementation is claimed.**
+**Current status: decisions recorded through L-37; design documents remain pending final review. No implementation is claimed.**
 
 
 ### L-26 — Trusted Validation and Schema Publication/Rollback
@@ -453,3 +453,15 @@ L-35 is design-only. It does not authorize database migrations, schema changes, 
 5. **Authorization:** Current and historical views remain subject to existing authorization rules. Historical views do not grant additional access to mentors or other roles. Availability of historical data remains subject to applicable retention and data-management policy, consistent with L-32.
 6. **Open details:** Archive filters by specialty, date range, and template version; display behavior for retired, replaced, or split targets; historical metric calculations; visual comparison details; and handling of data unavailable under retention policy remain open.
 7. **Implementation boundary:** L-36 is design-only and does not authorize migrations, database changes, backend changes, or UI implementation.
+
+
+### L-37 — Mentor Review Workflow and Statuses
+**Status: Accepted**
+
+1. **Separate concerns:** Mentor review is independent of log-entry status and formal approval. Changing review status does not automatically change entry status and is not formal approval.
+2. **Review statuses:** Use `NOT_REVIEWED` (review has not started), `IN_REVIEW` (review is in progress), `FEEDBACK_PROVIDED` (feedback has been provided), and `REVIEWED` (the current review cycle is complete with no outstanding feedback within that cycle). These statuses describe review only and do not replace entry or formal approval statuses.
+3. **No formal approval:** No mentor-review status constitutes formal approval. Formal approval and correction authorization/application remain governed by prior decisions, including L-17, L-23, and L-30.
+4. **Feedback:** Mentors may provide educational feedback within their permissions, but cannot directly edit submitted entries or apply corrections. Feedback alone does not change the entry, constitute formal rejection, or imply trainee agreement.
+5. **Authorization and auditability:** Mentors may review only records for trainees assigned to them, subject to existing authorization rules. Review status changes and feedback must be traceable, including trusted actor identity and timestamp. Client-supplied identity or role is not authoritative.
+6. **Open details:** Whether review attaches to each entry or each entry revision; whether a completed review can be reopened; how trainee responses and feedback resolution are represented; whether separate open/resolved feedback states are needed; and how repeated review cycles preserve prior history remain open.
+7. **Implementation boundary:** L-37 is design-only and does not authorize migrations, database changes, backend changes, or UI implementation.
