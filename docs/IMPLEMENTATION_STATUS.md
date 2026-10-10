@@ -84,3 +84,8 @@
 - L-40 is accepted: operational safeguards for template publication, eligibility changes, archival, rollback, failure handling, and auditability. Existing assignments and historical records are not automatically migrated, rewritten, deleted, or reinterpreted by lifecycle operations.
 - OD-01 and OD-13 are resolved at policy level by L-40. Detailed production runbooks, technical recovery/retry procedures, audit-write failure handling, operational responsibilities, and technical consistency mechanisms remain open.
 - L-40 is design/operational policy only. No migrations, database changes, backend implementation, UI implementation, or database tests have been run as a result of this decision.
+
+
+- L-41 is accepted: Super Admin emergency recovery requires pre-authorized operators, independent identity/authority verification, two independent approvers when operationally available, a narrow documented exception for material permanent-lockout risk, secure separate recovery-material custody, least privilege, trusted audit, and independent post-recovery review.
+- OD-02 and OD-15 are resolved at policy level by L-41. Environment-specific operator names, verification evidence, recovery-material custody, emergency contacts, approval/exception steps, and review deadline must be populated in the production runbook before launch.
+- L-41 is design/operational policy only. No migrations, database changes, backend implementation, UI implementation, or database tests have been run as a result of this decision.
