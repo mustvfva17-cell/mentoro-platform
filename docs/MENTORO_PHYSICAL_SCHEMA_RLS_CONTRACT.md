@@ -246,6 +246,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 7. Stable target keys and cross-version mapping.
 8. Audit taxonomy, retention, and export — resolved at principles level by L-34; exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open.
 9. Stable target identity and cross-version mapping — resolved by L-35: stable target identifiers and explicit version mappings; key format, approval authority, multi-target representation, reporting calculations, and conflict handling remain open.
+10. Historical dashboards for inactive targets and archived assignments — resolved by L-36: current progress is scoped to the active assignment, with a separate historical archive preserving original assignment/template links. Detailed filters, historical metrics, visual comparisons, and unavailable-data handling remain open.
 9. Historical display of inactive targets and archived assignments.
 10. Mentor-review statuses and effect on entry status.
 11. Failed-transition audit storage.
@@ -257,7 +258,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 
 Before migrations: review all three design documents together; resolve open decisions required for security/integrity; finalize exact SQL types, constraints, composite FKs, indexes, grants, and RLS; specify trusted functions; prepare version-controlled migrations and seeds; run real local/test database checks; review rollback and deployment.
 
-**Current status: CONSOLIDATED DESIGN DRAFT through L-35 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: CONSOLIDATED DESIGN DRAFT through L-36 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ### L-24 schema registry security and historical integrity
@@ -374,3 +375,13 @@ Before migrations: review all three design documents together; resolve open deci
 - Historical trainee records remain attached to the original template version. Mapping does not itself migrate records or assignments. Historical coverage is not automatically transferred or aggregated into targets in a newer version; reporting may use explicit approved mappings only when the applicable rules permit it.
 - Mappings must be traceable and reviewable. Define an authorized approval authority before using mappings in cross-version reporting.
 - Exact key format, approval authority, multi-target representation, reporting calculations, and incomplete/conflicting mapping handling remain open. L-35 is design-only; no migrations or implementation are authorized.
+
+
+## L-36 — Historical dashboards for inactive targets and archived assignments (accepted)
+
+- The current dashboard is scoped to the active assignment and its linked template version. Historical assignment progress does not automatically contribute to current metrics.
+- A separate historical archive provides authorized access to inactive/archived assignments, preserving each record's original assignment, template version, and historical target definition subject to retention policy.
+- Archiving does not delete or automatically transfer historical records. Historical and current progress remain distinct.
+- Cross-version comparison requires explicit approved mappings under L-35; such mappings do not automatically make historical achievements satisfy current requirements.
+- Current and historical views follow existing authorization rules and confer no additional mentor access. Data availability follows L-32 retention/data-management policy.
+- Filters, historical metric calculations, retired/replaced/split target display, visual comparison, and unavailable-data handling remain open. L-36 is design-only; no migrations or implementation are authorized.
