@@ -129,3 +129,11 @@ Do not create new policy decisions unless implementation reveals a genuine confl
 The policy-level design review is complete. The project is not yet migration-ready: executable SQL/RLS/grants/trusted-function design, detailed API/session and RPC contracts, concurrency-safe correction and enrollment/activation enforcement, approved specialty schemas, and actual database-backed test results remain required gates. Shared non-destructive scaffolding may proceed while source-approved specialty schemas are completed, but no specialty/log type should be enabled without its approved schema.
 
 Deferred work is limited to features or production-specific details not required for the current implementation slice; see the Implementation blockers vs. deferred work section above. No migrations, database changes, backend/UI implementation, or database tests are claimed by this documentation update.
+
+
+## Deployment connection review gate (2026-10-11)
+
+- Added `docs/MENTORO_DEPLOYMENT_CONNECTION_REVIEW.md`. The repository was checked for `package.json`, `vercel.json`, `api/index.js`, `supabase/config.toml`, Supabase client setup, environment-variable references, and database connection code; the checked paths/references were not found on `main`.
+- This only establishes what is present in the repository, not the live Vercel or Supabase configuration. The actual runtime connection, effective database role and grants, RLS behavior, RPC privileges, pooling/transaction semantics, and lock behavior remain unverified.
+- Before migrations or final grants/RPCs, inspect authorized Vercel/Supabase settings without exposing secret values, test against an isolated database, and document the chosen privilege model. Prefer evaluating a dedicated server-only PostgreSQL role without `BYPASSRLS`; if service-role access is retained, explicitly document that RLS is bypassed for that path.
+- No application/configuration files, credentials, migrations, policies, RPCs, or tests were changed or executed. This is a documentation-only gate.
