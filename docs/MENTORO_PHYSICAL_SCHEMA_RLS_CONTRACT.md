@@ -278,12 +278,17 @@ Enable RLS on all private tables exposed through Supabase APIs and define SQL gr
 - No frontend-controlled role elevation.
 - Recovery approach is Supabase Auth plus a secured emergency procedure (L-22). Exact verification, authorized operator(s), recovery-material handling, and post-recovery review remain open.
 
+### Platform-wide Super Admin concurrency enforcement (design-only)
+
+A candidate global uniqueness predicate is a partial unique index on a constant expression over active Super Admin grants, in addition to the per-user/per-role active-grant index. This prevents concurrent grants from creating two active platform-wide Super Admin rows. Exact migration syntax remains subject to review.
+
+Preventing revocation of the last active Super Admin requires more than a unique index: every grant/revoke/recovery workflow must acquire the same transaction-scoped serialization lock, then verify the post-change active-admin count before committing. A revoke that would leave zero active Super Admins is denied except under the narrowly documented L-41 emergency recovery procedure. Lock choice/order, grants, audit events, and recovery exception must be tested together.
 ### Security implementation requirements
 - Derive actor identity from authenticated Supabase context.
 - Never trust client-provided role, actor, owner, or assignment identifiers.
 - `SECURITY INVOKER` is the default for RPC functions. Any `SECURITY DEFINER` exception must be justified and reviewed for owner privileges, fixed safe `search_path`, narrow explicit execute grants, and RLS interaction.
 - Avoid recursive RLS helper policies.
-- Service-role secret remains server-side and is never exposed to browser code.
+- Service-role secret remains server-side and is never exposed to browser code. Important: a Supabase service-role connection bypasses RLS; `SECURITY INVOKER` does not restore RLS enforcement when invoked under that role. Before implementation, explicitly select and verify the Vercel database connection/role and its effective grants. Prefer a dedicated server-only least-privileged PostgreSQL role without `BYPASSRLS` when the deployment supports it; if a protected operation uses the service role, server-side authorization remains mandatory and RLS must not be described as its effective boundary.
 - Ordinary clients cannot update/delete revision and audit history.
 - Activation hashes are not readable by trainees or mentors.
 - For a sensitive write requiring an audit event, write the event in the same transaction. Audit failure must roll back the protected state change; do not report success without the required event.
