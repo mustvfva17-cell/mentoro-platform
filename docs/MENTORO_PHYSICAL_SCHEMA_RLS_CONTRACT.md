@@ -93,7 +93,7 @@ Trusted logic normalizes email and requires exact normalized match to the authen
 `id`, `pending_enrollment_id`, `code_hash UNIQUE`, `created_by`, `created_at`, `expires_at NOT NULL`, `used_at`, `used_by`, `revoked_at`, `replaced_by_code_id`. Store only a secure hash. Trusted logic sets expiry to exactly 24 hours after issuance. Replacement invalidates the previous unused code and creates a new 24-hour validity period. Validation, consumption, enrollment activation, assignment creation, and audit write are atomic; failed verification does not consume a valid code.
 
 ### 4.9 `template_transitions`
-`id`, `profile_id`, `from_assignment_id`, `to_assignment_id`, `from_template_id`, `to_template_id`, `initiated_by`, `transitioned_at`, `reason`, `mapping_summary JSONB`, `status`. Successful transition row and assignment changes commit atomically. Failed-attempt storage remains open. Historical entries are not reassigned.
+`id`, `profile_id`, `from_assignment_id`, `to_assignment_id`, `from_template_id`, `to_template_id`, `initiated_by`, `transitioned_at`, `reason`, `mapping_summary JSONB`, `status`. Per L-38, this table records only transitions that actually completed successfully; the successful transition row, assignment changes, and associated audit event commit atomically. Failed/rejected attempts are recorded in `audit_logs` only, not as successful transition rows. Historical entries are not reassigned.
 
 ### 4.10 `roadmap_targets`
 `id`, `logbook_template_id`, `target_key`, `track`, `domain`, `module`, `target_name`, `priority`, `expected_frequency`, `minimum_depth`, `is_active`, `created_at`. Unique `(logbook_template_id, target_key)` and `(id, logbook_template_id)`. Stable target keys, controlled vocabularies, and cross-version mapping remain open.
@@ -124,7 +124,7 @@ L-23/L-30 rules: submitting the request does not modify the entry; only the Supe
 `id`, `log_entry_id`, `revision_number`, `corrected_by`, `corrected_at`, `reason NOT NULL`, `before_snapshot JSONB NOT NULL`, `after_snapshot JSONB NOT NULL`, `correction_request_id`, `created_at`. Unique `(log_entry_id, revision_number)`. Snapshots include every scalar field and all target/context/procedure associations. Compare expected revision to current revision; reject stale changes. Entry, associations, revision, request status, and audit event update atomically. Ordinary clients cannot update/delete revisions.
 
 ### 4.18 `audit_logs`
-`id`, `actor_profile_id`, `action`, `entity_type`, `entity_id`, `occurred_at`, `metadata JSONB`, `request_id`. Trusted workflows write audit events. No plaintext activation codes, secrets, or patient-identifying data in metadata. Taxonomy, retention, and export remain open.
+`id`, `actor_profile_id`, `action`, `entity_type`, `entity_id`, `occurred_at`, `metadata JSONB`, `request_id`. Trusted workflows write audit events, including failed/rejected assignment-transition attempts. Where applicable, events capture trusted actor identity, timestamp, operation type, target assignment, outcome, and failure/rejection reason, minimizing sensitive data. No plaintext activation codes, secrets, or patient-identifying data in metadata. Taxonomy, retention, export, and audit-write failure handling remain open.
 
 ## 5. Integrity constraints and indexes
 
@@ -395,3 +395,13 @@ Before migrations: review all three design documents together; resolve open deci
 - Mentors may provide educational feedback within assigned-trainee permissions but cannot directly edit submitted entries or apply corrections. Formal approval and correction authority remain governed by L-17, L-23, and L-30. Feedback is not formal rejection and does not imply trainee agreement.
 - Record review-state changes and feedback in a traceable manner with trusted actor identity and timestamp. Client-supplied identity/role is not authoritative. Existing mentor scope restrictions apply.
 - Entry-versus-revision review granularity, reopening, trainee responses, feedback-resolution states, and repeated-cycle history remain open. L-37 is design-only; no migrations or implementation are authorized.
+
+
+## L-38 — Failed assignment transitions and audit logging (accepted)
+
+- `template_transitions` records only transitions that actually completed successfully. Failed/rejected attempts are recorded in `audit_logs` only and must not be represented as successful transition rows.
+- The assignment-state change, successful transition row, and associated audit event must commit atomically. Recording a failed attempt does not change assignment state.
+- Audit events should capture, where applicable, trusted actor identity, timestamp, operation type, target assignment, outcome, and failure/rejection reason, with data minimization and no secrets or unnecessary sensitive details.
+- Existing authorization and transition rules, including L-03 and L-21, remain applicable; client-supplied identity or role claims are not authoritative.
+- Audit retention/export follows L-34; broader data-management and retention principles follow L-32.
+- Audit-write failure handling, detailed failure taxonomy and retention, repeated/suspicious attempt handling, and exact technical atomicity/consistency mechanisms remain open. L-38 is design-only; no migrations or implementation are authorized.
