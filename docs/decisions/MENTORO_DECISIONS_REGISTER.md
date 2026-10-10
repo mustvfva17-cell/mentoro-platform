@@ -239,14 +239,42 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-11 | Are failed transition attempts stored in `template_transitions` or only in `audit_logs`? | **Resolved by accepted L-38:** `template_transitions` records only successful transitions; failed/rejected attempts are recorded in `audit_logs`. Operational handling of audit-write failure, detailed failure taxonomy, and retention specifics remain open. |
 | OD-12 | What are the final source-approved field/validation requirements per specialty and log type? | **Resolved at policy level by accepted L-39:** source-first requirements with traceable sources/design rationale; unsupported medical requirements remain unapproved. Selecting sources, extracting/reviewing actual fields, assigning detailed approval responsibilities, and final schemas remain open. |
 | OD-13 | What detailed operational procedures are required for publication, archival, rollback, and template eligibility? | **Resolved at policy level by accepted L-40:** lifecycle safeguards and required operational principles are defined. Detailed runbooks, audit-write failure handling, technical recovery procedures, and production responsibilities remain open. |
-| OD-14 | What is the final retention/deletion policy for expired activation-code rows? | Security and retention |
+| OD-14 | What is the final retention/deletion policy for expired activation-code rows? | **Deferred production-readiness item:** define retention/deletion, audit/privacy, and backup behavior before production; it does not block shared local development if existing code secrecy, expiry, revocation, and access controls are preserved. |
 | OD-15 | What remaining operational details must be specified for Super Admin emergency recovery before production? | **Resolved at policy level by accepted L-41.** Populate environment-specific operator names, contact details, verification evidence, recovery-material custody, and review deadline in the production runbook. |
 
 ## Consistency rule
 
 When an accepted decision changes, update this register and both design documents together and preserve the decision history. A proposal, example, or generated document does not itself imply approval.
 
-**Current status: decisions recorded through L-41; design documents remain pending final review. No implementation is claimed.**
+## Final design review — implementation blockers vs. deferred work (reviewed through L-41)
+
+This review does not supersede accepted decisions. It separates work that must be resolved before the relevant implementation gate from work that can safely wait until the corresponding feature is in scope.
+
+### Blockers before migrations or production writes
+
+1. **Executable database/security design:** define exact SQL types, primary/foreign/composite keys, uniqueness and check constraints, indexes, grants, RLS policies, and trusted transaction functions. Validate that client-controlled identifiers/roles cannot bypass authorization. This is a required implementation-design gate, not a new policy decision.
+2. **Trusted write and validation boundary:** select and document the concrete backend/deployment boundary that enforces authentication, authorization, template/assignment rules, JSON Schema Draft 2020-12 validation with Ajv 8, and atomic writes. No alternate client write path may bypass these controls.
+3. **Correction-request concurrency:** define the precise set of open correction-request states and enforce one open request per log entry with concurrency-safe database enforcement. Preserve the accepted L-23/L-30 workflow and stale-revision protection.
+4. **Enrollment/activation concurrency:** translate L-08/L-10/L-31 into database constraints and trusted atomic workflows so codes cannot be reused and a normalized email cannot acquire conflicting pending enrollments under concurrent requests.
+5. **Source-approved specialty schemas before enabling each specialty/log type:** choose authoritative sources, review required/optional fields and constraints, record traceability, and approve final schemas under L-39. Shared platform scaffolding may proceed in parallel, but a specialty/log type must not be treated as ready for use without its approved schema.
+6. **Pre-release verification:** implement and execute the security, integrity, concurrency, validation, history, and privacy tests in the Physical Schema/RLS Contract against a real local/test PostgreSQL or Supabase environment. Test definitions alone are not evidence of passing tests.
+
+### Deferred until the corresponding feature or production gate
+
+- Cross-version migration tooling and historical-entry editing beyond preserving immutable historical references; do not implement migration or reinterpretation implicitly.
+- Detailed historical-dashboard filters, comparison visuals, and nonessential metrics; the active-assignment scope and historical archive behavior from L-36 remain mandatory.
+- Additional mentor-feedback cycles, trainee responses, and reopening rules beyond the accepted L-37 statuses and permissions.
+- Exact audit export format, event catalogue refinements, numeric retention periods, and backup-specific handling; required privacy, auditability, and applicable legal review must still be completed before production where relevant.
+- Expired activation-code row retention/deletion policy (OD-14): decide and document before production, while preserving the existing single-use, expiry, revocation, and no-secret-logging controls during development.
+- Environment-specific Super Admin recovery operator names, verification evidence, material custody details, emergency contacts, and independent-review deadline: populate the runbook before production as required by L-41.
+- Operational publication/rollback runbooks and technical recovery/retry/audit-write-failure procedures: complete before enabling the relevant production operations.
+
+### Exit rule
+
+Do not open new policy decisions unless implementation reveals a genuine conflict with an accepted decision or a material security/data-integrity gap. Record non-blocking work as deferred tasks. This review does not itself authorize migrations or claim that any code, database change, or test has been executed.
+
+
+**Current status: decisions recorded through L-41; final design review completed at policy level. Implementation blockers and deferred work are classified below. No implementation is claimed.**
 
 
 ### L-26 — Trusted Validation and Schema Publication/Rollback
