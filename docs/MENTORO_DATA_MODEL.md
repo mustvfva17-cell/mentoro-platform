@@ -70,7 +70,7 @@ MENTORO is a centralized medical training platform. The first release supports G
 Proposed fields: `id UUID PK REFERENCES auth.users(id)`, `full_name`, `created_at`, `updated_at`. Identity is derived from authenticated Supabase Auth identity. Account deletion/anonymization remains open.
 
 ### 4.2 `user_roles`
-Proposed fields: `id`, `user_id`, `role`, `created_at`, `granted_by`, `revoked_at`. Allowed roles for the initial model: `SUPER_ADMIN`, `TRAINEE`, `MENTOR`. Only trusted workflows grant/revoke roles. The initial release has one Super Admin with platform-wide scope. Recovery uses Supabase Auth plus a secured emergency procedure (L-22); exact operational controls remain open. A uniqueness rule must prevent duplicate active grants while retaining revocation history.
+Proposed fields: `id`, `user_id`, `role`, `created_at`, `granted_by`, `revoked_at`. Allowed roles for the initial model: `SUPER_ADMIN`, `TRAINEE`, `MENTOR`. Only trusted workflows grant/revoke roles. The initial release has one Super Admin with platform-wide scope. Recovery uses Supabase Auth plus a secured emergency procedure (L-22, L-29, L-41): pre-authorized operators, independent identity/authority verification, two approvers when operationally available, a documented narrow exception for material lockout risk, least privilege, secure recovery-material custody, audit logging, and independent post-recovery review. Environment-specific operator names, contacts, verification evidence, custody details, and review deadline must be completed in the production runbook. A uniqueness rule must prevent duplicate active grants while retaining revocation history.
 
 ### 4.3 `specialties`
 Proposed fields: `id`, `name`, `slug`, `description`, `is_active`, `created_at`. Seed General Surgery, Neurology, and Anaesthesia & Critical Care. Deactivation must not invalidate history.
@@ -171,7 +171,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 
 ## 7. Open decisions — not approved
 
-2. Remaining operational runbook details for Super Admin bootstrap, recovery, replacement, and break-glass process (core controls are accepted in L-22 and L-29).
+2. Super Admin bootstrap, recovery, replacement, and break-glass procedure — core policy resolved by L-22, L-29, and L-41. Actual authorized operators, verification evidence, recovery-material custody, emergency contacts, and review deadline must be populated in the production runbook before launch.
 3. Correction-request initiation fields and UX — resolved by L-30 (required reason and complete proposed state; no attachments in the initial release; immutable after submission, withdrawal/re-submission, mandatory rejection reason, and no administrator editing of proposed values).
 4. Cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback workflow for the database-backed schema registry (schema-definition storage is resolved by L-27).
 5. Pending enrollment uniqueness across templates — resolved by L-31 at policy level (one pending enrollment per normalized email; same-scope reuse; different-scope cancel-and-replace with old unused codes invalidated). Exact database concurrency enforcement remains migration-design work.
@@ -371,3 +371,13 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Rollback disables new use of the affected version. A previously published version may regain eligibility only after validity and compatibility checks. Rollback must not rewrite versions or historical data, change historical schema references, or automatically migrate trainees. Trainee transitions remain separate authorized operations under L-03/L-21.
 - Lifecycle operations must prevent partially applied/inconsistent committed states; failures must not be treated as success. Audit sensitive changes through trusted workflows, following L-34; client-supplied identity/role is not authoritative.
 - Detailed production runbooks, recovery/retry procedures, audit-write failure handling, operational responsibilities, and technical consistency mechanisms remain open. L-40 is design/operational policy only and authorizes no migrations or implementation.
+
+
+## L-41 — Super Admin emergency recovery runbook (accepted)
+
+- Recovery is performed only by pre-authorized operators; requester identity and authority are verified independently of frontend state and user-editable role claims. Supabase Auth remains the authentication mechanism; no parallel identity system or authentication bypass is permitted.
+- Require two independent authorized approvers whenever operationally available. If a second approver is unavailable and delay creates a material risk of permanent administrative lockout, permit only a narrowly scoped documented exception, recording the rationale, operator, approval limitation, unavailable normal process, and actions performed. Identity verification, authentication, least privilege, and audit are never waived.
+- Store recovery materials securely and separately from the app and source repository, restrict access, and document access/use. Grant minimum necessary privileges; revoke or promptly review temporary privileges, credentials, and emergency access.
+- A trusted audit trail records request, verification, operator, approver(s) or exception, timestamps, actions, and resulting privileges without secrets or unnecessary sensitive data. An authorized reviewer independent of the operator documents the review, conclusion, irregularities, and corrective actions.
+- Before production, the runbook must specify authorized operators, acceptable verification evidence, recovery-material custody, emergency contacts, approval/exception steps, and review deadline. Actual environment-specific values remain to be populated; L-41 resolves OD-02 and OD-15 at policy level only.
+- L-41 is design/operational policy only and authorizes no migrations, database changes, backend implementation, or UI implementation.
