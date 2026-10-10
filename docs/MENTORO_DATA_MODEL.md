@@ -179,6 +179,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 7. Stable target keys and cross-version mapping.
 8. Audit taxonomy, retention, and export — resolved at principles level by L-34: unified model for sensitive events, with separate retention and export policies. Exact event catalogue, numeric retention periods, export format/permissions, backup handling, and operational safeguards remain open.
 9. Stable target identity and cross-version mapping — resolved by L-35: stable target identifiers plus explicit mappings between template versions; exact key format, mapping approval authority, multi-target relationship representation, reporting rules, and conflict handling remain open.
+10. Historical dashboards for inactive targets and archived assignments — resolved by L-36: separate current dashboard and historical archive, with progress separated and historical records preserved against their original assignment/template version. Detailed filters, historical metric calculations, visual comparison, and unavailable-data handling remain open.
 9. Historical dashboard behavior for inactive targets and archived assignments.
 10. Mentor-review statuses and whether review affects entry status.
 11. Storage of failed transition attempts.
@@ -190,7 +191,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 
 Before implementation, review this model against `docs/decisions/README.md` and `docs/PHYSICAL_SCHEMA_RLS_CONTRACT.md`, finalize SQL types/constraints/FKs/indexes, define exact RLS and grants, specify trusted transaction functions, prepare version-controlled migrations, and run tests against an actual local/test database.
 
-**Current status: DESIGN DRAFT through L-35 — NOT APPROVED FOR IMPLEMENTATION.**
+**Current status: DESIGN DRAFT through L-36 — NOT APPROVED FOR IMPLEMENTATION.**
 
 
 ## 9. Super Admin recovery (L-22)
@@ -318,3 +319,13 @@ The recovery approach is Supabase Auth plus a secured emergency procedure. Do no
 - Keep trainee records linked to their original template version. Do not automatically reinterpret historical records or transfer/aggregate coverage to new-version targets. Cross-version reports may use only explicit, approved mappings where applicable reporting rules permit.
 - Mappings must be traceable and reviewable. The approval authority must be defined before mappings are used for cross-version reporting.
 - Exact key format, approval authority, multi-target mapping representation, reporting calculations, and incomplete/conflicting mapping handling remain open. L-35 is design-only and does not authorize migrations or implementation.
+
+
+## L-36 — Historical dashboards for inactive targets and archived assignments (accepted)
+
+- The primary dashboard displays progress for the active assignment only, using its linked template version and applicable calculation rules. Historical assignments do not automatically contribute to current progress.
+- Provide a separate historical archive for inactive/archived assignments, subject to authorization and retention policy. Historical records remain associated with their original assignment and template version, including version-specific target definitions.
+- Archiving does not delete historical records or transfer them automatically to another assignment. Historical progress remains separate from current progress.
+- Cross-version comparison is allowed only where explicit approved mappings exist under L-35 and applicable rules permit it; historical achievements do not automatically satisfy current-version requirements.
+- Both views follow existing authorization rules and grant no additional mentor access. Data availability remains subject to L-32 retention/data-management policy.
+- Detailed filters, retired/replaced/split target display, historical metric calculations, visual comparison, and unavailable-data handling remain open. L-36 is design-only; no migrations or implementation are authorized.
