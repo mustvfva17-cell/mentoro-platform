@@ -98,6 +98,22 @@ The exact RPC signatures, SQL locks, isolation level, and partial-index syntax a
 
 Candidate database constraints described in the Physical Schema/RLS Contract are proposals only until migration review. Never implement these guarantees using UI checks alone.
 
+## 4.1 Candidate database enforcement and execution boundary
+
+The physical-schema contract proposes these final-defense uniqueness rules:
+- One `PENDING` enrollment per `normalized_email` across all templates.
+- One code per enrollment where `used_at IS NULL AND revoked_at IS NULL`; expired unused codes must be explicitly revoked before replacement because expiry is evaluated at redemption, not by a time-dependent index predicate.
+- One assignment per non-null `created_from_pending_enrollment_id`.
+- One `ACTIVE` assignment per `profile_id`.
+
+These are candidate migration definitions, not applied constraints. Required FKs, status consistency checks, grants, and exact SQL must be reviewed alongside them.
+
+Default to `SECURITY INVOKER`. The trusted Vercel API verifies the Supabase session and derives the profile UUID; clients must not call a privileged RPC or choose the profile ID. RPC execution should be restricted to the trusted server database role actually used by the API, with explicit review of `anon`/`authenticated` grants and RLS behavior. If `SECURITY DEFINER` is proposed, require a written justification plus fixed safe `search_path`, minimal grants, owner-privilege review, and an identity-binding proof before approval.
+
+Serialize create/replacement operations by normalized email within the database transaction. Activation must lock code/enrollment in a documented stable order and serialize the trainee's active-assignment invariant; database unique indexes remain the final defense. Exact lock primitive and isolation level are intentionally not frozen until the PostgreSQL/Supabase execution model and tests are reviewed.
+
+Profile provisioning is a precondition: if Auth registration succeeded but the required `profiles` row is not yet available, activation must fail retryably without consuming the code. Profile provisioning/reconciliation must be idempotent and trusted; do not report full signup/enrollment success until required profile state exists.
+
 ## 5. Minimal test matrix required before release
 
 - Verified matching email + valid code + eligible template → one assignment, enrollment activated, code consumed, audit event present.
