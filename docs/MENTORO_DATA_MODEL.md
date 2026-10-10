@@ -135,7 +135,7 @@ Proposed typed fields: `id`, `trainee_assignment_id`, `logbook_template_id`, `lo
 Proposed fields: `id`, `log_entry_id`, `mentor_profile_id`, `status`, `comments`, `reviewed_at`, `created_at`. A mentor must have an eligible trainee-wide mentor assignment for the record's trainee. Review statuses and whether review changes entry status remain open. Reviews are append-only events.
 
 ### 4.15 `log_entry_correction_requests`
-Proposed fields: `id`, `log_entry_id`, `requested_by`, `requested_at`, `reason`, `proposed_changes JSONB`, `status`, `reviewed_by`, `reviewed_at`, `review_decision_reason`, `applied_revision_id`. Status: `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`, `APPLIED`. Only administration approves/rejects and authorizes application. The exact request initiation and UI workflow remain open.
+Proposed fields: `id`, `log_entry_id`, `requested_by`, `requested_at`, `reason`, `proposed_changes JSONB`, `status`, `reviewed_by`, `reviewed_at`, `review_decision_reason`, `applied_revision_id`. Status: `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`, `APPLIED`. Only administration approves/rejects and authorizes application. `PENDING` is the only state awaiting a decision; `APPROVED` means the request awaits application, not that the entry was already changed. Enforce at most one `PENDING` request per entry and block a new request while an `APPROVED` request awaits application. `REJECTED`, `CANCELLED`, and `APPLIED` permit a new request. A partial unique index spanning `PENDING` and `APPROVED` is a candidate enforcement mechanism; exact index/state-transition design remains migration work.
 
 ### 4.16 `log_entry_revisions`
 Proposed fields: `id`, `log_entry_id`, `revision_number`, `corrected_by`, `corrected_at`, `reason`, `before_snapshot JSONB`, `after_snapshot JSONB`, `correction_request_id`, `created_at`. Unique `(log_entry_id, revision_number)`. Snapshots contain all scalar fields and target/context/procedure associations. Ordinary clients cannot update/delete revisions. Stale concurrent corrections are rejected. Entry, associations, revision, request status, and audit event update atomically.
@@ -154,6 +154,10 @@ Purpose: store database-backed, versioned payload schema definitions for a speci
 - Unique `(log_entry_id, revision_number)`.
 - Unique `code_hash`; mandatory expiry.
 - Constraints/indexes prevent duplicate active mentor assignments for the same mentor/trainee relationship according to lifecycle policy.
+- Correction concurrency contract: only one `PENDING` request per entry, and no new request while an `APPROVED` request awaits application. Candidate partial unique enforcement spans `PENDING` and `APPROVED`; exact predicate and state transitions must be finalized in migration design.
+- Required audit event for a sensitive operation is committed in the same transaction as the state change; audit-write failure causes rollback.
+- RPC functions default to `SECURITY INVOKER`; any `SECURITY DEFINER` exception requires explicit security review.
+- Only sensitive/multi-step writes are mandated through trusted API/RPC workflows. Any permitted direct simple write requires explicit reviewed GRANTS, RLS, and constraints; otherwise it is not allowed.
 - Role grants, activation, assignment transitions, log creation, submission, and correction application use trusted workflows.
 - Multi-row operations are atomic.
 - Authorization is not based on client-supplied role, actor, or owner identifiers.
@@ -172,7 +176,7 @@ The initial release has one Super Admin with platform-wide administrative scope.
 ## 7. Open decisions — not approved
 
 2. Super Admin bootstrap, recovery, replacement, and break-glass procedure — core policy resolved by L-22, L-29, and L-41. Actual authorized operators, verification evidence, recovery-material custody, emergency contacts, and review deadline must be populated in the production runbook before launch.
-3. Correction-request initiation fields and UX — resolved by L-30 (required reason and complete proposed state; no attachments in the initial release; immutable after submission, withdrawal/re-submission, mandatory rejection reason, and no administrator editing of proposed values).
+3. Correction-request initiation fields and UX — resolved by L-30. Database concurrency contract: one `PENDING` request per entry, and no new request while an `APPROVED` request awaits application; exact partial-index predicate and transaction/state-transition enforcement remain migration work.
 4. Cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback workflow for the database-backed schema registry (schema-definition storage is resolved by L-27).
 5. Pending enrollment uniqueness across templates — resolved by L-31 at policy level (one pending enrollment per normalized email; same-scope reuse; different-scope cancel-and-replace with old unused codes invalidated). Exact database concurrency enforcement remains migration-design work.
 6. Account deletion, anonymization, retention, export, and legal policies — resolved at principles level by L-32; numeric retention periods, legal exceptions, export/backup handling, and technical mechanisms remain open.
