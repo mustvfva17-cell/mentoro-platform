@@ -14,6 +14,7 @@
 - Role integrity: role grants/revocations are trusted, audited, and atomic; prevent duplicate active grants per user/role, prevent a second active platform-wide Super Admin, and prevent ordinary operations from removing the last active Super Admin. Initial Super Admin bootstrap is a separate restricted documented operation.
 - MVP enrollment/activation: one pending enrollment per normalized email; same-scope requests reuse it; scope replacement cancels the old pending enrollment and revokes unused codes atomically; one unconsumed/unrevoked code per enrollment; redemption, enrollment activation, assignment creation, and required audit writes are atomic.
 - MVP assignment integrity: a partial unique index enforces at most one active assignment per profile; activation can create at most one assignment from a pending enrollment and only for an assignable published template. Exact constraints/locking remain migration design.
+- Enrollment/activation API contract: `docs/MENTORO_ACTIVATION_API_CONTRACT.md` now defines the logical admin invitation and code-redemption operations, safe outcomes, transaction invariants, and minimum race/security test matrix. It is design-only; route names, RPC signatures, SQL locking/constraints, delivery channel, and tests remain unimplemented.
 
 ## Accepted through this update
 
@@ -38,7 +39,7 @@
 
 1. Finalize SQL types, constraints, primary/foreign/composite keys, indexes, grants, RLS, and trusted transaction functions.
    - Identity/role-specific gates: settle Auth/profile partial-failure recovery, initial Super Admin bootstrap details, grantor FK behavior, and concurrency-safe last-Super-Admin protection before migration.
-2. ADR-01 has selected the trusted backend/deployment boundary (Vercel Node.js API, Supabase Auth, PostgreSQL RLS/grants, and atomic RPC/transactions). Final API/session and executable database contracts remain to be reviewed before migrations.
+2. ADR-01 has selected the trusted backend/deployment boundary (Vercel Node.js API, Supabase Auth, PostgreSQL RLS/grants, and atomic RPC/transactions). The MVP enrollment/activation logical API contract is drafted in `docs/MENTORO_ACTIVATION_API_CONTRACT.md`; exact routes, session handling, RPC signatures, SQL locks/constraints, and executable database contracts remain to be reviewed before migrations.
 3. The correction-request policy is defined: one `PENDING` request per entry, and no new request while an `APPROVED` request awaits application. Exact partial-index predicate, state-transition locking, and concurrent enforcement remain migration-design blockers.
 4. Enrollment/activation policy is now specified for the MVP: pending-enrollment uniqueness per normalized email, serialized scope replacement, one usable code per enrollment, single-use redemption, and atomic assignment creation. Exact partial indexes, locking, FK constraints, and race-condition tests remain migration-design blockers.
 5. Approve source-traceable medical requirements and final schemas for each specialty/log type before enabling that specialty/log type. Shared infrastructure may be developed in parallel.
