@@ -137,3 +137,14 @@ Deferred work is limited to features or production-specific details not required
 - This only establishes what is present in the repository, not the live Vercel or Supabase configuration. The actual runtime connection, effective database role and grants, RLS behavior, RPC privileges, pooling/transaction semantics, and lock behavior remain unverified.
 - Before migrations or final grants/RPCs, inspect authorized Vercel/Supabase settings without exposing secret values, test against an isolated database, and document the chosen privilege model. Prefer evaluating a dedicated server-only PostgreSQL role without `BYPASSRLS`; if service-role access is retained, explicitly document that RLS is bypassed for that path.
 - No application/configuration files, credentials, migrations, policies, RPCs, or tests were changed or executed. This is a documentation-only gate.
+
+
+## Application foundation scaffold (2026-10-11)
+
+Added the initial app foundation directly on `main`: `package.json`, `.gitignore`, `.env.example`, `index.html`, `src/main.js`, `src/style.css`, `api/health.js`, and `README.md`.
+
+- Frontend scaffold: Vite + vanilla JavaScript/CSS with a minimal MENTORO shell.
+- API scaffold: a non-sensitive `/api/health` endpoint that reports application-shell status only; it explicitly does not claim database connectivity or readiness.
+- Environment template contains names only. Public browser variables are separated from server-only Supabase values; no real credentials were added.
+- No Supabase client, auth flow, database writes, migrations, RLS policies, RPCs, or Ajv schema validation have been implemented. No build or tests were run in a local runtime during this GitHub-only scaffold operation.
+- The next implementation gate is to verify the scaffold by pulling it locally and running install/build, then design the first migration and reviewed privilege/RLS boundary before any database write.
