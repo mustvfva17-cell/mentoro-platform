@@ -114,6 +114,35 @@ Proposed columns: `id UUID PRIMARY KEY`, `normalized_email TEXT NOT NULL`, `logb
 
 Trusted logic normalizes email and requires exact normalized match to the authenticated, verified email. Under L-31, enforce at most one `PENDING` enrollment per normalized email across all templates/specialties. Reuse an eligible pending enrollment for the same email and template/scope. For a different scope, atomically cancel the existing pending enrollment, revoke/invalidate its unused activation codes, create the replacement enrollment and code as applicable, and write the audit event; do not mutate the prior enrollment's scope. Never cancel/reuse an activated enrollment through this workflow. Concurrent create/reuse/replacement attempts must be serialized safely. Exact database constraint/index design remains migration work.
 
+### 4.7.1 Candidate constraints for enrollment and activation (not migration SQL)
+
+The following predicates are the intended invariants; names and exact SQL are proposed for migration review only:
+
+```sql
+-- One pending enrollment per normalized email across all templates.
+CREATE UNIQUE INDEX one_pending_enrollment_per_normalized_email
+ON public.pending_enrollments (normalized_email)
+WHERE status = 'PENDING';
+
+-- One unconsumed, unrevoked code per enrollment. Expired rows must be
+-- explicitly revoked before replacement; do not put now() in this predicate.
+CREATE UNIQUE INDEX one_usable_activation_code_per_enrollment
+ON public.activation_codes (pending_enrollment_id)
+WHERE used_at IS NULL AND revoked_at IS NULL;
+
+-- One assignment created from an enrollment, even if a later workflow changes
+-- assignment status. Historical assignment linkage remains unique.
+CREATE UNIQUE INDEX one_assignment_per_source_enrollment
+ON public.trainee_assignments (created_from_pending_enrollment_id)
+WHERE created_from_pending_enrollment_id IS NOT NULL;
+
+-- One active assignment platform-wide per trainee.
+CREATE UNIQUE INDEX one_active_assignment_per_profile
+ON public.trainee_assignments (profile_id)
+WHERE status = 'ACTIVE';
+```
+
+These indexes are defense-in-depth, not a substitute for the transaction workflow. Review required foreign keys, status/field consistency checks, and the behavior of every state transition before migration. In particular, a `PENDING` enrollment must not have activation metadata; `ACTIVATED` must have an activating profile/time and exactly one source-linked assignment; used codes should record the authenticated profile/time consistently. Exact check constraints and timestamp semantics remain to be specified and tested.
 ### 4.8 `activation_codes`
 Proposed columns: `id UUID PRIMARY KEY`, `pending_enrollment_id UUID NOT NULL`, `code_hash TEXT NOT NULL UNIQUE`, `created_by UUID`, `created_at TIMESTAMPTZ NOT NULL`, `expires_at TIMESTAMPTZ NOT NULL`, `used_at TIMESTAMPTZ NULL`, `used_by UUID NULL`, `revoked_at TIMESTAMPTZ NULL`, `replaced_by_code_id UUID NULL`.
 
@@ -202,6 +231,12 @@ Proposed narrow atomic operation: `redeem_pending_enrollment(activation_code_has
 5. Return an existing success result on a retry only if the code is already used and the same authenticated profile is the recorded activating profile and the corresponding assignment exists. Any other reuse fails safely.
 6. Roll back all writes if any protected write or required audit insert fails; failed validation does not consume a still-valid code.
 
+**Recommended call boundary and lock discipline (proposal for review):**
+- The Vercel API verifies the Supabase session and email-verification status, derives the profile UUID from that session, and computes the code hash. The browser cannot invoke the privileged database operation directly.
+- Grant RPC execution only to the trusted server database role actually used by the backend; explicitly revoke execution from `anon` and `authenticated` unless a reviewed alternative proves safe. Do not expose the service-role credential to the browser.
+- Serialize invitation create/replacement by normalized email inside the database transaction, then lock the selected enrollment/code rows in a documented stable order. For activation, serialize the trainee's active-assignment invariant before checking it. Unique indexes remain the final defense if requests race.
+- The transaction must not call an external email/SMS provider. Code delivery is outside the transaction and occurs only after commit.
+- If profile provisioning after Auth signup has not completed, fail with a retryable internal outcome without consuming the code; the trusted backend must reconcile/create the profile idempotently before a later activation attempt.
 RPC security is not presumed: `SECURITY INVOKER` is the default. If the final transaction boundary requires `SECURITY DEFINER`, document the justification and explicitly review owner privileges, fixed safe `search_path`, minimal execute grants, RLS behavior, and identity binding. The function must not trust a caller-supplied user ID without independently binding it to trusted authentication context. Exact signature, locking, isolation, grants, and SQL constraints require migration review.
 
 The API returns the plaintext invitation code once to the authorized Super Admin after the issuance transaction commits; it is never stored. No email/SMS delivery integration is included in this MVP slice. If the response is lost, the plaintext cannot be recovered; issue a replacement, revoke the old code, and audit the change.
