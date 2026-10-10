@@ -1,13 +1,13 @@
 # MENTORO — Implementation Status
 
-**Updated:** 2026-10-09
-**Phase:** Architecture and data-model decisions
+**Updated:** 2026-10-11
+**Phase:** Final policy review complete; preparing implementation design
 **Implementation status:** Documentation only. No migrations, application implementation, or database tests are claimed.
 
 ## Accepted through this update
 
-- Decisions register: accepted decisions through L-31.
-- Data model and Physical Schema/RLS Contract: design drafts updated to reflect L-31.
+- Decisions register: accepted decisions through L-41; final policy-level review completed, with implementation blockers and deferred work classified.
+- Data model and Physical Schema/RLS Contract: consolidated design drafts through L-41; executable implementation details and migrations remain gated.
 - L-25 selects JSON Schema Draft 2020-12 and Ajv 8 for schema definitions and trusted-backend payload validation.
 - L-26 requires all application write paths to use a central trusted backend validation path, rejects failed schema publication atomically, and defines safe schema eligibility/rollback principles while preserving historical schema references.
 - L-24 defines the database-backed versioned schema registry: stable schema references per template version/log type, trusted backend validation, immutable published definitions, preservation of historical schema references, and restricted/audited schema administration.
@@ -21,12 +21,26 @@
 - No tests have been executed against PostgreSQL or Supabase.
 - Documentation files can be updated directly on GitHub through the connected repository. Local files still require `git pull` to synchronize.
 
-## Remaining review gates
+## Implementation blockers vs. deferred work
 
-- Finalize the precise open-state predicate and concurrency-safe uniqueness mechanism for correction requests in the migration design.
-- Finalize schema-registry storage representation, exact backend technology/deployment boundary, detailed operational publication/rollback runbook, cross-version migration, and historical-entry editing separately.
-- Resolve other open decisions only through explicit user approval; accepted decisions resolve only the specific scope they address.
-- Review all design documents together before implementation, then define migrations, grants/RLS, trusted functions, seed data, and rollback strategy.
+### Blockers before migrations or production writes
+
+1. Finalize SQL types, constraints, primary/foreign/composite keys, indexes, grants, RLS, and trusted transaction functions.
+2. Select the concrete trusted backend/deployment boundary enforcing authentication, authorization, specialty schema validation with Ajv 8/JSON Schema Draft 2020-12, and atomic writes.
+3. Define the open correction-request states and concurrency-safe one-open-request-per-entry enforcement.
+4. Define concurrency-safe enrollment/activation enforcement consistent with L-08/L-10/L-31.
+5. Approve source-traceable medical requirements and final schemas for each specialty/log type before enabling that specialty/log type. Shared infrastructure may be developed in parallel.
+6. Implement and run the required security, integrity, concurrency, validation, history, and privacy tests against a real local/test PostgreSQL or Supabase environment.
+
+### Deferred until the relevant feature or production gate
+
+- Cross-version migration tooling and historical-entry editing beyond preserving historical references.
+- Detailed historical-dashboard filters/visual comparisons and additional mentor-feedback cycles beyond L-36/L-37.
+- Audit export details, numeric retention periods, backup-specific handling, and applicable legal review before production.
+- OD-14: retention/deletion policy for expired activation-code rows, to be decided before production.
+- L-41 environment-specific recovery operator details and the publication/rollback, retry, and audit-write-failure runbooks before their production use.
+
+Do not create new policy decisions unless implementation reveals a genuine conflict or material security/data-integrity gap. Track non-blocking items as deferred tasks. This review does not authorize migrations or claim implementation/test completion.
 
 - L-26 is accepted as a design decision only. No migrations, backend implementation, or database tests have been run.
 
@@ -89,3 +103,10 @@
 - L-41 is accepted: Super Admin emergency recovery requires pre-authorized operators, independent identity/authority verification, two independent approvers when operationally available, a narrow documented exception for material permanent-lockout risk, secure separate recovery-material custody, least privilege, trusted audit, and independent post-recovery review.
 - OD-02 and OD-15 are resolved at policy level by L-41. Environment-specific operator names, verification evidence, recovery-material custody, emergency contacts, approval/exception steps, and review deadline must be populated in the production runbook before launch.
 - L-41 is design/operational policy only. No migrations, database changes, backend implementation, UI implementation, or database tests have been run as a result of this decision.
+
+
+## Final review through L-41
+
+The policy-level design review is complete. The project is not yet migration-ready: the executable SQL/RLS/grants/trusted-function design, concrete backend validation boundary, concurrency-safe correction and enrollment/activation enforcement, approved specialty schemas, and actual database-backed test results remain required gates. Shared non-destructive scaffolding may proceed while source-approved specialty schemas are completed, but no specialty/log type should be enabled without its approved schema.
+
+Deferred work is limited to features or production-specific details not required for the current implementation slice; see the Implementation blockers vs. deferred work section above. No migrations, database changes, backend/UI implementation, or database tests are claimed by this documentation update.
