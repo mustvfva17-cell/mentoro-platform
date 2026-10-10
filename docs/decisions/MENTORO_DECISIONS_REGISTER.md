@@ -237,7 +237,7 @@ Identity, authorization, enrollment, assignments, audit, and common record infra
 | OD-09 | How should inactive targets and archived assignments appear in historical dashboards? | Resolved by accepted L-36: separate current dashboard and historical archive. Detailed filters, historical metric calculations, visual comparison, and handling of unavailable retained data remain open. |
 | OD-10 | What mentor-review statuses are required, and does review affect entry status? | Resolved by accepted L-37: mentor review is an independent workflow and does not itself change log-entry status or constitute formal approval. Review-cycle granularity, reopening, trainee responses, and repeated-cycle history remain open. |
 | OD-11 | Are failed transition attempts stored in `template_transitions` or only in `audit_logs`? | **Resolved by accepted L-38:** `template_transitions` records only successful transitions; failed/rejected attempts are recorded in `audit_logs`. Operational handling of audit-write failure, detailed failure taxonomy, and retention specifics remain open. |
-| OD-12 | What are the final source-approved field/validation requirements per specialty and log type? | Specialty correctness |
+| OD-12 | What are the final source-approved field/validation requirements per specialty and log type? | **Resolved at policy level by accepted L-39:** source-first requirements with traceable sources/design rationale; unsupported medical requirements remain unapproved. Selecting sources, extracting/reviewing actual fields, assigning detailed approval responsibilities, and final schemas remain open. |
 | OD-13 | What detailed operational procedures are required for publication, archival, rollback, and template eligibility? | Core lifecycle policy is established by L-21 and L-28; operational detail remains open |
 | OD-14 | What is the final retention/deletion policy for expired activation-code rows? | Security and retention |
 | OD-15 | What remaining operational details must be specified for Super Admin emergency recovery before production? | Core recovery controls are established by L-22 and L-29; operational details remain open |
@@ -478,3 +478,15 @@ L-35 is design-only. It does not authorize database migrations, schema changes, 
 6. **Retention:** Audit events follow L-34 audit retention/export principles and L-32 data-management and retention principles.
 7. **Open operational details:** Handling audit-write failures; final failure/rejection taxonomy; detailed retention for failed attempts; repeated or suspicious attempt handling; and technical atomicity/consistency mechanisms remain open.
 8. **Implementation boundary:** L-38 is design-only. It does not authorize migrations, database changes, backend changes, or UI implementation.
+
+
+### L-39 — Source-First Specialty Requirements and Validation
+**Status: Accepted**
+
+1. **Source-first policy:** Medical requirements for each specialty and log type must be grounded in identified, approved sources, including source/version details where applicable. Unsupported assumptions must not be presented as approved medical requirements.
+2. **Traceability:** Each requirement must be traceable either to a supporting source or to a documented platform design decision. Distinguish source-supported requirements, platform design decisions, and requirements awaiting verification/approval.
+3. **Field and validation specification:** Before approving a log type's requirements, document applicable required/optional fields, data types, allowed values, and validation constraints, along with the supporting source or rationale. A medical validation rule must not be made mandatory merely for implementation convenience.
+4. **Schema publication:** L-24 through L-28 continue to apply. Technical schema validity is necessary but does not establish medical correctness or completeness. Medical content must be reviewed and approved through the trusted workflow before being treated as final.
+5. **Unresolved requirements:** Unverified or undocumented medical requirements remain open for review and must not be filled by guessing. L-39 does not establish that all fields or requirements for General Surgery, Neurology, or Anaesthesia & Critical Care have already been defined.
+6. **Scope and implementation boundary:** This policy applies to the three MVP specialties and their relevant log types. L-39 does not itself approve a specific field list or final schema and does not authorize migrations, database changes, backend changes, or UI implementation.
+7. **Remaining work:** Identify and document approved sources for each specialty/log type; extract and review actual field requirements; define detailed approval responsibilities; and prepare final schemas consistent with approved requirements and template versions.
