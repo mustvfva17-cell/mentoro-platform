@@ -238,7 +238,7 @@ Tests must run against an actual local/test PostgreSQL or Supabase environment. 
 
 ## 10. Open decisions — not approved
 
-2. Exact Super Admin emergency verification, authorized operator(s), recovery-material handling, and post-recovery review under L-22.
+2. Super Admin emergency recovery operational policy — resolved by L-22, L-29, and L-41. Environment-specific operator names, verification evidence, recovery-material custody, emergency contacts, and review deadline must be populated in the production runbook before launch.
 3. Correction request initiation details — resolved by L-30; remaining schema/migration and concurrency details remain open.
 4. Exact schema storage representation, cross-version migration procedures, historical-entry editing policy, and detailed operational publication/rollback runbook.
 5. Pending-enrollment uniqueness across templates — resolved by L-31 at policy level; exact concurrency-safe database enforcement remains migration-design work.
@@ -426,3 +426,13 @@ Before migrations: review all three design documents together; resolve open deci
 - Rollback disables new use of an affected version. A previous published version may regain eligibility only after validity and compatibility checks. No in-place published-content edits, historical rewrites/reinterpretation, schema-reference changes, or automatic trainee migration are allowed.
 - Failed lifecycle operations must not be represented as successful or leave partially committed publication/eligibility state. Sensitive changes use trusted, auditable workflows; client-supplied identity/role is not authoritative.
 - Detailed runbooks, technical recovery/retry mechanisms, audit-write failure handling, operational responsibilities, and exact consistency mechanisms remain open. L-40 is design/operational policy only; no migrations or implementation are authorized.
+
+
+## L-41 — Super Admin emergency recovery runbook (accepted)
+
+- Only pre-authorized operators may perform recovery. Verify requester identity and authority independently of frontend state and user-editable role claims; Supabase Auth remains the authentication mechanism, with no parallel identity system or authentication bypass.
+- Require two independent authorized approvers whenever operationally available. If a second approver is unavailable and delay creates material risk of permanent administrative lockout, a narrowly scoped documented exception may be used. Record its rationale, operator, approval limitation, why the normal process was unavailable, and actions performed. Never waive identity verification, authentication, least privilege, or audit.
+- Keep recovery materials secure, access-restricted, and separate from the app and source repository; document access/use. Grant minimum necessary privileges and revoke or promptly review temporary privileges, credentials, and emergency access mechanisms.
+- Trusted audit records capture the request, verification, operator, approver(s) or exception, timestamps, actions, and resulting privileges, excluding secrets and unnecessary sensitive data. An authorized reviewer independent of the operator documents the review, conclusion, irregularities, and corrective actions.
+- Before production, the operational runbook must define operators, acceptable verification evidence, recovery-material custody, emergency contacts, approval/exception steps, and independent-review deadline. Actual environment-specific values remain to be populated. L-41 resolves OD-02 and OD-15 at policy level.
+- L-41 is design/operational policy only. No migrations, database changes, backend implementation, or UI implementation are authorized.
