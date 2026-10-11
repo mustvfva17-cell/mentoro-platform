@@ -36,9 +36,11 @@ npm run build
 Use `.env.example` as a names-only template. Copy it to a local `.env` only when the relevant integration is implemented. Never commit real credentials.
 
 - `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are public browser configuration values for approved client-side Auth use only.
-- `SUPABASE_URL` and `SUPABASE_SECRET_KEY` are server-only. Never prefix secrets with `VITE_`; never send a secret key to the browser or commit it to Git.
+- `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are used by the server-side token-verification endpoint. A publishable key is not a secret, but keep it in server configuration for this endpoint.
+- `SUPABASE_SECRET_KEY` is reserved for separately reviewed privileged workflows and is not used by `/api/auth/me`. Never prefix secrets with `VITE_`, send them to the browser, or commit them to Git.
+- Configure local/Preview values to the `mentoro-platform-test` Supabase project. Do not copy production credentials into test environments.
 
-No Supabase client, database writes, authentication flow, migrations, or RLS policies are implemented in this foundation scaffold.
+`@supabase/supabase-js` is used by the server-only `GET /api/auth/me` endpoint to verify a caller-supplied Supabase access token. This endpoint does not create sessions, read application tables, or authorize platform roles. The browser Auth flow, database writes, migrations, RLS policies, RPCs, and Ajv validation are not implemented.
 
 ## Architecture and decisions
 
@@ -46,4 +48,4 @@ Read `ARCHITECTURE.md` and the documents under `docs/` before implementing prote
 
 ## Current scope
 
-This is a foundation scaffold only. The health endpoint is not a readiness check and does not claim database connectivity. No production data or patient-identifying information should be entered.
+This is an early foundation. `/api/health` reports application-shell status only, not database readiness. `GET /api/auth/me` verifies a Supabase access token and returns minimal identity information; it is not a platform-role authorization check. No database schema, RLS policies, privileged RPCs, or production data writes exist yet. Do not enter patient-identifying information.
