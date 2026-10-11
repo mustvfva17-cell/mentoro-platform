@@ -1,6 +1,6 @@
 # MENTORO — Deployment Connection & Privilege Verification
 
-**Status:** Verification checklist only; actual deployment settings have not been inspected.
+**Status:** Connection-mode review documented; database privileges and runtime behavior remain unverified.
 **Purpose:** Close the pre-migration decision about how the Vercel Node.js API reaches Supabase/PostgreSQL and which database privileges are effective.
 
 ## 1. Evidence checked in the repository
@@ -58,3 +58,47 @@ Evaluate in this order:
 - [ ] Security and concurrency tests passed.
 
 **Current conclusion:** The real deployment connection and privilege model remain **unverified**. This checklist does not choose between the candidate models and does not authorize implementation. No credentials were accessed or changed; no migrations, application code, database policies, or tests were run.
+
+
+## 6. Connection-mode review (2026-10-11)
+
+### Dashboard evidence supplied by the project owner
+
+The Supabase Connect screen shows **Shared Transaction Pooler** selected, with URI format and these non-secret parameters:
+- Host: `aws-0-eu-west-1.pooler.supabase.com`
+- Port: `6543`
+- Database: `postgres`
+- Username shape: `postgres.<project-ref>`
+
+No password or full connection URI was recorded. The dashboard screen does not establish the effective privileges of a custom role or prove that any database behavior has been tested.
+
+### Findings from current Supabase documentation
+
+- Supabase recommends the shared transaction pooler for serverless/edge workloads with short-lived connections. Port 6543 is the expected shared transaction-pooler port.
+- A custom role using the shared pooler must use the username form `<role>.<project-ref>`; do not assume the default `postgres.<project-ref>` identity is least-privileged.
+- Transaction mode does not support prepared statements or session state that must persist across transactions. Session-level advisory locks are unsupported; any required lock must be transaction-scoped and tested through the selected driver/pooler.
+- For a Node.js serverless client, configure a single application-side connection per warm instance, disable prepared statements for the selected driver, and require TLS. Driver-specific settings must be verified against the chosen library.
+- A role without `BYPASSRLS` is still not automatically safe: table ownership, inherited/PUBLIC grants, function ownership, and explicit grants can widen access. Inspect effective privileges, not just the role definition.
+- A direct PostgreSQL connection does not automatically carry the caller's Supabase Auth JWT into database policies. If policies depend on `auth.uid()`, the identity propagation and trust boundary must be deliberately designed and tested; do not assume browser-session RLS applies to raw SQL connections.
+
+### Provisional decision
+
+**Use the shared Transaction Pooler as the leading runtime connection candidate for Vercel, but do not enable it in production yet.** The runtime must not connect as the broad `postgres` admin role. First evaluate a dedicated login role with no `BYPASSRLS`, no membership in privileged Supabase roles, and only explicitly granted access to the intended application schema/functions.
+
+This candidate is acceptable only after the design chooses and tests how verified user identity reaches authorization checks. Sensitive multi-row workflows must remain atomic; prefer narrow, reviewed database functions/transactions and explicitly test transaction-scoped locking, rollback, and audit-write failure. If this role-and-RLS model proves impractical, compare it against a Supabase Data API + server-only secret-key/RPC model and document the explicit RLS-bypass tradeoff before choosing.
+
+### Still not verified / not performed
+
+- No custom database role has been created and no grants, RLS policies, functions, or database settings have been changed.
+- No connection attempt, SQL inspection, transaction, concurrency test, or RLS test has been run. Dashboard evidence alone cannot verify effective role privileges.
+- No credentials or environment variables have been added to Vercel or GitHub.
+- No migration or application database code is authorized by this review.
+
+### References
+
+- Supabase, Connect to your database: https://supabase.com/docs/guides/database/connecting-to-postgres
+- Supabase, Connection pooling and limits: https://supabase.com/docs/guides/database/connecting-to-postgres/pooling-and-limits
+- Supabase, Row Level Security: https://supabase.com/docs/guides/database/postgres/row-level-security
+- Supabase, Postgres roles: https://supabase.com/docs/guides/database/postgres/roles
+
+**Updated conclusion:** The pooler mode is appropriate for a Vercel serverless candidate, but the production privilege model remains unapproved until the dedicated role, identity propagation, grants/RLS, and transaction/lock behavior are tested in an isolated database.
