@@ -102,3 +102,33 @@ This candidate is acceptable only after the design chooses and tests how verifie
 - Supabase, Postgres roles: https://supabase.com/docs/guides/database/postgres/roles
 
 **Updated conclusion:** The pooler mode is appropriate for a Vercel serverless candidate, but the production privilege model remains unapproved until the dedicated role, identity propagation, grants/RLS, and transaction/lock behavior are tested in an isolated database.
+
+
+## 7. Read-only role inventory results supplied by owner (2026-10-11)
+
+The owner ran the read-only `pg_roles` query in the Supabase SQL Editor on the production project and uploaded the CSV. This records role attributes only; it does not prove effective object privileges or runtime behavior.
+
+Observed roles relevant to the connection decision:
+- `postgres`: `rolcanlogin=true`, `rolsuper=false`, `rolcreatedb=true`, `rolcreaterole=true`, `rolbypassrls=true`.
+- `service_role`: `rolcanlogin=false`, `rolsuper=false`, `rolbypassrls=true`.
+- `authenticated` and `anon`: `rolcanlogin=false`, `rolsuper=false`, `rolbypassrls=false`.
+- `supabase_admin`: `rolsuper=true`, `rolbypassrls=true`.
+- The observed `authenticator` role can log in but does not itself have `BYPASSRLS`; its membership/inheritance and PostgREST role-switching behavior are separate from a raw PostgreSQL app login.
+
+Interpretation:
+1. Do not use `postgres` as the Vercel runtime login: it has role-creation/database-creation privileges and bypasses RLS.
+2. Do not treat `service_role` as RLS-protected: it has `BYPASSRLS` even though it is not a superuser.
+3. `anon` and `authenticated` are API role identities, not automatically suitable direct-Postgres login accounts; both report `rolcanlogin=false`.
+4. This role inventory does not establish whether a new custom role is permitted/appropriate, what grants it would inherit, whether it can safely use the selected pooler, or how verified Auth identity will be bound to SQL authorization.
+5. No roles or grants were created or modified. The result is evidence for rejecting the default administrative runtime identity, not approval of a replacement.
+
+### Updated verification status
+
+- [x] Supabase Connect screenshot reviewed; shared Transaction Pooler is the candidate mode.
+- [x] Read-only role attributes reviewed from owner-provided CSV.
+- [ ] Effective object/schema/function grants and all relevant role memberships verified for a proposed runtime identity.
+- [ ] Auth identity propagation and RLS model chosen and tested.
+- [ ] Driver/pooler transaction and concurrency behavior tested in an isolated database.
+- [ ] Runtime privilege model approved.
+
+**Conclusion:** The production role inventory confirms that the default `postgres` and `service_role` identities bypass RLS. Continue design and isolated testing only; do not create a production runtime role or change production grants based on this inventory alone.
