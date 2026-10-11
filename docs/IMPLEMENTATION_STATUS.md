@@ -155,3 +155,12 @@ Added the initial app foundation directly on `main`: `package.json`, `.gitignore
 - Added `docs/MENTORO_MIGRATION_0001_PROPOSAL.md` as a review-only proposal for `profiles`, `user_roles`, and `audit_logs`.
 - It preserves open gates rather than inventing executable SQL: actual Vercel/PostgreSQL role and RLS behavior, profile/Auth FK delete semantics under L-32, initial Super Admin bootstrap, last-admin transaction-scoped locking, exact grants/RLS policies, and audit taxonomy/retention.
 - No file was added under `supabase/migrations/`; no SQL was run; no Supabase database objects or credentials were changed. The proposal requires review and isolated-database tests before conversion into an executable migration.
+
+
+## Supabase connection-mode review (2026-10-11)
+
+- Reviewed the project owner's Supabase Connect screenshot and current official Supabase guidance.
+- Shared Transaction Pooler (port 6543) is the leading candidate for the Vercel serverless runtime; the default `postgres.<project-ref>` connection identity is not approved for app runtime.
+- Added findings and constraints to `docs/MENTORO_DEPLOYMENT_CONNECTION_REVIEW.md`: custom pooler username shape, no prepared statements/session-state assumptions in transaction mode, driver TLS/pool settings, role privilege checks, and the missing Auth JWT context when using raw PostgreSQL.
+- Next gate: test a dedicated non-`BYPASSRLS` role and explicit grants in an isolated database; design verified actor propagation; test RLS, transaction rollback, audit failure, and transaction-scoped locks. If this model fails, compare the Data API/server-only secret-key/RPC alternative and document its RLS-bypass implications.
+- No database roles, grants, policies, functions, migrations, Vercel environment variables, or credentials were changed. No database connection or runtime tests were performed. This is a documented connection-mode review, not a completed security verification.
