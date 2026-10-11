@@ -172,3 +172,12 @@ Added the initial app foundation directly on `main`: `package.json`, `.gitignore
 - Refined the driver decision: the transaction pooler is suitable for serverless, but driver compatibility must be tested. Current Supabase documentation identifies transaction-mode limitations and a Postgres.js query-pipelining issue; no driver is approved yet.
 - The plan specifically prohibits using the administrative `postgres` role as the application runtime identity and keeps migration credentials separate.
 - No SQL diagnostics were executed; no database role, grant, policy, function, migration, Vercel variable, or credential was changed. This is a review plan only, not a verified runtime connection.
+
+
+## ADR-02 — actor context and atomic RPC candidate (2026-10-11)
+
+- Added `docs/decisions/ADR-02-DATA-API-ACTOR-CONTEXT.md` as the recommended candidate to validate first: Supabase Data API/`supabase-js` from the trusted Vercel API, user-token context for user-scoped RLS, and narrowly scoped atomic RPCs for multi-row workflows.
+- This avoids using the production `postgres` login in app runtime and avoids raw-Postgres actor-context assumptions. It is still a proposal pending isolated security/concurrency tests, not an accepted production connection model.
+- The proposal requires verified actor derivation, server/database authorization, restricted RPC execute grants, reviewed function ownership and safe `search_path`, atomic audit writes, and explicit treatment of any service-role call as bypass-RLS when no user token is present.
+- No application code, SQL migrations, roles, grants, policies, RPCs, credentials, or environment variables were changed. Production remains untouched.
+- Migration 0001 remains blocked until the test environment and exact bootstrap/FK/locking/grant/RLS/RPC contracts are finalized.
