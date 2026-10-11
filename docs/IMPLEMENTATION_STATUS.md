@@ -181,3 +181,12 @@ Added the initial app foundation directly on `main`: `package.json`, `.gitignore
 - The proposal requires verified actor derivation, server/database authorization, restricted RPC execute grants, reviewed function ownership and safe `search_path`, atomic audit writes, and explicit treatment of any service-role call as bypass-RLS when no user token is present.
 - No application code, SQL migrations, roles, grants, policies, RPCs, credentials, or environment variables were changed. Production remains untouched.
 - Migration 0001 remains blocked until the test environment and exact bootstrap/FK/locking/grant/RLS/RPC contracts are finalized.
+
+
+## Server-side Supabase Auth verification slice (2026-10-11)
+
+- Added `@supabase/supabase-js` and `GET /api/auth/me` as a small, non-writing server-side integration slice.
+- The endpoint requires a Bearer access token, verifies it through Supabase Auth `getUser(token)`, returns only the authenticated user ID, email, and email-verification boolean, and avoids exposing provider errors or tokens.
+- Added `SUPABASE_PUBLISHABLE_KEY` to the server environment template. The endpoint does not use `SUPABASE_SECRET_KEY`; no secret values were committed.
+- This is not full login/session UI and does not implement platform roles, database access, RLS, RPCs, or migrations. ADR-02 remains a candidate pending isolated tests.
+- GitHub-side edits were not locally built or runtime-tested in this operation. Pull `main`, run `npm install` and `npm run build`, then test with Vercel local API runtime and test-project configuration before deployment.
