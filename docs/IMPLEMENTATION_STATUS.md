@@ -164,3 +164,11 @@ Added the initial app foundation directly on `main`: `package.json`, `.gitignore
 - Added findings and constraints to `docs/MENTORO_DEPLOYMENT_CONNECTION_REVIEW.md`: custom pooler username shape, no prepared statements/session-state assumptions in transaction mode, driver TLS/pool settings, role privilege checks, and the missing Auth JWT context when using raw PostgreSQL.
 - Next gate: test a dedicated non-`BYPASSRLS` role and explicit grants in an isolated database; design verified actor propagation; test RLS, transaction rollback, audit failure, and transaction-scoped locks. If this model fails, compare the Data API/server-only secret-key/RPC alternative and document its RLS-bypass implications.
 - No database roles, grants, policies, functions, migrations, Vercel environment variables, or credentials were changed. No database connection or runtime tests were performed. This is a documented connection-mode review, not a completed security verification.
+
+
+## Runtime database role verification plan (2026-10-11)
+
+- Added `docs/MENTORO_RUNTIME_ROLE_VERIFICATION_PLAN.md` with the candidate comparison (dedicated raw-PostgreSQL role versus Data API/RPC), read-only SQL diagnostics, actor-binding requirements, and isolated-database test gates.
+- Refined the driver decision: the transaction pooler is suitable for serverless, but driver compatibility must be tested. Current Supabase documentation identifies transaction-mode limitations and a Postgres.js query-pipelining issue; no driver is approved yet.
+- The plan specifically prohibits using the administrative `postgres` role as the application runtime identity and keeps migration credentials separate.
+- No SQL diagnostics were executed; no database role, grant, policy, function, migration, Vercel variable, or credential was changed. This is a review plan only, not a verified runtime connection.
