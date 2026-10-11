@@ -148,3 +148,10 @@ Added the initial app foundation directly on `main`: `package.json`, `.gitignore
 - Environment template contains names only. Public browser variables are separated from server-only Supabase values; no real credentials were added.
 - No Supabase client, auth flow, database writes, migrations, RLS policies, RPCs, or Ajv schema validation have been implemented. No build or tests were run in a local runtime during this GitHub-only scaffold operation.
 - The next implementation gate is to verify the scaffold by pulling it locally and running install/build, then design the first migration and reviewed privilege/RLS boundary before any database write.
+
+
+## Migration 0001 proposal prepared (2026-10-11)
+
+- Added `docs/MENTORO_MIGRATION_0001_PROPOSAL.md` as a review-only proposal for `profiles`, `user_roles`, and `audit_logs`.
+- It preserves open gates rather than inventing executable SQL: actual Vercel/PostgreSQL role and RLS behavior, profile/Auth FK delete semantics under L-32, initial Super Admin bootstrap, last-admin transaction-scoped locking, exact grants/RLS policies, and audit taxonomy/retention.
+- No file was added under `supabase/migrations/`; no SQL was run; no Supabase database objects or credentials were changed. The proposal requires review and isolated-database tests before conversion into an executable migration.
