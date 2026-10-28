@@ -13,7 +13,7 @@ MENTORO connects medical trainees with structured clinical training and mentorsh
 - Draft logbook entries and submission to the assigned mentor for review.
 - Supabase RLS, scoped workflow RPCs, database-generated submission timestamps, and least-privilege browser grants.
 
-The frontend work is still under review. Mentor/admin dashboards, complete template-driven logbook forms, browser end-to-end coverage, and specialty-by-specialty template migration are not yet complete.
+The trainee and mentor workspaces are implemented as MVPs, and the administrator workspace is under active review. The admin workspace can review trainee verification using short-lived signed document URLs, confirm mentor-approved bookings, create training offerings, and add future slots to published offerings. Authoring and publishing logbook template versions, full template-driven logbook forms, browser end-to-end tests, and specialty-by-specialty template migration remain incomplete.
 
 ## Branch and migration safety
 
@@ -41,6 +41,8 @@ Build and run the current source-contract check:
 npm run check:contracts
 npm run build
 ```
+
+The contract suite now also checks administrator workspace safeguards: private document links are short-lived, privileged changes use admin-checked RPCs, and the browser does not directly write administrative tables.
 
 The repository currently has no committed npm lockfile, so `npm install` is not yet fully reproducible. Before relying on repeatable dependency resolution, generate and review `package-lock.json` using the intended Node/npm toolchain, commit it, and switch CI to `npm ci`. Do not hand-author a lockfile.
 
