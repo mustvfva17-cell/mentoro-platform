@@ -590,10 +590,11 @@ function toggleTheme(){const cur=document.documentElement.getAttribute('data-the
 applyThemeButton();
 
 function currentCloudState(){return {sessions:data.sessions,cases:data.cases,procedures:data.procedures,roadmap:data.roadmap,emergency:data.emergency,reflection:data.reflection};}
-function notifyCloudStateChanged(){
+function notifyCloudStateChanged(options={}){
  if(readonlyMode||!instanceId||!window.opener)return;
- try{window.opener.postMessage({type:'MENTORO_LOGBOOK_STATE_CHANGED',instanceId,state:currentCloudState()},window.location.origin);}catch(e){}
+ try{window.opener.postMessage({type:'MENTORO_LOGBOOK_STATE_CHANGED',instanceId,state:currentCloudState(),flushNow:options.flushNow===true},window.location.origin);}catch(e){}
 }
+window.addEventListener('pagehide',()=>notifyCloudStateChanged({flushNow:true}));
 function save(){
  if(readonlyMode)return;
  store.set('mentoro_v4_sessions',JSON.stringify(data.sessions));store.set('mentoro_v4_cases',JSON.stringify(data.cases));store.set('mentoro_v4_procedures',JSON.stringify(data.procedures));store.set('mentoro_v4_roadmap',JSON.stringify(data.roadmap));store.set('mentoro_v4_emergency',JSON.stringify(data.emergency));store.set('mentoro_v4_reflection',JSON.stringify(data.reflection));
