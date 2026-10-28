@@ -1,8 +1,11 @@
 # MENTORO — Migration 0001 Proposal (Review Only)
 
-**Status:** Proposal; not executable migration SQL and not applied to Supabase.  
+**Status:** Historical proposal; not executable migration SQL and not applied to Supabase.  
 **Scope:** Foundational identity, role-history, and audit tables only.  
-**Authority:** Must remain consistent with the Physical Schema/RLS Contract, Executable DB Design Matrix, Role Security Contract, ADR-01, and L-32/L-34/L-41.
+**Authority:** Any future migration must use `docs/MENTORO_TARGET_DATA_MODEL_V2.md` and ADR-03 as the canonical enrollment/logbook model, alongside compatible security decisions.
+
+> **Architecture supersession notice — 2026-10-28:** The canonical booking/logbook model is now `docs/MENTORO_TARGET_DATA_MODEL_V2.md`, adopted with `docs/decisions/ADR-03-INDEPENDENT-TRAINING-ENROLLMENTS.md`. Any content in this legacy document that requires one active assignment/logbook per trainee, a trainee-wide mentor relationship, one pending enrollment per email, or activation-code-based training enrollment is superseded and must not be used to implement migrations or protected workflows. Shared security, audit, privacy, role-integrity, correction-history, and immutable-template-version principles remain relevant only where consistent with the new model. No SQL or database changes are authorized by this notice.
+
 
 ## 1. Why this is a proposal, not a migration file
 
