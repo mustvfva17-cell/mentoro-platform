@@ -1,10 +1,14 @@
 # MENTORO Platform — Architecture Decision Register
 
-**Status:** Consolidated decision register — pending final review  
+**Status:** Historical decision register with ADR-03 supersession — reconcile before implementation  
 **Phase:** Architecture and Data Model  
 **Implementation status:** Documentation only; no implementation is implied.
 
-This register contains only decisions explicitly accepted by the user. Other proposals remain open and must not be inferred as approved.
+This register preserves earlier decisions and is retained for traceability. ADR-03 (2026-10-28) explicitly supersedes earlier rules that conflict with independent concurrent training enrollments and per-enrollment logbooks. Use `docs/MENTORO_TARGET_DATA_MODEL_V2.md` as the canonical target model.
+
+
+> **Architecture supersession notice — 2026-10-28:** The canonical booking/logbook model is now `docs/MENTORO_TARGET_DATA_MODEL_V2.md`, adopted with `docs/decisions/ADR-03-INDEPENDENT-TRAINING-ENROLLMENTS.md`. Any content in this legacy document that requires one active assignment/logbook per trainee, a trainee-wide mentor relationship, one pending enrollment per email, or activation-code-based training enrollment is superseded and must not be used to implement migrations or protected workflows. Shared security, audit, privacy, role-integrity, correction-history, and immutable-template-version principles remain relevant only where consistent with the new model. No SQL or database changes are authorized by this notice.
+
 
 ## Accepted decisions
 
@@ -591,3 +595,17 @@ L-35 is design-only. It does not authorize database migrations, schema changes, 
 - Vercel Node.js is the selected trusted API runtime; exact API routing/layout, session propagation, error contracts, deployment configuration, and privileged-operation policy remain implementation-design tasks.
 - Exact SQL types, keys, indexes, RLS policies, grants, RPC signatures, transaction isolation/locking choices, and migration sequencing remain open until the executable database/security design is reviewed.
 - This ADR does not approve any SQL migration, schema change, backend/frontend implementation, secret provisioning, deployment, or test-completion claim.
+
+
+## L-42 — Independent Training Enrollments and Per-Enrollment Logbooks
+
+**Status: Accepted — 2026-10-28.** Canonical details: `docs/decisions/ADR-03-INDEPENDENT-TRAINING-ENROLLMENTS.md` and `docs/MENTORO_TARGET_DATA_MODEL_V2.md`.
+
+- One trainee account may have multiple simultaneous training enrollments, including multiple trainings in the same specialty or with the same mentor.
+- Every enrollment binds one trainee, one mentor, one specialty, one training period/status, and one approved template version; it gets one independent logbook instance.
+- Enforce one logbook instance per enrollment, not one active logbook per trainee. Do not transfer or merge entries across enrollments.
+- Mentor access is authorized through the mentor on each enrollment, not a trainee-wide mentor assignment.
+- University-ID review/account verification precedes training application. Mentor review followed by admin booking confirmation creates the enrollment and instance through a trusted atomic path.
+- Account/email identity is unique; training applications/enrollments are separate per booking. Do not use global one-pending-enrollment-per-email or cancel-and-replace semantics.
+- This decision supersedes conflicting assignment-switching/one-active-assignment and invitation-code activation rules in earlier entries (including L-03/L-31 where inconsistent). It does not supersede compatible security, auditing, privacy, correction history, or template-version principles.
+- The decision is not evidence of implementation. SQL, grants/RLS, API workflows, and tests remain pending access to an operational isolated Supabase environment.
