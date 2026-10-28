@@ -69,7 +69,7 @@ window.addEventListener('message', async (event) => {
     }
     sync.state = event.data.state;
     clearTimeout(sync.timer);
-    sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), 700);
+    sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), event.data.flushNow === true ? 0 : 700);
   }
 });
 
