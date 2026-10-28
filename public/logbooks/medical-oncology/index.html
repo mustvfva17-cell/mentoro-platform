@@ -766,6 +766,165 @@ window.discardDraft=k=>{store.set(DK(k),'');openModal(k)};
 const _save=save;save=function(){_save();let ok=false;try{ok=store.get('mentoro_v4_sessions')===JSON.stringify(data.sessions)&&store.get('mentoro_v4_cases')===JSON.stringify(data.cases)&&store.get('mentoro_v4_procedures')===JSON.stringify(data.procedures)}catch(e){}
  let b=$('saveWarn');if(!ok){if(!b){b=document.createElement('div');b.id='saveWarn';b.className='save-warn';b.innerHTML='Could not save to this device (storage full or blocked). Your latest changes exist only in this tab — <button type="button">Export a backup now</button>';b.querySelector('button').onclick=()=>{const x=document.querySelector('button[onclick*="xport"]');if(x)x.click()};document.body.prepend(b)}}else if(b)b.remove()};
 const _lv=labelView;labelView=v=>v==='logbook'?'Logbook':_lv(v);
+
+let mentorHtmlReviews = [];
+const mentorHtmlReviewMessages = Object.create(null);
+const mentorHtmlReviewPending = new Set();
+
+function renderMentorReviewPanel() {
+  if (!readonlyMode || !instanceId || !window.opener) return;
+  const root = document.querySelector('main.content');
+  if (!root) return;
+
+  let panel = document.getElementById('mentor-html-mentor-reviews');
+  if (!panel) {
+    panel = document.createElement('section');
+    panel.id = 'mentor-html-mentor-reviews';
+    panel.className = 'card mentor-html-mentor-reviews';
+    panel.setAttribute('aria-labelledby', 'mentor-html-mentor-reviews-title');
+    root.prepend(panel);
+    panel.addEventListener('click', function(event) {
+      const button = event.target.closest('[data-submit-mentor-review]');
+      if (!button || !panel.contains(button)) return;
+      const itemId = button.dataset.reviewItemId || '';
+      const itemType = button.dataset.reviewItemType || '';
+      const card = button.closest('[data-review-card]');
+      const decisionInput = card && card.querySelector('[data-review-decision]');
+      const feedbackInput = card && card.querySelector('[data-review-feedback]');
+      const status = card && card.querySelector('[data-review-status]');
+      const decision = decisionInput ? decisionInput.value : '';
+      const feedback = feedbackInput ? feedbackInput.value.trim() : '';
+      const showError = function(message) {
+        if (status) status.textContent = message;
+        if (status) status.setAttribute('role', 'alert');
+      };
+      if (!itemId || !itemType || !decision) { showError('Choose a review decision first.'); return; }
+      if (decision !== 'VERIFIED' && feedback.length < 5) {
+        showError('Add at least 5 characters of feedback for this decision.');
+        if (feedbackInput) feedbackInput.focus();
+        return;
+      }
+      if (feedback.length > 2000) { showError('Feedback must be 2,000 characters or fewer.'); return; }
+      if (!window.opener) { showError('The MENTORO workspace connection is no longer available. Reopen this logbook from the assigned training.'); return; }
+      if (mentorHtmlReviewPending.has(itemId)) return;
+      delete mentorHtmlReviewMessages[itemId];
+      mentorHtmlReviewPending.add(itemId);
+      button.disabled = true;
+      button.textContent = 'Saving review…';
+      if (status) { status.textContent = 'Saving this review securely…'; status.removeAttribute('role'); }
+      window.opener.postMessage({
+        type: 'MENTORO_LOGBOOK_MENTOR_REVIEW',
+        instanceId: instanceId,
+        itemId: itemId,
+        itemType: itemType,
+        decision: decision,
+        feedback: feedback
+      }, window.location.origin);
+    });
+  }
+
+  if (!document.getElementById('mentor-html-mentor-review-style')) {
+    const style = document.createElement('style');
+    style.id = 'mentor-html-mentor-review-style';
+    style.textContent = [
+      '#mentor-html-mentor-reviews{margin:0 0 18px;padding:18px;scroll-margin-top:16px}',
+      '#mentor-html-mentor-reviews .mentor-review-intro{margin:6px 0 14px;opacity:.82}',
+      '#mentor-html-mentor-reviews .mentor-review-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px}',
+      '#mentor-html-mentor-reviews .mentor-review-item{border:1px solid var(--border,#d6dce7);border-radius:12px;padding:14px;min-width:0}',
+      '#mentor-html-mentor-reviews .mentor-review-item h3{font-size:1rem;margin:0 0 5px;overflow-wrap:anywhere}',
+      '#mentor-html-mentor-reviews .mentor-review-meta{font-size:.82rem;opacity:.75;margin:0 0 10px}',
+      '#mentor-html-mentor-reviews .mentor-review-existing{font-size:.88rem;margin:8px 0;padding:9px;border-radius:8px;background:var(--surface-muted,rgba(120,130,150,.1));overflow-wrap:anywhere}',
+      '#mentor-html-mentor-reviews .mentor-review-controls{display:grid;gap:8px;margin-top:10px}',
+      '#mentor-html-mentor-reviews select,#mentor-html-mentor-reviews textarea{width:100%;max-width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--border,#d6dce7);border-radius:8px;background:var(--input-bg,transparent);color:inherit;font:inherit}',
+      '#mentor-html-mentor-reviews textarea{min-height:76px;resize:vertical}',
+      '#mentor-html-mentor-reviews .mentor-review-status{font-size:.87rem;min-height:1.2em;margin:5px 0 0;overflow-wrap:anywhere}',
+      '#mentor-html-mentor-reviews .mentor-review-global{margin:8px 0;padding:10px;border-radius:8px;background:var(--surface-muted,rgba(120,130,150,.1))}',
+      '#mentor-html-mentor-reviews .mentor-review-submit{justify-self:start}',
+      '@media(max-width:480px){#mentor-html-mentor-reviews{padding:13px}}'
+    ].join('\n');
+    document.head.appendChild(style);
+  }
+
+  const typeLabels = {
+    session: 'Clinical session',
+    case: 'Clinical case',
+    procedure: 'Procedure',
+    discussion: 'Teaching discussion',
+    emergency: 'Emergency exposure'
+  };
+  const items = [];
+  const addItems = function(values, type) {
+    (Array.isArray(values) ? values : []).forEach(function(item, index) {
+      if (!item || typeof item !== 'object') return;
+      const id = String(item.id == null ? '' : item.id).trim();
+      if (!id) return;
+      const title = [
+        item.title, item.topic, item.procedureName, item.procedure,
+        item.name, item.diagnosis, item.chiefComplaint, item.complaint,
+        item.template, item.activity, item.department, item.clinic,
+        item.focus, item.date
+      ].find(function(value) { return typeof value === 'string' && value.trim(); });
+      items.push({
+        id: id,
+        type: type,
+        title: title ? String(title).trim() : typeLabels[type] + ' ' + (index + 1),
+        date: typeof item.date === 'string' ? item.date : ''
+      });
+    });
+  };
+  addItems(data.sessions, 'session');
+  addItems(data.cases, 'case');
+  addItems(data.procedures.filter(function(item) {
+    return item && (item.kind === 'discussion' || Object.prototype.hasOwnProperty.call(item, 'topic'));
+  }), 'discussion');
+  addItems(data.procedures.filter(function(item) {
+    return item && !(item.kind === 'discussion' || Object.prototype.hasOwnProperty.call(item, 'topic'));
+  }), 'procedure');
+  addItems(data.emergency, 'emergency');
+
+  const latestByItem = new Map();
+  mentorHtmlReviews.forEach(function(review) {
+    if (review && review.item_id != null) latestByItem.set(String(review.item_id), review);
+  });
+  const decisionLabels = { VERIFIED: 'Verified', FEEDBACK: 'Feedback given', NEEDS_REVISION: 'Revision requested' };
+  const globalMessage = mentorHtmlReviewMessages._global
+    ? '<p class="mentor-review-global" role="status">' + esc(mentorHtmlReviewMessages._global) + '</p>'
+    : '';
+  const itemMarkup = items.map(function(item) {
+    const previous = latestByItem.get(item.id);
+    const pending = mentorHtmlReviewPending.has(item.id);
+    const statusMessage = mentorHtmlReviewMessages[item.id] || (pending ? 'Saving this review securely…' : '');
+    const priorMarkup = previous
+      ? '<div class="mentor-review-existing"><strong>Latest decision: ' + esc(decisionLabels[previous.decision] || previous.decision || 'Reviewed') + '</strong>' +
+        (previous.feedback ? '<p style="margin:5px 0 0">' + esc(previous.feedback) + '</p>' : '') +
+        (previous.created_at ? '<p style="margin:5px 0 0;opacity:.75">Recorded ' + esc(new Date(previous.created_at).toLocaleString()) + '</p>' : '') +
+        '</div>'
+      : '<p class="mentor-review-meta">No mentor decision recorded yet.</p>';
+    return '<article class="mentor-review-item" data-review-card>' +
+      '<h3>' + esc(item.title) + '</h3>' +
+      '<p class="mentor-review-meta">' + esc(typeLabels[item.type]) + (item.date ? ' · ' + esc(item.date) : '') + '</p>' +
+      priorMarkup +
+      '<div class="mentor-review-controls">' +
+        '<label>Review decision<select data-review-decision aria-label="Review decision for ' + esc(item.title) + '">' +
+          '<option value="">Choose a decision…</option>' +
+          '<option value="VERIFIED">Verified — completed satisfactorily</option>' +
+          '<option value="FEEDBACK">Feedback — give guidance</option>' +
+          '<option value="NEEDS_REVISION">Needs revision — follow-up required</option>' +
+        '</select></label>' +
+        '<label>Feedback / next steps<textarea data-review-feedback maxlength="2000" placeholder="Required for feedback or revision requests (5–2,000 characters). Do not include patient-identifying information."></textarea></label>' +
+        '<button type="button" class="btn primary mentor-review-submit" data-submit-mentor-review data-review-item-id="' + esc(item.id) + '" data-review-item-type="' + esc(item.type) + '"' + (pending ? ' disabled' : '') + '>' + (pending ? 'Saving review…' : 'Record mentor review') + '</button>' +
+        '<p class="mentor-review-status" data-review-status role="status">' + esc(statusMessage) + '</p>' +
+      '</div>' +
+    '</article>';
+  }).join('');
+  panel.innerHTML = '<div class="mentor-review-heading"><h2 id="mentor-html-mentor-reviews-title" style="font-size:1.18rem;margin:0">Mentor review</h2>' +
+    '<p class="mentor-review-intro">Review each saved session, clinical case, procedure, teaching discussion, or emergency exposure. The trainee logbook remains read-only in this view.</p></div>' +
+    globalMessage +
+    (items.length
+      ? '<div class="mentor-review-list">' + itemMarkup + '</div>'
+      : '<div class="empty-state"><strong>No saved entries to review yet</strong><p>After the trainee saves a session, case, procedure, discussion, or emergency exposure, reopen this review view.</p></div>');
+}
+
 function applyReadOnlyMode(){
  if(!readonlyMode)return;
  document.body.classList.add('html-logbook-readonly');
@@ -785,10 +944,30 @@ function applyReadOnlyMode(){
   form.dataset.readonlyGuarded='true';
  });
 }
-const _r=render;render=function(){_r();renderLogbook();renderOverviewPlus();renderTimeline();applyReadOnlyMode()};
+const _r=render;render=function(){_r();renderLogbook();renderOverviewPlus();renderTimeline();applyReadOnlyMode();renderMentorReviewPanel()};
 window.addEventListener('message',event=>{
  if(event.origin!==window.location.origin||!window.opener||event.source!==window.opener||!event.data||event.data.instanceId!==instanceId)return;
  const msg=event.data;
+ if(msg.type==='MENTORO_LOGBOOK_LOAD_REVIEWS'){
+  mentorHtmlReviews=Array.isArray(msg.reviews)?msg.reviews:[];
+  if(msg.error)mentorHtmlReviewMessages._global='Could not load previous mentor review decisions: '+String(msg.error);
+  else delete mentorHtmlReviewMessages._global;
+  renderMentorReviewPanel();
+  return;
+ }
+ if(msg.type==='MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT'){
+  const itemId=String(msg.itemId||'');
+  mentorHtmlReviewPending.delete(itemId);
+  if(msg.ok&&msg.review){
+   mentorHtmlReviews=mentorHtmlReviews.filter(function(review){return String(review.item_id)!==itemId;});
+   mentorHtmlReviews.push(msg.review);
+   mentorHtmlReviewMessages[itemId]='Mentor review saved successfully.';
+  }else{
+   mentorHtmlReviewMessages[itemId]=String(msg.error||'Could not save this mentor review.');
+  }
+  renderMentorReviewPanel();
+  return;
+ }
  const setCloudNotice=(text,kind='info')=>{
   let note=document.getElementById('cloud-sync-notice');
   if(!note){note=document.createElement('div');note.id='cloud-sync-notice';note.className='privacy-note';note.setAttribute('role','status');document.querySelector('main.content')?.prepend(note);}
