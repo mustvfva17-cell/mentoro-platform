@@ -12,7 +12,7 @@
 
 The test database has the core platform tables: profiles and role assignments, trainee and mentor profiles, verification documents, specialties, training offerings and slots, applications, enrollments, versioned logbook templates, logbook instances and entries, mentor reviews, assessments, and audit logs. RLS is enabled on the listed public tables. The six active specialty records are Anaesthesia & Critical Care, Cardiology, General Surgery, Medical Oncology, Neurology, and Ophthalmology.
 
-Five migrations were already recorded in the test database before this audit. The database had therefore advanced beyond the repository's older `IMPLEMENTATION_STATUS.md` wording that described the project as documentation-only.
+Five migrations were already recorded in the test database before this audit. The database had therefore advanced beyond the repository's older `IMPLEMENTATION_STATUS.md` wording that described the project as documentation-only. However, the repository's `supabase/migrations/` directory contains only the three privilege-hardening migrations added in this branch; the five pre-existing database migrations are not checked into GitHub. The current database schema is therefore **not reproducible from this branch alone**. Recover and review the original five migrations (or create a verified baseline/schema export) before treating this repo as the source of truth for database setup.
 
 ## Security finding and remediation
 
@@ -44,7 +44,8 @@ The UI uses the existing RLS-protected tables and does not introduce a service-r
 
 ## Not yet verified / remaining work
 
-- The application build and browser flow have **not** been executed. The attempt to clone the repository for a local build failed because the execution environment could not resolve `github.com`. Do not treat this branch as production-ready.
-- The Vercel Preview project/environment needs to be connected to `mentoro-platform` and configured with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. No environment-variable values or secrets were changed.
+- A GitHub Actions workflow was added at `.github/workflows/validate.yml`. Run `40661697452` completed successfully: dependency installation and `npm run build` both passed. This verifies the Vite production build, but not the runtime browser workflow.
+- Browser flow has **not** been tested with real trainee, mentor, or admin accounts. The attempt to clone the repository for a local build failed because the execution environment could not resolve `github.com`; CI now provides repeatable build validation. Do not treat this branch as production-ready.
+- Creating a separate Vercel Preview project was attempted but the Vercel API returned `403 forbidden` (no permission to create a project). No existing project was modified and no environment-variable values or secrets were changed. A team owner must create/authorize the preview project and connect `mentoro-platform`, then configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` for the preview branch.
 - No end-to-end tests were run against real trainee, mentor, or admin accounts.
 - The current branch is a review candidate, not a production deployment. Admin and mentor dashboards, robust end-to-end tests, full template-driven logbook fields, and the six specialty template migrations remain to be implemented.
