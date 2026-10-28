@@ -4,14 +4,20 @@ The dedicated branch deployment is available at:
 
 `https://mentoro-platform-git-feat-admin-workspace-mvp-mustvfva17-3787.vercel.app`
 
-Vercel has reported the deployment as `READY` for Git ref `feat/admin-workspace-mvp`. The two public browser variables below are configured on the Preview target for that branch. The owner confirmed that the in-app Supabase configuration warning is no longer visible.
+Vercel has reported the admin deployment as `READY` for Git ref `feat/admin-workspace-mvp`. The owner confirmed that its in-app Supabase configuration warning disappeared after the two public browser variables were configured for that branch.
+
+The template-schema branch has its own Ready Vercel deployment:
+
+`https://mentoro-platform-git-feat-logbook-templa-2a615c-mustvfva17-3787.vercel.app`
+
+Its deployment is tied to commit `e4ada69413f3fb5ad64deddcb63ef2eefa2b5d3d` on `feat/logbook-template-drafts`. The two variables have **not** been confirmed for this new branch. Vercel settings requests from this workflow currently return `Project not found`, and its deployment-content request returns `403`; therefore, don't assume the login or template builder is usable there until the variables are configured and the Preview is opened manually.
 
 ## Preview-only environment variables
 
-- `VITE_SUPABASE_URL` — URL for `mentoro-platform-test`.
-- `VITE_SUPABASE_PUBLISHABLE_KEY` — public publishable key for `mentoro-platform-test`.
+- `VITE_SUPABASE_URL` — `https://dkqrpndqfwmyevylbbse.supabase.co`.
+- `VITE_SUPABASE_PUBLISHABLE_KEY` — the public publishable key for `mentoro-platform-test`.
 
-These are scoped to Vercel Preview and `feat/admin-workspace-mvp`. Never use a Supabase secret or service-role key in a `VITE_` variable. Never copy credentials into this document or commit them to Git.
+These were confirmed on the Preview target for `feat/admin-workspace-mvp`. They must also be added with the Git branch set to `feat/logbook-template-drafts` for the new branch. Do not change Production or expose a Supabase secret/service-role key in a `VITE_` variable. Never copy credentials into this document or commit them to Git.
 
 ## Auth configuration status
 
