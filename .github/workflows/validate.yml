@@ -25,5 +25,7 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Validate frontend/schema contracts
+        run: npm run check:contracts
       - name: Build production assets
         run: npm run build
