@@ -106,6 +106,19 @@ assert.ok(htmlRuntime.includes("MENTORO_LOGBOOK_STATE_CHANGED"));
 assert.ok(htmlRuntime.includes("MENTORO_LOGBOOK_SAVE_RESULT"));
 assert.ok(htmlRuntime.includes("window.opener.postMessage"));
 assert.ok(htmlRuntime.includes("instanceId?'mentoro_training_'+instanceId+'_':"));
+
+assert.ok(main.includes('instance && !isRegisteredHtml'));
+assert.ok(main.includes('data-open-html-logbook-readonly'));
+assert.ok(main.includes('readOnly: sync.readOnly === true'));
+assert.ok(main.includes('if (sync.readOnly)'));
+const mentorReadOnlyRuntime = await read('public/logbooks/medical-oncology/index.html');
+assert.ok(mentorReadOnlyRuntime.includes("pageParams.get('readonly')==='1'"));
+assert.ok(mentorReadOnlyRuntime.includes('function applyReadOnlyMode()'));
+assert.ok(mentorReadOnlyRuntime.includes("button.hasAttribute('data-view')||button.id==='themeToggle'"));
+assert.ok(mentorReadOnlyRuntime.includes('if(readonlyMode)return;'));
+assert.ok(mentorReadOnlyRuntime.includes('Read-only mentor review loaded.'));
+console.log('HTML templates use the original runtime in trainee cards and expose a guarded, non-writing mentor review mode.');
+
 console.log('Existing HTML logbook launch, origin-checked cloud state bridge, per-instance local cache, and revisioned RPC integration passed.');
 
 
