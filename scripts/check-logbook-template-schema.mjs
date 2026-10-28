@@ -97,7 +97,7 @@ assert.ok(main.includes("renderPayloadSummary(entry.payload, templateFields)"));
 
 console.log('Schema-driven logbook rendering, explicit boolean answers, duplicate-key handling, payload persistence, edit support, and safe output passed.');
 
-const payloadMigration = await read('supabase/migrations/20261028154500_validate_logbook_entry_payload.sql');
+const payloadMigration = await read('supabase/migrations/20261028155601_validate_logbook_entry_payload.sql');
 assert.ok(payloadMigration.includes('CREATE OR REPLACE FUNCTION app_private.validate_logbook_entry_payload()'));
 assert.ok(payloadMigration.includes('SECURITY DEFINER'));
 assert.ok(payloadMigration.includes('FROM PUBLIC, anon, authenticated, service_role'));
