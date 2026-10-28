@@ -195,3 +195,62 @@ h1,h2,h3,p { margin-top: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Administrator workspace form surfaces */
+.admin-form-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(7, 27, 53, .035);
+}
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.admin-form-grid .field { min-width: 0; }
+.admin-form-grid .field input,
+.admin-form-grid .field select,
+.admin-form-grid .field textarea,
+.admin-slot-form input,
+.admin-form-card select,
+.admin-form-card input:not([type="checkbox"]),
+.admin-form-card textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #dfe5ee;
+  border-radius: 9px;
+  color: var(--navy);
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+.admin-form-grid .field textarea,
+.admin-form-card textarea { resize: vertical; }
+.admin-form-wide { grid-column: 1 / -1; }
+.admin-publish-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.admin-publish-option input { margin-top: 3px; accent-color: var(--red); }
+.admin-document-link { display: inline-flex; align-items: center; text-decoration: none; }
+.admin-slot-form { display: grid; gap: 9px; margin-top: 15px; padding-top: 14px; border-top: 1px solid #edf0f5; }
+.admin-slot-form .field-label { margin: 0; }
+.admin-slot-form .entry-form-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.admin-slot-form .entry-form-row:last-child { grid-template-columns: minmax(70px,.45fr) auto; }
+@media (max-width: 640px) {
+  .admin-form-card { padding: 15px; }
+  .admin-form-grid { grid-template-columns: 1fr; }
+  .admin-form-wide { grid-column: auto; }
+  .admin-slot-form .entry-form-row,
+  .admin-slot-form .entry-form-row:last-child { grid-template-columns: 1fr; }
+}
