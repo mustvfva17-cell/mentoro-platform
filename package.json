@@ -7,7 +7,8 @@
     "dev": "vite",
     "dev:vercel": "vercel dev",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:contracts": "node scripts/check-logbook-entry-types.mjs"
   },
   "devDependencies": {
     "vite": "^6.4.1"
