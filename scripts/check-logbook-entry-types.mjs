@@ -70,4 +70,19 @@ if (submissionSource !== null) {
   }
 }
 
+const provisioningCallCount = (frontend.match(/supabase\\.rpc\\(['"]provision_current_trainee['"]/g) || []).length;
+if (provisioningCallCount !== 1 ||
+    !frontend.includes("from('profile_roles')") ||
+    !frontend.includes(".is('revoked_at', null)") ||
+    !frontend.includes("item.role === 'TRAINEE'") ||
+    (frontend.match(/requireTraineeWorkspace\\(/g) || []).length !== 4) {
+  throw new Error('Existing platform accounts must be role-checked before trainee provisioning.');
+}
+
+if (!frontend.includes('const instanceRelation = enrollment.logbook_instances;') ||
+    !frontend.includes('Array.isArray(instanceRelation) ? instanceRelation[0] : instanceRelation')) {
+  throw new Error('Logbook instance rendering must support one-to-one PostgREST embedding.');
+}
+
+console.log('Account-role entry and one-to-one logbook embedding contracts passed.');
 console.log(`Logbook entry-type and scoped-submission contracts passed: ${[...new Set(usedTypes)].join(', ')}.`);
