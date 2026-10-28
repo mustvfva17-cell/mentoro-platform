@@ -15,7 +15,7 @@ Recover a reproducible database history for MENTORO, verify its existing test sc
 
 ## Migration history in the database
 
-The test database currently reports these nine applied migration records:
+The test database currently reports these ten applied migration records:
 
 | Version | Name | SQL file in recovery branch? |
 | --- | --- | --- |
@@ -28,6 +28,7 @@ The test database currently reports these nine applied migration records:
 | 20261028090059 | restrict_postgres_default_table_privileges | Present |
 | 20261028090137 | least_privilege_browser_write_columns | Present |
 | 20261028092340 | restrict_app_private_helper_execute | Present |
+| 20261028093412 | harden_trainee_verification_bucket | Present |
 
 The first five migration records existed in the database history but were absent from the trainee-auth branch. The SQL files were recovered from the existing `feature/independent-training-enrollments` branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
 
@@ -66,6 +67,15 @@ The live default-ACL inventory also reports broad defaults for objects created b
 
 The current migration connection is `postgres` and does not have membership in `supabase_admin`, so it cannot change that role's default privileges. This is a **follow-up for a Supabase project owner** to review and harden in a controlled way. No attempt was made to bypass role ownership. The existing objects in the current app schema were separately checked and do not inherit those permissions automatically; the concern is future objects created by that role.
 
+## Verification storage limits
+
+The `trainee-verification` bucket is private and now enforces the client UI's upload constraints at the Storage layer:
+- Maximum object size: 8 MiB (8,388,608 bytes).
+- Allowed MIME types: `image/jpeg`, `image/png`, and `application/pdf`.
+- It contained zero objects when the limits were applied, so no existing uploads were affected.
+
+Migration `20261028093412_harden_trainee_verification_bucket.sql` creates/configures the bucket idempotently and applies these limits during replay, rather than relying only on client-side checks.
+
 ## Findings and limits
 
 - The database contains 17 public tables and helper routines/policies. Reconstructing a migration from current schema alone can lose historical intent, ordering, grants, triggers, storage policies, and edge-case safeguards.
@@ -94,4 +104,4 @@ The GitHub Actions workflow now runs `npm run check:contracts` before the produc
 
 ## Current state
 
-The five missing migration files, the privilege-hardening migration, and this audit note are present on the recovery branch. The latest privilege-hardening migration was applied only to `mentoro-platform-test` and was checked afterward with read-only privilege queries. Production was not accessed or modified. No PR was merged and no production deployment was made.
+The five missing migration files, both security/storage hardening migrations, and this audit note are present on the recovery branch. The latest privilege-hardening migration was applied only to `mentoro-platform-test` and was checked afterward with read-only privilege queries. Production was not accessed or modified. No PR was merged and no production deployment was made.
