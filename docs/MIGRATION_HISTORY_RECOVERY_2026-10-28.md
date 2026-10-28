@@ -81,12 +81,12 @@ Migration `20261028094412_fix_scoped_logbook_submission_rpc.sql` changes the RPC
 
 The original column-grant migration allowed `authenticated` to UPDATE `submitted_at`, even after the scoped submission RPC was changed to update only `status`. The row-level policy and BEFORE trigger protected the supported submission transition, so this was an unnecessary privilege rather than a demonstrated timestamp forgery path.
 
-Migration `20261028102000_revoke_submission_timestamp_client_write.sql` revokes direct browser UPDATE on `submitted_at`. Catalog validation then confirmed:
+Migration `20261028101524_revoke_submission_timestamp_client_write.sql` revokes direct browser UPDATE on `submitted_at`. Catalog validation then confirmed:
 - `authenticated` cannot UPDATE `submitted_at` or `updated_at`.
 - `authenticated` can still UPDATE `status`, as needed for the scoped submission RPC.
 - The server-side submission timestamp trigger remains enabled.
 
-A final rollback-only RPC test after this privilege change is required before calling the submission path fully verified against the updated grant set.
+A rollback-only RPC test after this privilege change passed: the entry became `SUBMITTED`, the database generated `submitted_at`, `authenticated` could still update `status`, and direct UPDATE permission on `submitted_at` was denied.
 
 ## Logbook submission timestamp integrity
 
