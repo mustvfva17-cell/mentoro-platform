@@ -94,6 +94,20 @@ assert.ok(main.includes('payload: templatePayload.payload'));
 assert.ok(main.includes('entry_type: entryType'));
 assert.ok(main.includes('update({ title, entry_date: entryDate, payload: templatePayload.payload })'));
 assert.ok(main.includes("renderPayloadSummary(entry.payload, templateFields)"));
+assert.ok(main.includes("data-open-html-logbook"));
+assert.ok(main.includes("templateVersion?.template_definition?.renderer === 'HTML'"));
+assert.ok(main.includes("get_my_logbook_html_state"));
+assert.ok(main.includes("save_my_logbook_html_state"));
+assert.ok(main.includes("event.origin !== window.location.origin"));
+const htmlRuntime = await read('public/logbooks/medical-oncology/index.html');
+assert.ok(htmlRuntime.includes("MENTORO_LOGBOOK_READY"));
+assert.ok(htmlRuntime.includes("MENTORO_LOGBOOK_LOAD_STATE"));
+assert.ok(htmlRuntime.includes("MENTORO_LOGBOOK_STATE_CHANGED"));
+assert.ok(htmlRuntime.includes("MENTORO_LOGBOOK_SAVE_RESULT"));
+assert.ok(htmlRuntime.includes("window.opener.postMessage"));
+assert.ok(htmlRuntime.includes("instanceId?'mentoro_training_'+instanceId+'_':"));
+console.log('Existing HTML logbook launch, origin-checked cloud state bridge, per-instance local cache, and revisioned RPC integration passed.');
+
 
 console.log('Schema-driven logbook rendering, explicit boolean answers, duplicate-key handling, payload persistence, edit support, and safe output passed.');
 
