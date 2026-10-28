@@ -17,12 +17,12 @@ The frontend work is still under review. Mentor/admin dashboards, complete templ
 
 ## Branch and migration safety
 
-The work is intentionally split across stacked draft pull requests:
+The work is tracked across these pull requests:
 
-- **PR #1 — trainee foundation:** trainee-facing UI and Auth workflow.
-- **PR #2 — migration recovery/security:** the restored core schema, migration history, and subsequent database hardening. PR #2 targets the PR #1 branch.
+- **PR #1 — trainee foundation:** merged into `main` on 2026-10-28. This does not constitute production-readiness approval.
+- **PR #2 — migration recovery/security:** open as a draft and targets `main`; it restores historical migration files and adds database hardening.
 
-**Do not merge or deploy PR #1 on its own.** Its frontend depends on database objects supplied by the stacked migration branch. Neither pull request is approved for production. Production has not been changed by this work.
+**Do not merge PR #2 or deploy to production until it has been reviewed and the outstanding migration/security and end-to-end checks are complete.** The test-only PostgreSQL 17 `MAINTAIN` privilege fix is recorded in PR #2. No production database changes or production deployment were initiated by the work described in the recovery PR.
 
 The test Supabase project is `mentoro-platform-test`. Do not replay the recovered migrations on that project because its migration ledger already records them as applied. A clean-room migration replay still requires an isolated disposable database. Do not run development migrations against production.
 
@@ -53,7 +53,7 @@ Use only the test Supabase project for local development and Preview deployments
 
 The publishable key is intended for browser use; database access must still be constrained by RLS and grants. Never expose a Supabase secret/service-role key through a `VITE_` variable or commit credentials to Git.
 
-The independent Preview project and environment configuration are not yet verified. A Vercel team owner must authorize or create the Preview project and connect this repository before browser-based end-to-end testing can be completed.
+The independent Preview project and environment configuration are not yet verified. Creating a separate Vercel project returned 403 in the available team context. A Vercel team owner must authorize or create the Preview project and connect this repository before browser-based end-to-end testing can be completed.
 
 ## Expected trainee flow
 
