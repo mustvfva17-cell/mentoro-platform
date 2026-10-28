@@ -23,7 +23,9 @@ const [
   scopedSubmission,
   submissionTimestampRevocation,
   traineeRoleGuard,
-  browserMaintainPrivilege
+  browserMaintainPrivilege,
+  mentorInboxMigration,
+  secureMentorInboxMigration
 ] = await Promise.all([
   read('src/main.js'),
   read('supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql'),
@@ -36,7 +38,9 @@ const [
   read('supabase/migrations/20261028094412_fix_scoped_logbook_submission_rpc.sql'),
   read('supabase/migrations/20261028101524_revoke_submission_timestamp_client_write.sql'),
   read('supabase/migrations/20261028103649_prevent_nontrainee_self_provisioning.sql'),
-  read('supabase/migrations/20261028113918_revoke_browser_maintain_privilege.sql')
+  read('supabase/migrations/20261028113918_revoke_browser_maintain_privilege.sql'),
+  read('supabase/migrations/20261028115852_mentor_scoped_application_inbox.sql'),
+  read('supabase/migrations/20261028115928_secure_mentor_inbox_wrapper.sql')
 ]);
 
 // Authentication and identity provisioning.
@@ -52,6 +56,22 @@ check('active mentor role routes to the mentor workspace and uses the current-us
   /supabase\.rpc\(['"]mentor_review_my_application['"]/.test(frontend) &&
   contains(currentUserWrappers, 'CREATE OR REPLACE FUNCTION public.mentor_review_my_application(') &&
   contains(currentUserWrappers, 'app_private.mentor_review_current_application(p_application_id, p_decision, p_reason)'));
+
+check('mentor application inbox is limited to the authenticated active mentor and assigned offerings',
+  contains(mentorInboxMigration, "v_actor_id uuid := auth.uid()") &&
+  contains(mentorInboxMigration, "IF v_actor_id IS NULL OR NOT app_private.is_mentor()") &&
+  contains(mentorInboxMigration, "WHERE o.mentor_profile_id = v_actor_id") &&
+  contains(mentorInboxMigration, "p_limit < 1 OR p_limit > 200") &&
+  !contains(mentorInboxMigration, "p.email"));
+check('public mentor inbox endpoint uses SECURITY INVOKER and delegates to the private implementation',
+  contains(secureMentorInboxMigration, "LANGUAGE sql STABLE SECURITY INVOKER") &&
+  contains(secureMentorInboxMigration, "FROM app_private.mentor_list_my_applications(p_limit)") &&
+  contains(secureMentorInboxMigration, "REVOKE ALL ON FUNCTION public.mentor_list_my_applications(integer) FROM PUBLIC, anon, service_role"));
+check('mentor application cards use the scoped inbox RPC and escape trainee display fields',
+  /supabase\.rpc\(['"]mentor_list_my_applications['"]/.test(frontend) &&
+  contains(frontend, "esc(item.trainee_name || 'Trainee')") &&
+  contains(frontend, "esc(education)") &&
+  contains(frontend, "data-mentor-decision=\"APPROVE\""));
 check('administrator roles are recognized without opening the trainee workspace',
   contains(frontend, "roles.has('SUPER_ADMIN')") &&
   contains(frontend, "roles.has('ADMIN')") &&
