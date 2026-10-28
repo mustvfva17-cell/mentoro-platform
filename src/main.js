@@ -590,7 +590,7 @@ function mentorEnrollmentCard(enrollment) {
     '<p class="mentor-line">' + esc(dateTime(enrollment.starts_at)) + ' — ' + esc(dateTime(enrollment.ends_at)) + '</p>' +
     '<div class="mentor-entry-stats"><span>' + entries.length + ' native entries</span><span>' + submittedCount + ' awaiting review</span></div>' +
     (isRegisteredHtml
-      ? '<p class="workspace-note">Existing HTML logbook state is available for read-only review. Native per-entry review actions do not apply to this legacy HTML state yet.</p>' +
+      ? '<p class="workspace-note">Existing HTML logbook state is available for read-only review, with item-level mentor decisions and feedback stored in the review audit trail.</p>' +
         '<button class="button button--secondary button--small" type="button" data-open-html-logbook-readonly="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open HTML logbook · read only</button>'
       : '') +
   '</article>';
