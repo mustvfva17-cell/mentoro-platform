@@ -74,14 +74,14 @@ A trainee may have multiple enrollments in the same specialty; each enrollment m
 
 ## Current validation and outstanding checks
 
-GitHub Actions runs `npm run check:contracts` and `npm run build`. Database workflow checks have also been exercised in rollback-only transactions against the test project. These checks do **not** substitute for browser testing with separate trainee, mentor, and administrator identities.
+GitHub Actions installs with `npm ci`, runs `npm run check:migrations` and `npm run check:contracts`, then runs `npm run build`. Database workflow checks have also been exercised in rollback-only transactions against the test project. These checks do **not** substitute for browser testing with separate trainee, mentor, and administrator identities.
 
 Outstanding before considering a merge:
 
 - Clean-room migration replay on an isolated database.
 - Resolve/review broad default privileges owned by `supabase_admin` for future public objects.
 - Confirm the Vercel Preview branch variables and manually test the schema-driven template/logbook flow.
-- Configure an independent Vercel Preview and test the full trainee-to-mentor/admin journey.
+- Confirm the branch-scoped Vercel Preview variables and manually test the full trainee-to-mentor/admin journey.
 - Add browser end-to-end tests for separate trainee, mentor, and admin identities; manually verify the template-version creation/publication workflow.
 - Review both stacked pull requests together; do not merge PR #1 alone.
 
