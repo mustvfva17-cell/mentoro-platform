@@ -2,6 +2,13 @@
 
 This checklist is for a Vercel team owner who can authorize a new project or connect a repository. The GitHub/Vercel integration available during the current audit could not access a project linked to this repository, so this work has not been deployed to a Preview environment.
 
+## Verified Vercel status
+
+- Team: `mustvfva17-3787`, plan reported as `Hobby`.
+- Vercel's Git deployment context currently reports no linked Git projects for this team.
+- The existing `mentoro` project has a deployment whose target is `production`; it was not modified and must not be reused as the platform Preview.
+- A repository-linked Preview could not be provisioned with the current access. A team owner needs to authorize the GitHub connection and confirm that Preview builds use the test Supabase project only.
+
 ## 1. Create an isolated Preview project
 
 - Create a **new** Vercel project, for example `mentoro-platform-preview`.
