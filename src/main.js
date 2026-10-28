@@ -266,7 +266,9 @@ function logbookCard(enrollment) {
   const offering = enrollment.training_offerings || {};
   const mentor = offering.mentor_profiles || {};
   const specialty = offering.specialties || {};
-  const instance = enrollment.logbook_instances?.[0];
+  const instanceRelation = enrollment.logbook_instances;
+  // enrollment_id is unique in logbook_instances, so PostgREST may embed this as an object.
+  const instance = Array.isArray(instanceRelation) ? instanceRelation[0] : instanceRelation;
   const entries = instance?.logbook_entries || [];
   const draftCount = entries.filter((entry) => entry.status === 'DRAFT').length;
   return `
