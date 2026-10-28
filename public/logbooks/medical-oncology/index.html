@@ -550,6 +550,7 @@ const roadmapItems=makeRoadmapItems();
 
 const pageParams=new URLSearchParams(window.location.search);
 const previewMode=pageParams.get('mode')==='preview';
+let readonlyMode=pageParams.get('readonly')==='1';
 const instanceParam=pageParams.get('instance')||'';
 const instanceId=/^[0-9a-f-]{36}$/i.test(instanceParam)?instanceParam:'';
 const storageScope=instanceId?'mentoro_training_'+instanceId+'_':(previewMode?'mentoro_medical_oncology_preview_':'');
@@ -590,10 +591,11 @@ applyThemeButton();
 
 function currentCloudState(){return {sessions:data.sessions,cases:data.cases,procedures:data.procedures,roadmap:data.roadmap,emergency:data.emergency,reflection:data.reflection};}
 function notifyCloudStateChanged(){
- if(!instanceId||!window.opener)return;
+ if(readonlyMode||!instanceId||!window.opener)return;
  try{window.opener.postMessage({type:'MENTORO_LOGBOOK_STATE_CHANGED',instanceId,state:currentCloudState()},window.location.origin);}catch(e){}
 }
 function save(){
+ if(readonlyMode)return;
  store.set('mentoro_v4_sessions',JSON.stringify(data.sessions));store.set('mentoro_v4_cases',JSON.stringify(data.cases));store.set('mentoro_v4_procedures',JSON.stringify(data.procedures));store.set('mentoro_v4_roadmap',JSON.stringify(data.roadmap));store.set('mentoro_v4_emergency',JSON.stringify(data.emergency));store.set('mentoro_v4_reflection',JSON.stringify(data.reflection));
  notifyCloudStateChanged();
 }
@@ -763,7 +765,26 @@ window.discardDraft=k=>{store.set(DK(k),'');openModal(k)};
 const _save=save;save=function(){_save();let ok=false;try{ok=store.get('mentoro_v4_sessions')===JSON.stringify(data.sessions)&&store.get('mentoro_v4_cases')===JSON.stringify(data.cases)&&store.get('mentoro_v4_procedures')===JSON.stringify(data.procedures)}catch(e){}
  let b=$('saveWarn');if(!ok){if(!b){b=document.createElement('div');b.id='saveWarn';b.className='save-warn';b.innerHTML='Could not save to this device (storage full or blocked). Your latest changes exist only in this tab — <button type="button">Export a backup now</button>';b.querySelector('button').onclick=()=>{const x=document.querySelector('button[onclick*="xport"]');if(x)x.click()};document.body.prepend(b)}}else if(b)b.remove()};
 const _lv=labelView;labelView=v=>v==='logbook'?'Logbook':_lv(v);
-const _r=render;render=function(){_r();renderLogbook();renderOverviewPlus();renderTimeline()};
+function applyReadOnlyMode(){
+ if(!readonlyMode)return;
+ document.body.classList.add('html-logbook-readonly');
+ document.querySelectorAll('button').forEach(button=>{
+  if(button.hasAttribute('data-view')||button.id==='themeToggle')return;
+  button.disabled=true;
+  button.setAttribute('aria-disabled','true');
+  button.title='Read-only mentor review';
+ });
+ document.querySelectorAll('input,textarea,select').forEach(control=>{
+  if(control.type==='search')return;
+  control.disabled=true;
+ });
+ document.querySelectorAll('form').forEach(form=>{
+  if(form.dataset.readonlyGuarded==='true')return;
+  form.addEventListener('submit',event=>{event.preventDefault();event.stopImmediatePropagation();},true);
+  form.dataset.readonlyGuarded='true';
+ });
+}
+const _r=render;render=function(){_r();renderLogbook();renderOverviewPlus();renderTimeline();applyReadOnlyMode()};
 window.addEventListener('message',event=>{
  if(event.origin!==window.location.origin||!window.opener||event.source!==window.opener||!event.data||event.data.instanceId!==instanceId)return;
  const msg=event.data;
@@ -773,6 +794,7 @@ window.addEventListener('message',event=>{
   note.textContent=text;note.style.display='block';note.hidden=false;note.style.borderColor=kind==='error'?'var(--danger)':'';
  };
  if(msg.type==='MENTORO_LOGBOOK_LOAD_STATE'){
+  readonlyMode=readonlyMode||msg.readOnly===true;
   window.__mentoroCloudRevision=Number(msg.revision||0);
   if(msg.hasCloudState&&msg.state&&typeof msg.state==='object'){
    data.sessions=Array.isArray(msg.state.sessions)?msg.state.sessions:[];
@@ -781,9 +803,19 @@ window.addEventListener('message',event=>{
    data.roadmap=msg.state.roadmap&&typeof msg.state.roadmap==='object'?msg.state.roadmap:{};
    data.emergency=Array.isArray(msg.state.emergency)?msg.state.emergency:[];
    data.reflection=msg.state.reflection&&typeof msg.state.reflection==='object'?msg.state.reflection:{};
-   store.set('mentoro_v4_sessions',JSON.stringify(data.sessions));store.set('mentoro_v4_cases',JSON.stringify(data.cases));store.set('mentoro_v4_procedures',JSON.stringify(data.procedures));store.set('mentoro_v4_roadmap',JSON.stringify(data.roadmap));store.set('mentoro_v4_emergency',JSON.stringify(data.emergency));store.set('mentoro_v4_reflection',JSON.stringify(data.reflection));
-   render();setCloudNotice('Cloud logbook loaded for this confirmed training. Changes sync automatically. Do not enter patient-identifying information.');
-  }else{setCloudNotice('Cloud logbook connected. Changes sync automatically. Do not enter patient-identifying information.');notifyCloudStateChanged();}
+   if(!readonlyMode){
+    store.set('mentoro_v4_sessions',JSON.stringify(data.sessions));store.set('mentoro_v4_cases',JSON.stringify(data.cases));store.set('mentoro_v4_procedures',JSON.stringify(data.procedures));store.set('mentoro_v4_roadmap',JSON.stringify(data.roadmap));store.set('mentoro_v4_emergency',JSON.stringify(data.emergency));store.set('mentoro_v4_reflection',JSON.stringify(data.reflection));
+   }
+   render();
+   setCloudNotice(readonlyMode
+    ? 'Read-only mentor review loaded. Editing and saving are disabled. Do not enter patient-identifying information.'
+    : 'Cloud logbook loaded for this confirmed training. Changes sync automatically. Do not enter patient-identifying information.');
+  }else{
+   setCloudNotice(readonlyMode
+    ? 'Read-only mentor review. No saved state exists for this training yet; edits are disabled.'
+    : 'Cloud logbook connected. Changes sync automatically. Do not enter patient-identifying information.');
+   if(!readonlyMode)notifyCloudStateChanged();
+  }
  }else if(msg.type==='MENTORO_LOGBOOK_LOAD_ERROR'){
   setCloudNotice('Could not connect this logbook to MENTORO: '+String(msg.error||'Unknown error'), 'error');
  }else if(msg.type==='MENTORO_LOGBOOK_SAVE_RESULT'){
@@ -793,7 +825,9 @@ window.addEventListener('message',event=>{
 });
 if(instanceId&&window.opener){
  const note=document.getElementById('legacy-preview-banner');
- if(note){note.hidden=false;note.style.display='block';note.textContent='Connecting to the assigned MENTORO training logbook… Do not enter patient-identifying information.';}
+ if(note){note.hidden=false;note.style.display='block';note.textContent=readonlyMode
+  ? 'Opening read-only mentor review for this assigned training… Do not enter patient-identifying information.'
+  : 'Connecting to the assigned MENTORO training logbook… Do not enter patient-identifying information.';}
  window.opener.postMessage({type:'MENTORO_LOGBOOK_READY',instanceId},window.location.origin);
 }
 render();
