@@ -9,6 +9,7 @@ on:
     branches:
       - main
       - feat/trainee-auth-foundation
+      - chore/recover-migration-history
 
 permissions:
   contents: read
