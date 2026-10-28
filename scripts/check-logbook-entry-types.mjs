@@ -80,7 +80,8 @@ if (provisioningCallCount !== 1 ||
     !frontend.includes("roles.has('ADMIN')") ||
     !frontend.includes("roles.has('SUPER_ADMIN')") ||
     !frontend.includes("if (role === 'MENTOR') return renderMentorDashboard(user);") ||
-    !frontend.includes("return renderAdminWorkspace(user);") ||
+    !frontend.includes("import { renderAdminWorkspace } from './admin-workspace.js';") ||
+    !frontend.includes("return renderAdminWorkspace({ user, supabase, shell, esc, dateTime, setBusy, message, errorText });") ||
     roleResolverCallCount !== 4) {
   throw new Error('Existing platform accounts must be role-checked and routed without cross-role provisioning.');
 }
