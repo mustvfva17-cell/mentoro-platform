@@ -96,3 +96,17 @@ assert.ok(main.includes('update({ title, entry_date: entryDate, payload: templat
 assert.ok(main.includes("renderPayloadSummary(entry.payload, templateFields)"));
 
 console.log('Schema-driven logbook rendering, explicit boolean answers, duplicate-key handling, payload persistence, edit support, and safe output passed.');
+
+const payloadMigration = await read('supabase/migrations/20261028154500_validate_logbook_entry_payload.sql');
+assert.ok(payloadMigration.includes('CREATE OR REPLACE FUNCTION app_private.validate_logbook_entry_payload()'));
+assert.ok(payloadMigration.includes('SECURITY DEFINER'));
+assert.ok(payloadMigration.includes('FROM PUBLIC, anon, authenticated, service_role'));
+assert.ok(payloadMigration.includes('BEFORE INSERT OR UPDATE OF payload, instance_id'));
+assert.ok(payloadMigration.includes('Payload contains an unknown field key'));
+assert.ok(payloadMigration.includes('Required logbook field is missing'));
+assert.ok(payloadMigration.includes('must match one of its configured options'));
+assert.ok(payloadMigration.includes('must be a valid calendar date'));
+assert.ok(payloadMigration.includes('must be at least'));
+assert.ok(payloadMigration.includes('must be at most'));
+console.log('Database-boundary payload validation checks against the attached immutable template version passed.');
+
