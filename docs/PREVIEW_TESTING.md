@@ -10,7 +10,7 @@ The template-schema branch has its own Ready Vercel deployment:
 
 `https://mentoro-platform-git-feat-logbook-templa-2a615c-mustvfva17-3787.vercel.app`
 
-The branch's latest deployment metadata is available from Vercel and reports `READY` for `feat/logbook-template-drafts`; the stable branch alias above should resolve to the latest deployment. The two browser variables are now configured for this branch only and Preview target only. Vercel's latest successful deployment may lag subsequent commits because the free-tier daily deployment limit was hit; check the deployed commit before expecting the newest review UI. The owner should open the stable branch alias and confirm the warning is gone; tool-side access to the page itself remains blocked by Vercel's deployment protection.
+The latest checked deployment metadata reported `READY` for `feat/logbook-template-drafts`; the stable branch alias above points to an older commit. The two browser variables are configured for this branch only and Preview target only. A fresh direct deployment was rejected by Vercel's free-plan daily API limit (`api-deployments-free-per-day`), so the new General Surgery asset and routing are CI-validated but not yet available in the deployed Preview. Check the deployed commit before expecting the newest review UI. The owner should open the stable branch alias and confirm the warning is gone; tool-side access to the page itself remains blocked by Vercel's deployment protection.
 
 ## Preview-only environment variables
 
@@ -48,13 +48,13 @@ Every insert or payload/instance update on `public.logbook_entries` is validated
 
 ## Existing HTML logbook cloud-state integration
 
-- The original `/logbooks/medical-oncology/index.html` is retained.
+- The original `/logbooks/medical-oncology/index.html` is retained, and the existing General Surgery HTML UI is added at `/logbooks/general-surgery/index.html`.
 - An enrollment-linked launch uses `?instance={uuid}` and reads/saves the full existing HTML state with `get_my_logbook_html_state` and `save_my_logbook_html_state`.
 - The bridge uses same-origin `postMessage` with source/origin checks. Cloud writes are revision-checked, limited to the active assigned trainee, and rejected for archived/cancelled/revoked enrollments or unregistered HTML assets.
 - Mentors assigned to an HTML-backed enrollment can open the existing UI in read-only mode. It loads state from the same access-scoped RPC; the child page disables data-editing controls and the parent refuses write messages in read-only mode. The rollback-only integration test confirms an assigned mentor can read but cannot save the trainee’s state.
 - `?mode=preview` remains local-only for design inspection. It is not a confirmed training record.
 - The native mentor workflow does not yet collect per-session/per-case review decisions for legacy HTML state. The whole HTML state is one revisioned JSON record, not separate native `logbook_entries`.
-- The HTML template remains a draft and is not assignable until an authorized human has completed the required clinical review.
+- Both `medical-oncology-html` and `general-surgery-html` remain `DRAFT`, `is_assignable=false`. Neither has been published. An authorized clinical reviewer must assess each template before publication.
 ## Current functional boundaries
 
 - Opening the deployed app and connecting its browser client to the test Supabase project are confirmed by the owner observing that the configuration warning disappeared.
@@ -64,7 +64,7 @@ Every insert or payload/instance update on `public.logbook_entries` is validated
 
 ## Verification checklist
 
-1. Check Vercel reports the source ref as `feat/logbook-template-drafts`.
+1. Check Vercel reports the source ref as `feat/logbook-template-drafts` and the deployment commit includes the General Surgery HTML import.
 2. Confirm the two Vite variables remain scoped to Preview and the branch.
 3. Confirm the warning remains gone.
 4. After branch-scoped Preview variables and the Auth redirect allow-list are set, test signup/email confirmation and sign-in with a dedicated test user.
