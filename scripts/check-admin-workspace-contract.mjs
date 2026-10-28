@@ -166,4 +166,23 @@ check(
   'creating a template version is admin-only, serialized, audited, non-assignable, and exposed through a checked wrapper'
 );
 
+const apiWrappersMigration = await read('../supabase/migrations/20261028154338_admin_template_api_invoker_wrappers.sql');
+check(
+  apiWrappersMigration.includes('CREATE OR REPLACE FUNCTION public.admin_create_logbook_template_draft') &&
+  apiWrappersMigration.includes('CREATE OR REPLACE FUNCTION public.admin_create_logbook_template_version_draft') &&
+  apiWrappersMigration.includes('CREATE OR REPLACE FUNCTION public.admin_publish_logbook_template_version') &&
+  (apiWrappersMigration.match(/SECURITY INVOKER/g) || []).length === 3 &&
+  !/CREATE OR REPLACE FUNCTION public\.admin_(?:create_logbook_template_draft|create_logbook_template_version_draft|publish_logbook_template_version)[\s\S]*?SECURITY DEFINER/i.test(apiWrappersMigration),
+  'public admin template RPCs use SECURITY INVOKER rather than SECURITY DEFINER'
+);
+check(
+  apiWrappersMigration.includes('GRANT EXECUTE ON FUNCTION app_private.admin_create_logbook_template_draft') &&
+  apiWrappersMigration.includes('GRANT EXECUTE ON FUNCTION app_private.admin_create_logbook_template_version_draft') &&
+  apiWrappersMigration.includes('GRANT EXECUTE ON FUNCTION app_private.admin_publish_logbook_template_version') &&
+  templateMigration.includes('IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()') &&
+  templateVersionDraftMigration.includes('IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()') &&
+  publicationMigration.includes('IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()'),
+  'invoker wrappers delegate only to private SECURITY DEFINER implementations that check the active admin role'
+);
+
 console.log('Administrator workspace safety contracts passed.');
