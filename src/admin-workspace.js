@@ -104,6 +104,20 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
             '<div class="mentor-review-buttons"><button class="button button--primary button--small" type="button" data-confirm-application="' + escape(item.id) + '">Confirm booking & create logbook</button></div></div></article>';
           }).join('') + '</div>' : '<div class="empty-state"><strong>No bookings need confirmation</strong><p>Applications approved by mentors will appear here.</p></div>') +
         '</section>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">LOGBOOK DESIGN</p><h2>Create logbook template draft</h2></div><span class="status-chip status-chip--neutral">Draft only</span></div>' +
+          '<p class="workspace-note">Create a specialty-specific draft with a structured field schema and source/reviewer notes. Saving a draft does not make it bookable. Publishing stays blocked until the template is clinically reviewed and the trainee logbook UI fully supports its schema.</p>' +
+          (specialties.length ? '<form id="admin-template-form" class="admin-form-card">' +
+            '<div class="admin-form-grid">' +
+              '<div class="field"><label for="admin-template-title">Template title</label><input id="admin-template-title" name="title" maxlength="160" required placeholder="e.g. General Surgery Clinical Logbook"></div>' +
+              '<div class="field"><label for="admin-template-slug">Unique slug</label><input id="admin-template-slug" name="slug" maxlength="100" pattern="[a-z0-9]+(-[a-z0-9]+)*" required placeholder="e.g. general-surgery-v2"></div>' +
+              '<div class="field"><label for="admin-template-specialty">Specialty</label><select id="admin-template-specialty" name="specialtyId" required>' + specialties.map((specialty) => '<option value="' + escape(specialty.id) + '">' + escape(specialty.name_en || specialty.name_ar || 'Specialty') + '</option>').join('') + '</select></div>' +
+              '<div class="field admin-form-wide"><label for="admin-template-description">Description</label><textarea id="admin-template-description" name="description" rows="2" maxlength="2000" placeholder="Purpose and intended training scope"></textarea></div>' +
+              '<div class="field admin-form-wide"><label for="admin-template-schema">Field schema (JSON)</label><textarea id="admin-template-schema" name="schemaDefinition" rows="8" required spellcheck="false">{\n  "fields": [\n    { "key": "activity_title", "label": "Activity title", "type": "text", "required": true },\n    { "key": "clinical_notes", "label": "Clinical notes", "type": "textarea", "required": true }\n  ]\n}</textarea><small>Supported types: text, textarea, date, number, boolean, select. Select fields need 2–50 options.</small></div>' +
+              '<div class="field admin-form-wide"><label for="admin-template-layout">Template sections (JSON)</label><textarea id="admin-template-layout" name="templateDefinition" rows="4" required spellcheck="false">{\n  "sections": [\n    { "id": "clinical-activity", "title": "Clinical activity" }\n  ]\n}</textarea></div>' +
+              '<div class="field admin-form-wide"><label for="admin-template-source">Clinical source / reviewer notes</label><textarea id="admin-template-source" name="sourceNotes" rows="3" minlength="20" maxlength="4000" required placeholder="Record the curriculum/source and who must review this draft before publication."></textarea></div>' +
+            '</div><button class="button button--primary" type="submit">Save template draft</button></form>' :
+            '<div class="empty-state"><strong>No active specialties</strong><p>Add an active specialty before drafting a logbook template.</p></div>') +
+        '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">TRAINING SETUP</p><h2>Create training offering</h2></div><span class="status-chip status-chip--neutral">Admin only</span></div>' +
           '<p class="workspace-note">Create a draft offering while its logbook template is being prepared, or publish immediately when the mentor is approved/public and the matching template version is published and assignable. The database validates all constraints.</p>' +
           (mentors.length && specialties.length && templateVersions.length
@@ -139,6 +153,52 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       '</main>',
       user
     );
+
+    const templateForm = document.querySelector('#admin-template-form');
+    if (templateForm) {
+      templateForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(templateForm);
+        let schemaDefinition;
+        let templateDefinition;
+        try {
+          schemaDefinition = JSON.parse(String(data.get('schemaDefinition') || ''));
+          templateDefinition = JSON.parse(String(data.get('templateDefinition') || ''));
+        } catch {
+          showMessage('Field schema and template sections must be valid JSON.', 'error');
+          return;
+        }
+        const title = String(data.get('title') || '').trim();
+        const slug = String(data.get('slug') || '').trim();
+        const specialtyId = String(data.get('specialtyId') || '');
+        const sourceNotes = String(data.get('sourceNotes') || '').trim();
+        if (!title || !slug || !specialtyId || sourceNotes.length < 20 ||
+            !schemaDefinition || typeof schemaDefinition !== 'object' || Array.isArray(schemaDefinition) ||
+            !Array.isArray(schemaDefinition.fields) || !schemaDefinition.fields.length ||
+            !templateDefinition || typeof templateDefinition !== 'object' || Array.isArray(templateDefinition)) {
+          showMessage('Complete the template details, provide at least one schema field, and add source/reviewer notes.', 'error');
+          return;
+        }
+        const button = templateForm.querySelector('button[type="submit"]');
+        busy(button, true, 'Saving draft…');
+        const { error } = await supabase.rpc('admin_create_logbook_template_draft', {
+          p_specialty_id: specialtyId,
+          p_slug: slug,
+          p_title: title,
+          p_description: String(data.get('description') || '').trim() || null,
+          p_schema_definition: schemaDefinition,
+          p_template_definition: templateDefinition,
+          p_source_notes: sourceNotes
+        });
+        if (error) {
+          showMessage((errorText || ((err) => err?.message || 'Could not save the template draft.'))(error), 'error');
+          busy(button, false);
+          return;
+        }
+        await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
+        showMessage('Logbook template draft saved. It is not published or assignable yet.', 'success');
+      });
+    }
 
     const offeringForm = document.querySelector('#admin-offering-form');
     if (offeringForm) {
