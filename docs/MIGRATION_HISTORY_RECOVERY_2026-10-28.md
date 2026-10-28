@@ -15,7 +15,7 @@ Recover a reproducible database history for MENTORO, verify its existing test sc
 
 ## Migration history in the database
 
-The test database currently reports these eleven applied migration records:
+The test database currently reports these twelve applied migration records:
 
 | Version | Name | SQL file in recovery branch? |
 | --- | --- | --- |
@@ -30,6 +30,7 @@ The test database currently reports these eleven applied migration records:
 | 20261028092340 | restrict_app_private_helper_execute | Present |
 | 20261028093412 | harden_trainee_verification_bucket | Present |
 | 20261028093532 | enforce_server_submission_timestamp | Present |
+| 20261028094110 | fix_scoped_logbook_submission_rpc | Present |
 
 The first five migration records existed in the database history but were absent from the trainee-auth branch. The SQL files were recovered from the existing `feature/independent-training-enrollments` branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
 
@@ -67,6 +68,12 @@ The live default-ACL inventory also reports broad defaults for objects created b
 - Future functions in `public`: EXECUTE grants to `anon`, `authenticated`, and `service_role`.
 
 The current migration connection is `postgres` and does not have membership in `supabase_admin`, so it cannot change that role's default privileges. This is a **follow-up for a Supabase project owner** to review and harden in a controlled way. No attempt was made to bypass role ownership. The existing objects in the current app schema were separately checked and do not inherit those permissions automatically; the concern is future objects created by that role.
+
+## Scoped logbook submission RPC
+
+The original `set_logbook_entry_submitted` function updated `updated_at` explicitly, but the least-privilege grants intentionally restrict browser UPDATE columns and a table trigger already maintains `updated_at`. That made the RPC inconsistent with the column grants.
+
+Migration `20261028094110_fix_scoped_logbook_submission_rpc.sql` changes the RPC to update only `status`; database triggers populate `submitted_at` and `updated_at`. The trainee UI now calls this scoped RPC instead of directly updating submission timestamps. The contract check also verifies that the UI uses the RPC and, when the corrective migration is present, that it does not directly write timestamp columns.
 
 ## Logbook submission timestamp integrity
 
