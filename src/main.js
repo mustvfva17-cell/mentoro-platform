@@ -138,8 +138,8 @@ function renderAuth() {
           if (provisionError) throw provisionError;
           await renderDashboard(result.session.user);
         } else {
-          message('Account created. Check your email and confirm your address, then return here to sign in.', 'success');
           document.querySelector('[data-auth-tab="signin"]').click();
+          message('Account created. Check your email and confirm your address, then return here to sign in.', 'success');
         }
       } else {
         const { data: result, error } = await supabase.auth.signInWithPassword({ email, password: pass });
@@ -170,6 +170,7 @@ async function renderDashboard(user) {
     ]);
     if (applicationsResult.error) throw applicationsResult.error;
     if (enrollmentsResult.error) throw enrollmentsResult.error;
+    if (docResult.error) throw docResult.error;
     const latestDoc = docResult.data?.[0] || null;
     const isVerified = profile.account_status === 'VERIFIED';
     const enrollments = enrollmentsResult.data || [];
@@ -272,8 +273,8 @@ function bindVerificationUpload(user, latestDoc) {
       if (uploadError) throw uploadError;
       const { error: recordError } = await supabase.rpc('record_verification_document', { p_object_path: path, p_document_type: 'UNIVERSITY_ID' });
       if (recordError) throw recordError;
-      message('University ID submitted securely. Your account will remain pending until an administrator reviews it.', 'success');
       await renderDashboard(user);
+      message('University ID submitted securely. Your account will remain pending until an administrator reviews it.', 'success');
     } catch (error) {
       message(errorText(error), 'error');
       setBusy(button, false);
@@ -328,8 +329,8 @@ async function loadOfferings(user, isVerified) {
       setBusy(button, false);
       return;
     }
-    message('Application submitted. Your mentor will review it, then MENTORO administration confirms the booking.', 'success');
     await renderDashboard(user);
+    message('Application submitted. Your mentor will review it, then MENTORO administration confirms the booking.', 'success');
   }));
 }
 
@@ -353,8 +354,8 @@ function bindEntryForms(user) {
       setBusy(button, false);
       return;
     }
-    message('Draft saved to this training’s logbook.', 'success');
     await renderDashboard(user);
+    message('Draft saved to this training’s logbook.', 'success');
   }));
   document.querySelectorAll('[data-submit-entry]').forEach((button) => button.addEventListener('click', async () => {
     button.disabled = true;
@@ -366,8 +367,8 @@ function bindEntryForms(user) {
       button.disabled = false;
       return;
     }
-    message('Entry submitted to your mentor for review.', 'success');
     await renderDashboard(user);
+    message('Entry submitted to your mentor for review.', 'success');
   }));
 }
 
