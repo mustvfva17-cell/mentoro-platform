@@ -15,6 +15,10 @@ Scope: the isolated `mentoro-platform-test` Supabase project only. These observa
 
 The PostgreSQL 17 `MAINTAIN` gap on existing application tables is closed on the test project. The separate default-ACL concern below remains open because it affects future objects created by `supabase_admin`, not the current 17 application tables.
 
+## Performance advisor observations
+
+The Supabase performance advisor reported 23 indexes as unused during this check (informational level). The test project currently has no persistent trainee/mentor workflow data or representative application workload, so these usage counters are not a sound basis for removing indexes. In particular, indexes used by foreign-key checks, RLS predicates, mentor/enrollment filtering, and logbook history should be evaluated against representative query plans and real usage before any removal. No index was dropped as part of this audit.
+
 ## Required owner-level decision: future defaults for objects owned by supabase_admin
 
 The current database session cannot alter `supabase_admin`'s default ACLs. A Supabase project owner should review the platform ownership boundary and determine the supported way to harden these defaults (which may require Supabase support if the managed role is not alterable by the project owner).
