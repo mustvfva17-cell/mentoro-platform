@@ -206,7 +206,7 @@ const generalSurgeryMigration = await read('supabase/migrations/20261028175703_r
 assert.ok(generalSurgeryMigration.includes("'/logbooks/general-surgery/index.html'"));
 assert.ok(generalSurgeryMigration.includes("'/logbooks/medical-oncology/index.html'"));
 assert.ok(generalSurgeryMigration.includes("'general-surgery-html'"));
-assert.ok(generalSurgeryMigration.includes("'DRAFT', false"));
+assert.match(generalSurgeryMigration, /'DRAFT',\\s*false/);
 assert.ok(generalSurgeryMigration.includes("'general-surgery-html'"));
 assert.ok(generalSurgeryMigration.includes("'/logbooks/general-surgery/index.html'"));
 assert.ok(generalSurgeryMigration.includes('app_private.get_my_logbook_html_state'));
