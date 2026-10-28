@@ -121,6 +121,7 @@ check(
 
 
 const publicationMigration = await read('../supabase/migrations/20261028151327_admin_publish_logbook_template_version.sql');
+const publicationVersioningMigration = await read('../supabase/migrations/20261028152000_keep_only_latest_assignable_template_version.sql');
 check(
   admin.includes('CLINICAL GOVERNANCE') &&
   admin.includes('data-publish-template') &&
@@ -136,6 +137,14 @@ check(
   publicationMigration.includes('LOGBOOK_TEMPLATE_VERSION_PUBLISHED') &&
   publicationMigration.includes('FROM PUBLIC, anon, authenticated, service_role'),
   'template publication is admin-only, draft-only, audited, and keeps the private RPC inaccessible'
+);
+check(
+  publicationVersioningMigration.includes('SET is_assignable = false') &&
+  publicationVersioningMigration.includes('WHERE template_id = v_template_id') &&
+  publicationVersioningMigration.includes('AND id <> p_version_id') &&
+  publicationVersioningMigration.includes('SET status = \'PUBLISHED\'') &&
+  publicationVersioningMigration.includes('Existing offerings, enrollments, and logbook instances still reference them'),
+  'publishing a new version stops assigning older versions to new offerings while preserving historical references'
 );
 
 console.log('Administrator workspace safety contracts passed.');
