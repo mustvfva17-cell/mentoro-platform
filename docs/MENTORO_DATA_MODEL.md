@@ -1,18 +1,21 @@
 # MENTORO Platform — Consolidated Data Model
 
-**Status:** Design draft — pending final review and approval  
+**Status:** Superseded legacy design draft — use `docs/MENTORO_TARGET_DATA_MODEL_V2.md`  
 **Phase:** Architecture and Data Model  
 **Implementation status:** Documentation only; no migrations or database tests are claimed.
+
+> **Architecture supersession notice — 2026-10-28:** The canonical booking/logbook model is now `docs/MENTORO_TARGET_DATA_MODEL_V2.md`, adopted with `docs/decisions/ADR-03-INDEPENDENT-TRAINING-ENROLLMENTS.md`. Any content in this legacy document that requires one active assignment/logbook per trainee, a trainee-wide mentor relationship, one pending enrollment per email, or activation-code-based training enrollment is superseded and must not be used to implement migrations or protected workflows. Shared security, audit, privacy, role-integrity, correction-history, and immutable-template-version principles remain relevant only where consistent with the new model. No SQL or database changes are authorized by this notice.
+
 
 ## 1. Scope and principles
 
 MENTORO is a centralized medical training platform. The first release supports General Surgery, Neurology, and Anaesthesia & Critical Care.
 
 - One central identity per person.
-- A trainee may have historical assignments over time but at most one active assignment platform-wide.
-- Switching logbooks suspends the previous assignment and activates the destination atomically.
-- Administrators choose per trainee whether to retain the current template version or transition.
-- Mentors can access assigned trainees only; mentor scope is trainee-wide across their permitted records.
+- A trainee can hold multiple concurrent training enrollments, including multiple enrollments in one specialty.
+- Every enrollment has one trainee, one mentor, one specialty, a training period/status, and an independent logbook instance.
+- Mentor authorization is enrollment-scoped, not trainee-wide.
+- See the canonical target model linked above; the following detailed assignment-based sections are retained as historical design material and are not an executable specification.
 - Only administration may approve/reject submitted-record correction requests and authorize their application.
 - Drafts are editable by the owning trainee; submitted records require a documented correction workflow.
 - Specialty-specific fields use `JSONB` validated against a versioned schema selected by template version and log type.
