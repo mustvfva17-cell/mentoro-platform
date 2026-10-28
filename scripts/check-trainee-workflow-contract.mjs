@@ -45,7 +45,17 @@ const [
 check('email/password sign-up is implemented', /supabase\.auth\.signUp\s*\(/.test(frontend));
 check('email/password sign-in is implemented', /supabase\.auth\.signInWithPassword\s*\(/.test(frontend));
 check('frontend uses current-user provisioning RPC', /supabase\.rpc\(['"]provision_current_trainee['"]/.test(frontend));
-check('database provisioning requires a confirmed auth email', contains(currentUserWrappers, 'u.email_confirmed_at IS NOT NULL'));
+
+check('active mentor role routes to the mentor workspace and uses the current-user decision RPC',
+  contains(frontend, "roles.has('MENTOR')") &&
+  contains(frontend, "if (role === 'MENTOR') return renderMentorDashboard(user);") &&
+  /supabase\.rpc\(['"]mentor_review_my_application['"]/.test(frontend) &&
+  contains(currentUserWrappers, 'CREATE OR REPLACE FUNCTION public.mentor_review_my_application(') &&
+  contains(currentUserWrappers, 'app_private.mentor_review_current_application(p_application_id, p_decision, p_reason)'));
+check('administrator roles are recognized without opening the trainee workspace',
+  contains(frontend, "roles.has('SUPER_ADMIN')") &&
+  contains(frontend, "roles.has('ADMIN')") &&
+  contains(frontend, "return renderAdminWorkspace(user)"));check('database provisioning requires a confirmed auth email', contains(currentUserWrappers, 'u.email_confirmed_at IS NOT NULL'));
 check('provisioning derives the identity from auth.uid()', contains(currentUserWrappers, 'v_user_id uuid := auth.uid()'));
 check('provisioning creates trainee role and trainee profile', contains(coreSchema, "VALUES (p_user_id, 'TRAINEE')") && contains(coreSchema, 'INSERT INTO public.trainee_profiles (profile_id)'));
 check('existing profiles cannot self-provision a TRAINEE role without an active trainee assignment',
