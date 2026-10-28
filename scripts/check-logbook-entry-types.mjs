@@ -70,12 +70,12 @@ if (submissionSource !== null) {
   }
 }
 
-const provisioningCallCount = (frontend.match(/supabase\\.rpc\\(['"]provision_current_trainee['"]/g) || []).length;
+const provisioningCallCount = frontend.split("supabase.rpc('provision_current_trainee'").length - 1;
 if (provisioningCallCount !== 1 ||
     !frontend.includes("from('profile_roles')") ||
     !frontend.includes(".is('revoked_at', null)") ||
     !frontend.includes("item.role === 'TRAINEE'") ||
-    (frontend.match(/requireTraineeWorkspace\\(/g) || []).length !== 4) {
+    (frontend.split('requireTraineeWorkspace(').length - 1) !== 4) {
   throw new Error('Existing platform accounts must be role-checked before trainee provisioning.');
 }
 
