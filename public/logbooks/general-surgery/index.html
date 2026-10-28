@@ -693,7 +693,7 @@ window.addEventListener('message',event=>{
   }
  }else if(msg.type==='MENTORO_LOGBOOK_LOAD_ERROR'){
   setCloudLoading(false);
-  setCloudNotice('Could not connect this logbook to MENTORO: +String(msg.error||'Unknown error'), 'error');
+  setCloudNotice('Could not connect this logbook to MENTORO: ' + String(msg.error||'Unknown error'), 'error');
  }else if(msg.type==='MENTORO_LOGBOOK_SAVE_RESULT'){
   if(msg.ok){
    if(JSON.stringify(currentCloudState())===lastQueuedCloudSnapshot)htmlCloudDirty=false;
