@@ -121,7 +121,7 @@ check(
 
 
 const publicationMigration = await read('../supabase/migrations/20261028151327_admin_publish_logbook_template_version.sql');
-const publicationVersioningMigration = await read('../supabase/migrations/20261028152000_keep_only_latest_assignable_template_version.sql');
+const publicationVersioningMigration = await read('../supabase/migrations/20261028153201_keep_only_latest_assignable_template_version.sql');
 check(
   admin.includes('CLINICAL GOVERNANCE') &&
   admin.includes('data-publish-template') &&
