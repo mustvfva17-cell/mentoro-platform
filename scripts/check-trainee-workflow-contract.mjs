@@ -128,5 +128,37 @@ check('mentor review RLS requires the assigned mentor and a submitted entry',
   contains(mentorAdminSetup, 'app_private.is_assigned_mentor_for_entry(entry_id)') &&
   contains(mentorAdminSetup, "le.status = 'SUBMITTED'"));
 
+// Additional authority and schema-wide checks beyond the trainee UI's own happy path.
+const adminConfirmCurrent = currentUserWrappers.match(
+  /CREATE OR REPLACE FUNCTION app_private\.admin_confirm_current_application\([\s\S]*?\$\$;/i
+)?.[0] || '';
+const adminConfirmCore = coreSchema.match(
+  /CREATE OR REPLACE FUNCTION public\.admin_confirm_application\([\s\S]*?\$\$;/i
+)?.[0] || '';
+const mentorReviewCore = coreSchema.match(
+  /CREATE OR REPLACE FUNCTION public\.mentor_review_application\([\s\S]*?\$\$;/i
+)?.[0] || '';
+
+check('current-user booking confirmation verifies platform-admin authority before calling the privileged routine',
+  contains(adminConfirmCurrent, 'v_actor_id uuid := auth.uid()') &&
+  contains(adminConfirmCurrent, 'IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()') &&
+  contains(adminConfirmCurrent, 'public.admin_confirm_application(v_actor_id, p_application_id)'));
+check('booking confirmation itself requires an active administrator and a mentor-approved application',
+  contains(adminConfirmCore, "r.role IN ('ADMIN', 'SUPER_ADMIN')") &&
+  contains(adminConfirmCore, 'r.revoked_at IS NULL') &&
+  contains(adminConfirmCore, "v_app.status <> 'MENTOR_APPROVED'") &&
+  contains(adminConfirmCore, "p.account_status = 'VERIFIED'"));
+check('application review is restricted to an active mentor assigned to that offering',
+  contains(mentorReviewCore, "r.role = 'MENTOR'") &&
+  contains(mentorReviewCore, 'r.revoked_at IS NULL') &&
+  contains(mentorReviewCore, 'v_mentor_id IS DISTINCT FROM p_actor_id'));
+const coreTables = [...coreSchema.matchAll(/CREATE TABLE public\.([a-z_]+)\s*\(/gi)].map((match) => match[1]);
+check('all tables in the core schema enable row-level security',
+  coreTables.length >= 17 &&
+  coreTables.every((table) => new RegExp(
+    'ALTER TABLE\\s+public\\.' + table + '\\s+ENABLE ROW LEVEL SECURITY',
+    'i',
+  ).test(coreSchema)));
+
 console.log(`Trainee workflow contract checks passed: ${checks.length}.`);
 for (const name of checks) console.log(`  ✓ ${name}`);
