@@ -216,7 +216,7 @@ check(
   admin.includes("href=\"/logbooks/general-surgery/index.html?mode=preview\"") &&
   admin.includes("const canPublishReviewedRuntime = isRegisteredHtml || version.fields.length > 0") &&
   admin.includes("data-publish-template") &&
-  admin.includes("Pending clinical review. Publishing remains disabled until the HTML asset and source are reviewed."),
+  admin.includes("Pending clinical review. Preview the existing HTML asset, confirm the clinical source/reviewer notes, and record the decision before publishing."),
   'existing HTML templates are shown as HTML, can be previewed, and are publication-eligible only through the registered asset review path'
 );
 check(
