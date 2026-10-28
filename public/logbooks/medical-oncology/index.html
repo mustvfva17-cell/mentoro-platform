@@ -553,6 +553,7 @@ const previewMode=pageParams.get('mode')==='preview';
 let readonlyMode=pageParams.get('readonly')==='1';
 const instanceParam=pageParams.get('instance')||'';
 const instanceId=/^[0-9a-f-]{36}$/i.test(instanceParam)?instanceParam:'';
+let htmlCloudReady = !(instanceId && window.opener);
 const storageScope=instanceId?'mentoro_training_'+instanceId+'_':(previewMode?'mentoro_medical_oncology_preview_':'');
 const scopedStorageKey=(key)=>storageScope+key;
 const store={
@@ -590,8 +591,15 @@ function toggleTheme(){const cur=document.documentElement.getAttribute('data-the
 applyThemeButton();
 
 function currentCloudState(){return {sessions:data.sessions,cases:data.cases,procedures:data.procedures,roadmap:data.roadmap,emergency:data.emergency,reflection:data.reflection};}
+function setCloudLoading(loading){
+ if(!instanceId||!window.opener)return;
+ const content=document.querySelector('main.content');
+ if(!content)return;
+ content.inert=loading;
+ if(loading)content.setAttribute('aria-busy','true');else content.removeAttribute('aria-busy');
+}
 function notifyCloudStateChanged(options={}){
- if(readonlyMode||!instanceId||!window.opener)return;
+ if(readonlyMode||!instanceId||!window.opener||!htmlCloudReady)return;
  try{window.opener.postMessage({type:'MENTORO_LOGBOOK_STATE_CHANGED',instanceId,state:currentCloudState(),flushNow:options.flushNow===true},window.location.origin);}catch(e){}
 }
 window.addEventListener('pagehide',()=>notifyCloudStateChanged({flushNow:true}));
@@ -983,6 +991,7 @@ window.addEventListener('message',event=>{
    data.roadmap=msg.state.roadmap&&typeof msg.state.roadmap==='object'?msg.state.roadmap:{};
    data.emergency=Array.isArray(msg.state.emergency)?msg.state.emergency:[];
    data.reflection=msg.state.reflection&&typeof msg.state.reflection==='object'?msg.state.reflection:{};
+   htmlCloudReady = true;setCloudLoading(false);
    if(!readonlyMode){
     store.set('mentoro_v4_sessions',JSON.stringify(data.sessions));store.set('mentoro_v4_cases',JSON.stringify(data.cases));store.set('mentoro_v4_procedures',JSON.stringify(data.procedures));store.set('mentoro_v4_roadmap',JSON.stringify(data.roadmap));store.set('mentoro_v4_emergency',JSON.stringify(data.emergency));store.set('mentoro_v4_reflection',JSON.stringify(data.reflection));
    }
@@ -991,6 +1000,7 @@ window.addEventListener('message',event=>{
     ? 'Read-only mentor review loaded. Editing and saving are disabled. Do not enter patient-identifying information.'
     : 'Cloud logbook loaded for this confirmed training. Changes sync automatically. Do not enter patient-identifying information.');
   }else{
+   htmlCloudReady = true;setCloudLoading(false);
    if(readonlyMode){
     data.sessions=[];data.cases=[];data.procedures=[];data.roadmap={};data.emergency=[];data.reflection={};
     render();
@@ -1001,13 +1011,15 @@ window.addEventListener('message',event=>{
    if(!readonlyMode)notifyCloudStateChanged();
   }
  }else if(msg.type==='MENTORO_LOGBOOK_LOAD_ERROR'){
-  setCloudNotice('Could not connect this logbook to MENTORO: '+String(msg.error||'Unknown error'), 'error');
+  setCloudLoading(false);
+  setCloudNotice('Could not connect this logbook to MENTORO: +String(msg.error||'Unknown error'), 'error');
  }else if(msg.type==='MENTORO_LOGBOOK_SAVE_RESULT'){
   if(msg.ok){window.__mentoroCloudRevision=Number(msg.revision||window.__mentoroCloudRevision||0);setCloudNotice('Saved to this training’s secure cloud logbook. Do not enter patient-identifying information.');}
   else setCloudNotice(String(msg.error||'Cloud save failed. Export a backup before closing this tab.'),'error');
  }
 });
 if(instanceId&&window.opener){
+ setCloudLoading(true);
  const note=document.getElementById('legacy-preview-banner');
  if(note){note.hidden=false;note.style.display='block';note.textContent=readonlyMode
   ? 'Opening read-only mentor review for this assigned training… Do not enter patient-identifying information.'
