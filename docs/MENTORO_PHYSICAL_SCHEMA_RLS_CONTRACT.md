@@ -1,8 +1,11 @@
 # MENTORO Platform — Physical Schema & RLS Contract
 
-**Status:** Consolidated design draft — pending final review and approval  
+**Status:** Superseded legacy schema/RLS draft — target model v2 is canonical  
 **Phase:** Architecture and Data Model  
 **Implementation status:** Documentation only. No migration, RLS policy, function, test, or deployment is claimed.  
+
+> **Architecture supersession notice — 2026-10-28:** The canonical booking/logbook model is now `docs/MENTORO_TARGET_DATA_MODEL_V2.md`, adopted with `docs/decisions/ADR-03-INDEPENDENT-TRAINING-ENROLLMENTS.md`. Any content in this legacy document that requires one active assignment/logbook per trainee, a trainee-wide mentor relationship, one pending enrollment per email, or activation-code-based training enrollment is superseded and must not be used to implement migrations or protected workflows. Shared security, audit, privacy, role-integrity, correction-history, and immutable-template-version principles remain relevant only where consistent with the new model. No SQL or database changes are authorized by this notice.
+
 **Companion documents:** `ARCHITECTURE.md`, `docs/IMPLEMENTATION_STATUS.md`, `docs/DATA_MODEL.md`, `docs/decisions/README.md`
 
 ## 1. Purpose
@@ -13,7 +16,7 @@ Existing specialty logbook projects remain reference sources only, outside this 
 
 ## 2. Accepted decisions this contract enforces
 
-- One active trainee assignment maximum platform-wide.
+- Multiple concurrent training enrollments are allowed; the old one-active-trainee-assignment rule is superseded by ADR-03.
 - Assignment switch suspends the old assignment and activates the new assignment atomically.
 - Historical records remain linked to original assignment and template version.
 - Drafts are trainee-editable; submitted records require documented correction workflow.
