@@ -550,8 +550,8 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
 
           const confirmed = window.confirm(
             'Grant Mentor workspace access to ' + (profile.full_name || displayName) + ' (' + email + ')?' +
-            (roles.has('TRAINEE') ? '\\n\\nThis account currently has a trainee role; the app routes multi-role accounts to the Mentor workspace first. The account must have no trainee history.' : '') +
-            '\\n\\nPublic directory visibility: ' + (makePublic ? 'ON' : 'OFF') + '.'
+            (roles.has('TRAINEE') ? '\n\nThis account currently has a trainee role; the app routes multi-role accounts to the Mentor workspace first. The account must have no trainee history.' : '') +
+            '\n\nPublic directory visibility: ' + (makePublic ? 'ON' : 'OFF') + '.'
           );
           if (!confirmed) { busy(button, false); return; }
 
