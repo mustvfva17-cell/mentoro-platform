@@ -84,6 +84,11 @@ if (!frontend.includes('const instanceRelation = enrollment.logbook_instances;')
   throw new Error('Logbook instance rendering must support one-to-one PostgREST embedding.');
 }
 
+if (!frontend.includes('const entries = [...(instance?.logbook_entries || [])].sort((a, b) =>') ||
+    !frontend.includes("String(b.entry_date || '').localeCompare(String(a.entry_date || ''))")) {
+  throw new Error('Logbook entries must be sorted newest-first because nested query ordering is not guaranteed.');
+}
+
 const localDateContract = frontend.includes('const localDateISO = () => {') &&
   frontend.includes('now.getFullYear()') &&
   frontend.includes('now.getMonth() + 1') &&
