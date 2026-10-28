@@ -7,17 +7,21 @@ const app = document.querySelector('#app');
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+const REGISTERED_HTML_LOGBOOK_PATHS = new Set(['/logbooks/medical-oncology/index.html', '/logbooks/general-surgery/index.html']);
 
 const htmlLogbookWindows = new Map();
 const htmlLogbookSync = new Map();
 function openHTMLLogbook(instanceId, options = {}) {
   const readOnly = options.readOnly === true;
-  if (!supabase || !/^[0-9a-f-]{36}$/i.test(instanceId || '')) { message('This logbook is not available for this training.', 'error'); return; }
+  const htmlPath = options.htmlPath || '/logbooks/medical-oncology/index.html';
+  if (!supabase || !/^[0-9a-f-]{36}$/i.test(instanceId || '') || !REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)) {
+    message('This logbook is not available for this training.', 'error'); return;
+  }
   const existing = htmlLogbookWindows.get(instanceId);
   if (existing && !existing.closed) { existing.focus(); return; }
   const query = new URLSearchParams({ instance: instanceId });
   if (readOnly) query.set('readonly', '1');
-  const child = window.open('/logbooks/medical-oncology/index.html?' + query.toString(), '_blank');
+  const child = window.open(htmlPath + '?' + query.toString(), '_blank');
   if (!child) { message('Your browser blocked the logbook window. Allow pop-ups for this site and try again.', 'error'); return; }
   htmlLogbookWindows.set(instanceId, child);
   htmlLogbookSync.set(instanceId, { revision: null, timer: null, saving: false, state: null, readOnly });
@@ -405,7 +409,7 @@ async function renderMentorDashboard(user) {
     bindMentorApplicationActions(user);
     bindMentorEntryActions(user);
     document.querySelectorAll('[data-open-html-logbook-readonly]').forEach((button) => {
-      button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbookReadonly, { readOnly: true }));
+      button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbookReadonly, { readOnly: true, htmlPath: button.dataset.htmlPath }));
     });
   } catch (error) {
     shell(
@@ -526,8 +530,9 @@ function mentorEnrollmentCard(enrollment) {
   const instance = Array.isArray(instanceRelation) ? instanceRelation[0] : instanceRelation;
   const templateRelation = instance?.logbook_template_versions;
   const templateVersion = Array.isArray(templateRelation) ? templateRelation[0] : templateRelation;
+  const htmlPath = templateVersion?.template_definition?.html_path;
   const isRegisteredHtml = templateVersion?.template_definition?.renderer === 'HTML' &&
-    templateVersion?.template_definition?.html_path === '/logbooks/medical-oncology/index.html';
+    REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath);
   const entries = instance?.logbook_entries || [];
   const submittedCount = entries.filter((entry) => {
     if (entry.status !== 'SUBMITTED') return false;
@@ -543,7 +548,7 @@ function mentorEnrollmentCard(enrollment) {
     '<div class="mentor-entry-stats"><span>' + entries.length + ' native entries</span><span>' + submittedCount + ' awaiting review</span></div>' +
     (isRegisteredHtml
       ? '<p class="workspace-note">Existing HTML logbook state is available for read-only review. Native per-entry review actions do not apply to this legacy HTML state yet.</p>' +
-        '<button class="button button--secondary button--small" type="button" data-open-html-logbook-readonly="' + esc(instance.id) + '">Open HTML logbook · read only</button>'
+        '<button class="button button--secondary button--small" type="button" data-open-html-logbook-readonly="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open HTML logbook · read only</button>'
       : '') +
   '</article>';
 }
@@ -613,8 +618,9 @@ function logbookCard(enrollment) {
   const instance = Array.isArray(instanceRelation) ? instanceRelation[0] : instanceRelation;
   const templateRelation = instance?.logbook_template_versions;
   const templateVersion = Array.isArray(templateRelation) ? templateRelation[0] : templateRelation;
+  const htmlPath = templateVersion?.template_definition?.html_path;
   const isRegisteredHtml = templateVersion?.template_definition?.renderer === 'HTML' &&
-    templateVersion?.template_definition?.html_path === '/logbooks/medical-oncology/index.html';
+    REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath);
   const templateFields = getTemplateFields(templateVersion);
   const entries = [...(instance?.logbook_entries || [])].sort((a, b) =>
     String(b.entry_date || '').localeCompare(String(a.entry_date || '')) ||
@@ -632,7 +638,7 @@ function logbookCard(enrollment) {
       <p class="mentor-line">${esc(mentor.display_name || 'Assigned mentor')}</p>
       <div class="logbook-meta"><span>${entries.length} entries</span><span>${draftCount} drafts / revisions</span></div>
       ${instance && isRegisteredHtml
-        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '">Open interactive logbook</button><p class="workspace-note">This uses the original HTML logbook for this training. Cloud changes save to this enrollment only; do not enter patient-identifying information.</p>'
+        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open interactive logbook</button><p class="workspace-note">This uses the original HTML logbook for this training. Cloud changes save to this enrollment only; do not enter patient-identifying information.</p>'
         : ''}
       ${instance && !isRegisteredHtml ? `
         <form class="entry-form" data-instance-id="${esc(instance.id)}">
@@ -741,7 +747,7 @@ async function loadOfferings(user, isVerified) {
 }
 
 function bindEntryForms(user) {
-  document.querySelectorAll('[data-open-html-logbook]').forEach((button) => button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbook)));
+  document.querySelectorAll('[data-open-html-logbook]').forEach((button) => button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbook, { htmlPath: button.dataset.htmlPath })));
   document.querySelectorAll('.entry-form').forEach((form) => form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const data = new FormData(form);
