@@ -1,8 +1,11 @@
 # MENTORO — Executable Database Design Matrix
 
-**Status:** Design proposal for review; not approved as migration SQL.  
+**Status:** Superseded legacy design proposal; not approved as migration SQL.  
 **Implementation status:** Documentation only. No migration, policy, RPC, test, or deployment has been created or run.  
-**Scope of this pass:** Identity, role grants, pending enrollment, activation codes, and trainee assignments only.
+**Scope of this pass:** Historical proposal for identity, role grants, invitation enrollment, activation codes, and trainee assignments; do not use the enrollment/assignment constraints as the current model.
+
+> **Architecture supersession notice — 2026-10-28:** The canonical booking/logbook model is now `docs/MENTORO_TARGET_DATA_MODEL_V2.md`, adopted with `docs/decisions/ADR-03-INDEPENDENT-TRAINING-ENROLLMENTS.md`. Any content in this legacy document that requires one active assignment/logbook per trainee, a trainee-wide mentor relationship, one pending enrollment per email, or activation-code-based training enrollment is superseded and must not be used to implement migrations or protected workflows. Shared security, audit, privacy, role-integrity, correction-history, and immutable-template-version principles remain relevant only where consistent with the new model. No SQL or database changes are authorized by this notice.
+
 
 This matrix translates accepted decisions into a reviewable implementation checklist. It does not override the Architecture Decision Register, Data Model, Physical Schema/RLS Contract, or Activation API Contract. If a requirement is unresolved, it is explicitly marked open rather than guessed.
 
