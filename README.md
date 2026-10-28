@@ -13,7 +13,7 @@ MENTORO connects medical trainees with structured clinical training and mentorsh
 - Draft logbook entries and submission to the assigned mentor for review.
 - Supabase RLS, scoped workflow RPCs, database-generated submission timestamps, and least-privilege browser grants.
 
-The trainee and mentor workspaces are implemented as MVPs. The admin workspace can review trainee verification through short-lived signed document URLs, confirm mentor-approved bookings, create offerings/slots, create and inspect inactive logbook-template drafts, and submit a draft for an audited publication workflow. The trainee UI renders supported fields from the template version attached to that specific logbook instance, saves them to the entry payload, and preserves the entry type when revising a returned entry. The review/publication controls and database guards exist, but no template has been clinically reviewed or published in the test database; no template is made bookable by this change. Specialty-by-specialty medical template migration and browser end-to-end testing remain incomplete.
+The trainee and mentor workspaces are implemented as MVPs. The admin workspace can review trainee verification through short-lived signed document URLs, confirm mentor-approved bookings, create offerings/slots, create and inspect inactive logbook-template drafts, and submit a draft for an audited publication workflow. The trainee UI renders supported fields from the template version attached to that specific logbook instance, saves them to the entry payload, preserves the entry type when revising a returned entry, and treats required boolean fields as explicit Yes/No answers. An admin can create new immutable draft versions for an existing template; publishing a newer version stops assigning older versions to new offerings while leaving historical references intact. The review/publication controls and database guards exist, but no template has been clinically reviewed or published in the test database; no template is made bookable by this change. Specialty-by-specialty medical template migration and browser end-to-end testing remain incomplete.
 
 ## Branch and migration safety
 
@@ -82,7 +82,7 @@ Outstanding before considering a merge:
 - Resolve/review broad default privileges owned by `supabase_admin` for future public objects.
 - Confirm the Vercel Preview branch variables and manually test the schema-driven template/logbook flow.
 - Configure an independent Vercel Preview and test the full trainee-to-mentor/admin journey.
-- Add browser end-to-end tests and complete mentor/admin workspaces.
+- Add browser end-to-end tests for separate trainee, mentor, and admin identities; manually verify the template-version creation/publication workflow.
 - Review both stacked pull requests together; do not merge PR #1 alone.
 
 Do not enter patient-identifying information into test environments.
