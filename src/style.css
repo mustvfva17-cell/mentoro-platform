@@ -293,3 +293,14 @@ h1,h2,h3,p { margin-top: 0; }
   .template-field-grid { grid-template-columns: 1fr; gap: 10px; }
   .template-field--wide { grid-column: auto; }
 }
+
+
+.template-review-fields { margin-top: 12px; }
+.template-review-fields > strong { color: var(--navy); font-size: 12px; }
+.template-field-list { display: grid; gap: 7px; margin: 9px 0 0; padding: 0; list-style: none; }
+.template-field-list li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; padding: 8px 10px; border: 1px solid #edf0f5; border-radius: 8px; background: #fbfcfe; }
+.template-field-list li strong { color: var(--navy); font-size: 12px; overflow-wrap: anywhere; }
+.template-field-list li span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .03em; }
+.admin-template-review-card .activity-main { width: 100%; min-width: 0; }
+.admin-template-review-card .training-card-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.admin-template-review-card h3 { overflow-wrap: anywhere; }
