@@ -49,4 +49,16 @@ if (invalid.length) {
   );
 }
 
-console.log(`Logbook entry-type contract passed: ${[...new Set(usedTypes)].join(', ')}.`);
+const usesScopedSubmissionRpc = /supabase\\.rpc\\(['"]set_logbook_entry_submitted['"]/.test(frontend);
+if (!usesScopedSubmissionRpc) {
+  throw new Error('Logbook submission must use the scoped set_logbook_entry_submitted RPC.');
+}
+
+if (migration !== null) {
+  const submitFunction = migration.match(/CREATE OR REPLACE FUNCTION public\\.set_logbook_entry_submitted\\([\\s\\S]*?\\$\\$;?/i);
+  if (submitFunction && /updated_at\\s*=|submitted_at\\s*=/i.test(submitFunction[0])) {
+    throw new Error('Submission RPC must rely on database triggers for timestamps, not write timestamp columns directly.');
+  }
+}
+
+console.log(`Logbook entry-type and scoped-submission contracts passed: ${[...new Set(usedTypes)].join(', ')}.`);
