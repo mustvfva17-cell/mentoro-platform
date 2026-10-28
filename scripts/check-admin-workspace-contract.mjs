@@ -4,7 +4,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 const admin = await read('../src/admin-workspace.js');
 const wrappers = await read('../supabase/migrations/20261028062421_current_user_workflow_wrappers.sql');
 const adminSetup = await read('../supabase/migrations/20261028062818_mentor_reviews_and_admin_training_setup.sql');
-const mentorRegistrationGuard = await read('../supabase/migrations/20261028190000_guard_admin_mentor_registration_target.sql');
+const mentorRegistrationGuard = await read('../supabase/migrations/20261028201121_guard_admin_mentor_registration_target.sql');
 const mentorRegistrationTest = await read('../supabase/tests/admin_register_mentor_authorization.sql');
 const schema = await read('../supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql');
 const legacyHtml = await read('../public/logbooks/medical-oncology/index.html');
