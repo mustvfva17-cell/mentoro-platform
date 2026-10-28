@@ -58,8 +58,8 @@ check(
 );
 
 
-const templateMigration = await read('../supabase/migrations/20261028143000_admin_create_logbook_template_draft.sql');
-const schemaGuardMigration = await read('../supabase/migrations/20261028143800_guard_logbook_template_schema.sql');
+const templateMigration = await read('../supabase/migrations/20261028143433_admin_create_logbook_template_draft.sql');
+const schemaGuardMigration = await read('../supabase/migrations/20261028145034_guard_logbook_template_schema.sql');
 check(
   admin.includes('id="admin-template-form"') &&
   admin.includes("supabase.rpc('admin_create_logbook_template_draft'") &&
