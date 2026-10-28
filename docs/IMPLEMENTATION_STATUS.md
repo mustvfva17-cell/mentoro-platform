@@ -1,8 +1,11 @@
 # MENTORO — Implementation Status
 
-**Updated:** 2026-10-11
-**Phase:** Final policy review complete; preparing implementation design
-**Implementation status:** Documentation only. No migrations, application implementation, or database tests are claimed.
+**Updated:** 2026-10-28
+**Phase:** Reconciling canonical enrollment/logbook model before implementation
+**Implementation status:** Application shell and design documents only. No database schema, migrations, protected workflows, or database tests are implemented or claimed.
+
+> **Current implementation direction (2026-10-28):** Use `docs/MENTORO_TARGET_DATA_MODEL_V2.md` as the canonical target model. Each confirmed training enrollment binds one trainee, one mentor, one specialty, a period and status, and exactly one independent logbook instance. Multiple simultaneous enrollments per trainee are allowed. Earlier single-active-assignment and invitation-code workflows are superseded by ADR-03. The application/database integration is still not implemented; Supabase test connectivity must be verified before migrations or protected writes are attempted.
+
 
 - Added `docs/MENTORO_EXECUTABLE_DB_DESIGN_MATRIX.md` as a table-by-table review matrix for `profiles`, `user_roles`, `pending_enrollments`, `activation_codes`, and `trainee_assignments`. It lists candidate uniqueness predicates, trusted write boundaries, RLS/grant review items, activation atomicity, and minimum test gates. It is design-only; the Super Admin global uniqueness strategy, exact role grants/RLS, FK/check constraints, RPC signature, and lock/isolation design remain open. No migrations or tests were run.
 - Added `docs/MENTORO_ROLE_SECURITY_CONTRACT.md` to define role grant/revocation behavior, the global Super Admin concurrency guard, emergency recovery constraints, and the Vercel/PostgreSQL privilege-boundary review. It is design-only; the connection model, lock primitive, exact grants/RLS/RPC SQL, and tests remain open.
