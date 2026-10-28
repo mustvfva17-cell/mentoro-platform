@@ -6,7 +6,7 @@ Scope: the isolated `mentoro-platform-test` Supabase project only. These observa
 
 ## Verified current state
 
-- The test database migration ledger contains 16 entries, matching the migration filenames recorded on the recovery branch.
+- The test database migration ledger currently contains 20 entries, but only 16 matching SQL migration files are present on the recovery branch. Four later entries are missing from all checked branches: `20261028115852_mentor_scoped_application_inbox.sql`, `20261028115928_secure_mentor_inbox_wrapper.sql`, `20261028120703_logbook_review_return_workflow.sql`, and `20261028121405_fix_returned_submission_trigger_conditions.sql`. Recover their exact original SQL before claiming migration history is complete; do not reconstruct them from filenames or re-apply them to the test database.
 - Supabase Security Advisor returned no security lints at the time of this check.
 - All 17 current application tables in `public` have no `MAINTAIN`, `TRUNCATE`, `REFERENCES`, or `TRIGGER` privilege for `anon` or `authenticated`. Migration `20261028113918_revoke_browser_maintain_privilege.sql` was applied to the test project; the post-migration privilege query returned zero `MAINTAIN` and zero `TRUNCATE` grants for both browser roles.
 - `authenticated` retains table-level `DELETE` on `logbook_entries` because the schema explicitly supports deleting **only owned DRAFT entries** through RLS policy `logbook_entries_delete_own_drafts` (`status = 'DRAFT' AND app_private.owns_instance(instance_id)`). No draft-delete control is currently exposed in the trainee frontend. Do not revoke this table-level privilege without intentionally removing the database-supported draft-cleanup workflow; the row-level policy is the actual row scope.
@@ -75,6 +75,7 @@ After extension installs, restores, or upgrades, rerun both read-only inventorie
 
 ## Release blockers not resolved by this document
 
+- Four migration source files are missing despite being present in the test database ledger; exact original SQL must be recovered before clean-room migration replay.
 - Clean-room migration replay is still outstanding.
 - The dependency tree is not reproducible until a reviewed lockfile is generated and CI switches to `npm ci`.
 - Browser/e2e tests with actual trainee, mentor, and admin sessions are still outstanding.
