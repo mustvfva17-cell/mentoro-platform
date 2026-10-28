@@ -15,7 +15,7 @@ Recover a reproducible database history for MENTORO, verify its existing test sc
 
 ## Migration history in the database
 
-The test database currently reports these fourteen applied migration records:
+The test database currently reports these fifteen applied migration records:
 
 | Version | Name | SQL file in recovery branch? |
 | --- | --- | --- |
@@ -33,6 +33,7 @@ The test database currently reports these fourteen applied migration records:
 | 20261028094412 | fix_scoped_logbook_submission_rpc | Present |
 | 20261028100024 | fix_application_offering_slot_binding | Present |
 | 20261028101524 | revoke_submission_timestamp_client_write | Present |
+| 20261028103649 | prevent_nontrainee_self_provisioning | Present |
 
 The first five migration records existed in the database history but were absent from the trainee-auth branch. The SQL files were recovered from the existing `feature/independent-training-enrollments` branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
 
@@ -101,7 +102,7 @@ A read-only catalog comparison between the 17 tables declared by `20261028061628
 - All 35 explicit index names declared across the repository migration set exist in the test database.
 - All 22 public-schema RLS policies declared by the migrations match the live policy names and commands; the two Storage policies are also present.
 - All seven application-table triggers declared by the migrations are enabled in the live database.
-- The current ledger contains the 14 migration versions in this recovery sequence, with repository filenames matching the recorded version/name pairs.
+- The current ledger contains the 15 migration versions in this recovery sequence, with repository filenames matching the recorded version/name pairs.
 
 This establishes catalog-level consistency for these inventories, not a clean-room migration replay. It does not prove the recovered five SQL bodies were the exact scripts originally applied in the historical environment.
 
@@ -127,6 +128,18 @@ Migration `20261028093412_harden_trainee_verification_bucket.sql` creates/config
 ## Transactional verification smoke test
 
 A rollback-only database smoke test confirmed that an authenticated user with a confirmed email can provision a pending trainee profile; an unconfirmed identity is rejected and receives no profile. It then registered a synthetic university-ID object in the private verification bucket, submitted the document through the current-user RPC, and approved it through the admin review wrapper. The result was a `VERIFIED` trainee profile and an `APPROVED` verification document. A follow-up read confirmed that the synthetic identities, verification row, and Storage object were all removed by transaction rollback.
+
+## Role-safe trainee provisioning
+
+Migration `20261028103649_prevent_nontrainee_self_provisioning.sql` hardens `app_private.provision_current_trainee`. Before this fix, any confirmed signed-in account could call the current-user wrapper, which always attempted to provision a trainee role/profile. Existing mentor/admin accounts could therefore pick up an unintended active `TRAINEE` role when invoking that RPC; this was a role-separation defect, not evidence of cross-user data access.
+
+The updated wrapper permits:
+- A new confirmed identity with no existing `profiles` row to create its first trainee profile.
+- An existing identity with an active `TRAINEE` role to call idempotent provisioning.
+
+It rejects an existing profile that has no active `TRAINEE` role. The trainee frontend also checks active roles before entering its trainee workspace, but the database-side guard is the authoritative protection against direct RPC calls.
+
+A rollback-only transaction test passed on `mentoro-platform-test`: an existing ADMIN-only identity was denied and did not receive a TRAINEE role, while a separate new confirmed identity successfully provisioned a trainee profile. The transaction was rolled back; follow-up counts confirmed zero synthetic auth users, profiles, roles, or trainee profiles remained. Production was not changed.
 
 ## Build dependency reproducibility
 
