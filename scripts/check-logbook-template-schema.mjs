@@ -161,7 +161,6 @@ for (const scenario of [
   'Reload did not return the saved state',
   'A second enrollment must not inherit',
   'Stale revision should have been rejected',
-  'A second enrollment must not inherit',
   'Assigned mentor could not read the current logbook state',
   'Assigned mentor must not be able to save trainee state',
   'Non-trainee writer should have been rejected'
