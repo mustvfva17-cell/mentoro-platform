@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { Script } from 'node:vm';
 import {
   LOGBOOK_ENTRY_TYPES,
   collectTemplatePayload,
@@ -9,6 +10,17 @@ import {
 } from '../src/logbook-schema.js';
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
+function assertInlineScriptsParse(path, html) {
+  const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script\\s*>/gi)];
+  assert.ok(scripts.length > 0, `${path} should include inline JavaScript`);
+  scripts.forEach((match, index) => {
+    if (!match[1].trim()) return;
+    assert.doesNotThrow(
+      () => new Script(match[1], { filename: `${path} inline script ${index + 1}` }),
+      `${path} inline script ${index + 1} should parse`
+    );
+  });
+}
 const main = await read('src/main.js');
 const admin = await read('src/admin-workspace.js');
 
@@ -100,6 +112,7 @@ assert.ok(main.includes("'/logbooks/general-surgery/index.html'"));
 assert.ok(main.includes("REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)"));
 assert.ok(main.includes("data-html-path"));
 const generalSurgeryHtml = await read('public/logbooks/general-surgery/index.html');
+assertInlineScriptsParse('public/logbooks/general-surgery/index.html', generalSurgeryHtml);
 assert.ok(generalSurgeryHtml.includes('MENTORO · General Surgery Logbook'));
 assert.ok(generalSurgeryHtml.includes("MENTORO_LOGBOOK_READY"));
 assert.ok(generalSurgeryHtml.includes("MENTORO_LOGBOOK_STATE_CHANGED"));
@@ -114,6 +127,7 @@ assert.ok(main.includes("save_my_logbook_html_state"));
 assert.ok(main.includes("event.data.flushNow === true ? 0 : 700"));
 assert.ok(main.includes("event.origin !== window.location.origin"));
 const htmlRuntime = await read('public/logbooks/medical-oncology/index.html');
+assertInlineScriptsParse('public/logbooks/medical-oncology/index.html', htmlRuntime);
 assert.ok(htmlRuntime.includes("MENTORO_LOGBOOK_READY"));
 assert.ok(htmlRuntime.includes("MENTORO_LOGBOOK_LOAD_STATE"));
 assert.ok(htmlRuntime.includes("MENTORO_LOGBOOK_STATE_CHANGED"));
