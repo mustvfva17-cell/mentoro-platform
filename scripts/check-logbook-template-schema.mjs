@@ -79,7 +79,7 @@ assert.ok(main.includes('logbook_template_versions(id,version_number,status,sche
 assert.ok(main.includes('entry_type,payload,created_at,submitted_at'));
 assert.ok(main.includes('payload: templatePayload.payload'));
 assert.ok(main.includes('entry_type: entryType'));
-assert.ok(main.includes('update({ title, entry_date: entryDate, entry_type: entryType, payload: templatePayload.payload })'));
+assert.ok(main.includes('update({ title, entry_date: entryDate, payload: templatePayload.payload })'));
 assert.ok(main.includes("renderPayloadSummary(entry.payload, templateFields)"));
 
 console.log('Schema-driven logbook field rendering, validation, payload persistence, edit support, and safe output passed.');
