@@ -15,7 +15,7 @@ Recover a reproducible database history for MENTORO, verify its existing test sc
 
 ## Migration history in the database
 
-The test database currently reports these sixteen applied migration records:
+The test database currently reports these twenty applied migration records. Only sixteen matching migration files are currently present on this branch; four newer records were discovered during the latest verification and their original SQL files are missing from all branches checked so far:
 
 | Version | Name | SQL file in recovery branch? |
 | --- | --- | --- |
@@ -35,6 +35,10 @@ The test database currently reports these sixteen applied migration records:
 | 20261028101524 | revoke_submission_timestamp_client_write | Present |
 | 20261028103649 | prevent_nontrainee_self_provisioning | Present |
 | 20261028113918 | revoke_browser_maintain_privilege | Present |
+| 20261028115852 | mentor_scoped_application_inbox | **Missing — recover original SQL** |
+| 20261028115928 | secure_mentor_inbox_wrapper | **Missing — recover original SQL** |
+| 20261028120703 | logbook_review_return_workflow | **Missing — recover original SQL** |
+| 20261028121405 | fix_returned_submission_trigger_conditions | **Missing — recover original SQL** |
 
 The first five migration records existed in the database history but were absent from the trainee-auth branch. The SQL files were recovered from the existing `feature/independent-training-enrollments` branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
 
@@ -109,7 +113,7 @@ A read-only catalog comparison between the 17 tables declared by `20261028061628
 - All 35 explicit index names declared across the repository migration set exist in the test database.
 - All 22 public-schema RLS policies declared by the migrations match the live policy names and commands; the two Storage policies are also present.
 - All seven application-table triggers declared by the migrations are enabled in the live database.
-- The current ledger contains the 16 migration versions in this recovery sequence, with repository filenames matching the recorded version/name pairs.
+- The current database ledger contains 20 records, but only 16 matching SQL files are present in this branch. The four versions `20261028115852`, `20261028115928`, `20261028120703`, and `20261028121405` were discovered in the latest ledger query and are not available on `main`, `feat/trainee-auth-foundation`, `feature/independent-training-enrollments`, or this recovery branch under their expected paths. Recover the exact original SQL bodies from the authoring source or database migration artifacts before considering the migration history complete. Do not recreate historical files from names alone or re-apply them to the test database.
 
 This establishes catalog-level consistency for these inventories, not a clean-room migration replay. It does not prove the recovered five SQL bodies were the exact scripts originally applied in the historical environment.
 
@@ -182,4 +186,4 @@ The GitHub Actions workflow now runs `npm run check:contracts` before the produc
 
 ## Current state
 
-The five recovered historical migration files, ten subsequent hardening/repair migrations, the PostgreSQL 17 browser-privilege fix, and this audit note are present on the recovery branch. The helper-function ACL, verification-bucket limits, server-side submission timestamp trigger, application-to-slot RLS fix, and direct submitted_at write revocation were applied only to `mentoro-platform-test` and then checked through catalog queries and rollback-only functional tests. PR #1 was merged into `main` on 2026-10-28 at 11:21:59 UTC. PR #2 remains an open draft targeting `main`; this work session did not merge it. The `mentoro-platform-test` database alone was modified by the documented test migrations. Production was not accessed or modified during this work session, and no production deployment was initiated by this session.
+The five recovered historical migration files, eleven available hardening/repair migrations including the PostgreSQL 17 browser-privilege fix, and this audit note are present on the recovery branch. Four later ledger entries remain without matching source files and are an explicit release blocker. The helper-function ACL, verification-bucket limits, server-side submission timestamp trigger, application-to-slot RLS fix, and direct submitted_at write revocation were applied only to `mentoro-platform-test` and then checked through catalog queries and rollback-only functional tests. PR #1 was merged into `main` on 2026-10-28 at 11:21:59 UTC. PR #2 remains an open draft targeting `main`; this work session did not merge it. The `mentoro-platform-test` database alone was modified by the documented test migrations. Production was not accessed or modified during this work session, and no production deployment was initiated by this session.
