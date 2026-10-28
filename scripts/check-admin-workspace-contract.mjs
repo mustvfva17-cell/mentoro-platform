@@ -90,7 +90,7 @@ check(
   admin.includes("const allTemplateVersions = (templateVersionResult.data || []).map") &&
   admin.includes("LOGBOOK REVIEW") &&
   admin.includes("const templateVersions = allTemplateVersions.filter((version) => version.template?.is_active)") &&
-  admin.includes("Pending clinical review. Publishing remains disabled"),
+  admin.includes("Pending clinical review. Preview the existing HTML asset, confirm the clinical source/reviewer notes, and record the decision before publishing."),
   'template drafts are visible in an admin review queue but inactive drafts cannot be offered for booking'
 );
 check(
@@ -209,6 +209,8 @@ const htmlScopeMigration = await read('../supabase/migrations/20261028165610_sco
 const htmlSeedMigration = await read('../supabase/migrations/20261028165736_seed_medical_oncology_html_logbook_draft.sql');
 check(
   admin.includes("const isRegisteredHtml = templateDefinition.renderer === 'HTML'") &&
+  admin.includes("Existing HTML logbook · ' + escape(version.template?.title || 'Registered asset')") &&
+  !admin.includes("Existing Medical Oncology HTML logbook") &&
   admin.includes("REGISTERED_HTML_LOGBOOK_PATHS.has(templateDefinition.html_path)") &&
   admin.includes("Preview existing logbook") &&
   admin.includes("href=\"/logbooks/general-surgery/index.html?mode=preview\"") &&
