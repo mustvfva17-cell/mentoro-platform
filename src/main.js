@@ -1,4 +1,5 @@
 import './style.css';
+import { renderAdminWorkspace } from './admin-workspace.js';
 import { createClient } from '@supabase/supabase-js';
 
 const app = document.querySelector('#app');
@@ -83,7 +84,7 @@ async function resolveWorkspaceRole(user) {
 async function renderWorkspace(user, role) {
   if (role === 'TRAINEE') return renderDashboard(user);
   if (role === 'MENTOR') return renderMentorDashboard(user);
-  return renderAdminWorkspace(user);
+  return renderAdminWorkspace({ user, supabase, shell, esc, dateTime, setBusy, message, errorText });
 }
 
 const errorText = (error) => {
@@ -496,19 +497,6 @@ function bindMentorApplicationActions(user) {
       ? 'Application approved. MENTORO administration can now confirm the booking.'
       : 'Application rejected. Your decision has been recorded.', 'success');
   }));
-}
-
-function renderAdminWorkspace(user) {
-  shell(
-    '<main class="dashboard">' +
-      '<section class="dashboard-welcome"><div><p class="eyebrow">ADMIN WORKSPACE</p><h1>Welcome back, <span>' +
-        esc(user.email || 'administrator') +
-      '</span></h1><p>Your administrator role has been recognized. Administration tools are not part of this preview slice yet.</p></div>' +
-      '<span class="status-chip status-chip--neutral">Administrator</span></section>' +
-      '<section class="empty-state"><strong>Admin dashboard is still being built</strong><p>This account was not converted to a trainee account. You can sign out safely; administrator actions will be added in a separate reviewed change.</p></section>' +
-    '</main>',
-    user
-  );
 }
 
 function verificationPanel(doc, profile) {
