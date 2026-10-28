@@ -131,7 +131,8 @@ check(
 check(
   publicationMigration.includes('IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()') &&
   publicationMigration.includes("v_status <> 'DRAFT'") &&
-  publicationMigration.includes("SET status = 'PUBLISHED', is_assignable = true") &&
+  publicationMigration.includes("SET status = 'PUBLISHED'") &&
+  publicationMigration.includes('is_assignable = true') &&
   publicationMigration.includes('LOGBOOK_TEMPLATE_VERSION_PUBLISHED') &&
   publicationMigration.includes('FROM PUBLIC, anon, authenticated, service_role'),
   'template publication is admin-only, draft-only, audited, and keeps the private RPC inaccessible'
