@@ -991,6 +991,10 @@ window.addEventListener('message',event=>{
     ? 'Read-only mentor review loaded. Editing and saving are disabled. Do not enter patient-identifying information.'
     : 'Cloud logbook loaded for this confirmed training. Changes sync automatically. Do not enter patient-identifying information.');
   }else{
+   if(readonlyMode){
+    data.sessions=[];data.cases=[];data.procedures=[];data.roadmap={};data.emergency=[];data.reflection={};
+    render();
+   }
    setCloudNotice(readonlyMode
     ? 'Read-only mentor review. No saved state exists for this training yet; edits are disabled.'
     : 'Cloud logbook connected. Changes sync automatically. Do not enter patient-identifying information.');
