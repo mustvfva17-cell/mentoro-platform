@@ -112,10 +112,11 @@ check('submission timestamp and audit triggers explicitly fire on both DRAFT and
   contains(returnedSubmissionTriggerFix, 'EXECUTE FUNCTION app_private.audit_entry_submission()'));
 
 
-check('administrator roles are recognized without opening the trainee workspace',
+check('administrator roles route to the dedicated admin workspace without opening the trainee workspace',
   contains(frontend, "roles.has('SUPER_ADMIN')") &&
   contains(frontend, "roles.has('ADMIN')") &&
-  contains(frontend, "return renderAdminWorkspace(user)"));check('database provisioning requires a confirmed auth email', contains(currentUserWrappers, 'u.email_confirmed_at IS NOT NULL'));
+  contains(frontend, "import { renderAdminWorkspace } from './admin-workspace.js';") &&
+  contains(frontend, "return renderAdminWorkspace({ user, supabase, shell, esc, dateTime, setBusy, message, errorText });"));check('database provisioning requires a confirmed auth email', contains(currentUserWrappers, 'u.email_confirmed_at IS NOT NULL'));
 check('provisioning derives the identity from auth.uid()', contains(currentUserWrappers, 'v_user_id uuid := auth.uid()'));
 check('provisioning creates trainee role and trainee profile', contains(coreSchema, "VALUES (p_user_id, 'TRAINEE')") && contains(coreSchema, 'INSERT INTO public.trainee_profiles (profile_id)'));
 check('existing profiles cannot self-provision a TRAINEE role without an active trainee assignment',
