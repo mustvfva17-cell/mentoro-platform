@@ -31,18 +31,19 @@ The test Supabase project is `mentoro-platform-test`. Do not replay migrations o
 Requirements: a supported Node.js LTS release and npm.
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
-Build and run the current source-contract check:
+Run all repository checks and build the application:
 
 ```sh
+npm run check:migrations
 npm run check:contracts
 npm run build
 ```
 
-The repository currently has no committed npm lockfile, so `npm install` is not yet fully reproducible. Before relying on repeatable dependency resolution, generate and review `package-lock.json` using the intended Node/npm toolchain, commit it, and switch CI to `npm ci`. Do not hand-author a lockfile.
+The repository now contains an npm-generated `package-lock.json` (`lockfileVersion: 3`, 74 locked packages). GitHub Actions uses `npm ci` against the committed lockfile; validation run [40692616988](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40692616988) passed dependency installation, migration-history checks, frontend/schema contracts, and the Vite production build. Do not edit the lockfile by hand; regenerate it with npm when dependency definitions intentionally change.
 
 ## Preview environment
 
@@ -76,7 +77,6 @@ Outstanding before considering a merge:
 
 - Clean-room migration replay on an isolated database.
 - Resolve/review broad default privileges owned by `supabase_admin` for future public objects.
-- Generate and commit a reviewed npm lockfile, then use `npm ci` in CI.
 - Configure an independent Vercel Preview and test the full trainee-to-mentor/admin journey.
 - Add browser end-to-end tests and complete mentor/admin workspaces.
 - Review both stacked pull requests together; do not merge PR #1 alone.
