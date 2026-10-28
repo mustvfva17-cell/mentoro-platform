@@ -11,7 +11,7 @@ import {
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
 function assertInlineScriptsParse(path, html) {
-  const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script\\s*>/gi)];
+  const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)];
   assert.ok(scripts.length > 0, `${path} should include inline JavaScript`);
   scripts.forEach((match, index) => {
     if (!match[1].trim()) return;
