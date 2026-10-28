@@ -209,8 +209,9 @@ const htmlScopeMigration = await read('../supabase/migrations/20261028165610_sco
 const htmlSeedMigration = await read('../supabase/migrations/20261028165736_seed_medical_oncology_html_logbook_draft.sql');
 check(
   admin.includes("const isRegisteredHtml = templateDefinition.renderer === 'HTML'") &&
-  admin.includes("templateDefinition.html_path === '/logbooks/medical-oncology/index.html'") &&
-  admin.includes("Preview original HTML logbook") &&
+  admin.includes("REGISTERED_HTML_LOGBOOK_PATHS.has(templateDefinition.html_path)") &&
+  admin.includes("Preview existing logbook") &&
+  admin.includes("href=\"/logbooks/general-surgery/index.html?mode=preview\"") &&
   admin.includes("const canPublishReviewedRuntime = isRegisteredHtml || version.fields.length > 0") &&
   admin.includes("data-publish-template") &&
   admin.includes("Pending clinical review. Publishing remains disabled until the HTML asset and source are reviewed."),
