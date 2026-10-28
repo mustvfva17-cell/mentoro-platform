@@ -101,5 +101,17 @@ if (!startupSource.includes('error: sessionError') ||
   throw new Error('Auth startup must handle session restoration failures with a visible message.');
 }
 
+const offeringsErrorBlock = frontend.match(/if \(error\) \{\s*target\.innerHTML = '[^']*Training listings are temporarily unavailable[^']*';[\s\S]*?return;\s*\}/);
+if (!offeringsErrorBlock ||
+    !offeringsErrorBlock[0].includes('retry-offerings') ||
+    !offeringsErrorBlock[0].includes('loadOfferings(user, isVerified)')) {
+  throw new Error('Training listing failures must expose a working retry action.');
+}
+
+if (!frontend.includes("const accountStatus = profile.account_status || 'PENDING';") ||
+    !frontend.includes("esc(accountStatus.replaceAll('_', ' '))")) {
+  throw new Error('Dashboard rendering must tolerate a missing account status without crashing.');
+}
+
 console.log('Account-role entry and one-to-one logbook embedding contracts passed.');
 console.log(`Logbook entry-type and scoped-submission contracts passed: ${[...new Set(usedTypes)].join(', ')}.`);
