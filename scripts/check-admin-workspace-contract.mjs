@@ -4,6 +4,8 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 const admin = await read('../src/admin-workspace.js');
 const wrappers = await read('../supabase/migrations/20261028062421_current_user_workflow_wrappers.sql');
 const adminSetup = await read('../supabase/migrations/20261028062818_mentor_reviews_and_admin_training_setup.sql');
+const mentorRegistrationGuard = await read('../supabase/migrations/20261028190000_guard_admin_mentor_registration_target.sql');
+const mentorRegistrationTest = await read('../supabase/tests/admin_register_mentor_authorization.sql');
 const schema = await read('../supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql');
 const legacyHtml = await read('../public/logbooks/medical-oncology/index.html');
 
@@ -31,6 +33,30 @@ check(
   adminSetup.includes('CREATE OR REPLACE FUNCTION public.admin_register_mentor') &&
   adminSetup.includes("IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()"),
   'admin mentor registration uses an existing account, protects administrator identities, checks trainee history, and calls the admin-authorized RPC'
+);
+
+check(
+  admin.includes("if (roles.has('TRAINEE'))") &&
+  admin.includes("Create a separate account dedicated to mentor access") &&
+  mentorRegistrationGuard.includes("u.email_confirmed_at IS NOT NULL") &&
+  mentorRegistrationGuard.includes("p_mentor_profile_id = v_actor_id") &&
+  mentorRegistrationGuard.includes("role IN ('ADMIN', 'SUPER_ADMIN')") &&
+  mentorRegistrationGuard.includes("Use a separate account without an active trainee role") &&
+  mentorRegistrationGuard.includes("FROM public.training_applications a") &&
+  mentorRegistrationGuard.includes("FROM public.training_enrollments e") &&
+  mentorRegistrationGuard.includes("FROM public.verification_documents d"),
+  'mentor registration rejects unconfirmed, admin, trainee, or trainee-history accounts at both UI and database layers'
+);
+
+check(
+  mentorRegistrationTest.startsWith('-- Rollback-only authorization test') &&
+  mentorRegistrationTest.includes('BEGIN;') &&
+  mentorRegistrationTest.trimEnd().endsWith('ROLLBACK;') &&
+  mentorRegistrationTest.includes('anonymous caller registered a mentor') &&
+  mentorRegistrationTest.includes('trainee invoked the admin mentor RPC') &&
+  mentorRegistrationTest.includes('administrator registered their own account as mentor') &&
+  mentorRegistrationTest.includes('administrator repurposed a trainee account'),
+  'rollback-only mentor registration tests cover anonymous, non-admin, self-registration, and trainee-repurposing denial'
 );
 
 check(
