@@ -128,6 +128,12 @@ Migration `20261028093412_harden_trainee_verification_bucket.sql` creates/config
 
 A rollback-only database smoke test confirmed that an authenticated user with a confirmed email can provision a pending trainee profile; an unconfirmed identity is rejected and receives no profile. It then registered a synthetic university-ID object in the private verification bucket, submitted the document through the current-user RPC, and approved it through the admin review wrapper. The result was a `VERIFIED` trainee profile and an `APPROVED` verification document. A follow-up read confirmed that the synthetic identities, verification row, and Storage object were all removed by transaction rollback.
 
+## Build dependency reproducibility
+
+The branch does not contain `package-lock.json` or `npm-shrinkwrap.json`. The workflow currently runs `npm install`, and `package.json` uses semver ranges for Vite and Supabase JS. The production build and contract checks pass, but the exact dependency tree is not locked in source control.
+
+Before treating CI as fully repeatable, generate a lockfile using the intended Node/npm toolchain, review and commit it, and switch CI to `npm ci`. Do not hand-author a lockfile: let npm resolve and record package versions and integrity data.
+
 ## Findings and limits
 
 - The database contains 17 public tables and helper routines/policies. Reconstructing a migration from current schema alone can lose historical intent, ordering, grants, triggers, storage policies, and edge-case safeguards.
