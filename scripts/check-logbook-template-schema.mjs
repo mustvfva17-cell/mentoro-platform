@@ -206,7 +206,9 @@ const generalSurgeryMigration = await read('supabase/migrations/20261028175703_r
 assert.ok(generalSurgeryMigration.includes("'/logbooks/general-surgery/index.html'"));
 assert.ok(generalSurgeryMigration.includes("'/logbooks/medical-oncology/index.html'"));
 assert.ok(generalSurgeryMigration.includes("'general-surgery-html'"));
-assert.ok(generalSurgeryMigration.includes("'DRAFT', false"));
+assert.ok(generalSurgeryMigration.includes("'DRAFT'"));
+assert.ok(generalSurgeryMigration.includes("'general-surgery-html'"));
+assert.ok(generalSurgeryMigration.includes("status='DRAFT'" ) === false);
 assert.ok(generalSurgeryMigration.includes('app_private.get_my_logbook_html_state'));
 assert.ok(generalSurgeryMigration.includes('app_private.save_my_logbook_html_state'));
 assert.ok(generalSurgeryMigration.includes('app_private.admin_publish_logbook_template_version'));
@@ -215,6 +217,13 @@ assert.ok(main.includes("REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)"));
 assert.ok(main.includes("htmlPath: button.dataset.htmlPath"));
 assert.ok(main.includes("data-html-path"));
 assert.ok(admin.includes("href=\"/logbooks/general-surgery/index.html?mode=preview\""));
+const generalSurgeryStateTest = await read('supabase/tests/general_surgery_html_state_integration.sql');
+assert.ok(generalSurgeryStateTest.startsWith('-- Rollback-only integration test'));
+assert.ok(generalSurgeryStateTest.includes('BEGIN;'));
+assert.ok(generalSurgeryStateTest.trimEnd().endsWith('ROLLBACK;'));
+assert.ok(generalSurgeryStateTest.includes('Initial General Surgery HTML state should be empty at revision zero'));
+assert.ok(generalSurgeryStateTest.includes('General Surgery HTML state did not round-trip'));
+assert.ok(generalSurgeryStateTest.includes('Assigned mentor must not write trainee-owned General Surgery state'));
 console.log('General Surgery HTML asset registration, per-enrollment cloud bridge, admin preview, and read-only mentor integration checks passed.');
 
 
