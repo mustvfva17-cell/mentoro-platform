@@ -20,7 +20,8 @@ const [
   mentorAdminSetup,
   privateBucket,
   serverTimestamp,
-  scopedSubmission
+  scopedSubmission,
+  submissionTimestampRevocation
 ] = await Promise.all([
   read('src/main.js'),
   read('supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql'),
@@ -30,7 +31,8 @@ const [
   read('supabase/migrations/20261028062818_mentor_reviews_and_admin_training_setup.sql'),
   read('supabase/migrations/20261028093412_harden_trainee_verification_bucket.sql'),
   read('supabase/migrations/20261028093532_enforce_server_submission_timestamp.sql'),
-  read('supabase/migrations/20261028094412_fix_scoped_logbook_submission_rpc.sql')
+  read('supabase/migrations/20261028094412_fix_scoped_logbook_submission_rpc.sql'),
+  read('supabase/migrations/20261028102000_revoke_submission_timestamp_client_write.sql')
 ]);
 
 // Authentication and identity provisioning.
@@ -121,6 +123,8 @@ check('submission RPC cannot directly update submitted_at or updated_at',
   !/SET[\s\S]{0,160}(submitted_at|updated_at)\s*=/i.test(
     scopedSubmission.match(/CREATE OR REPLACE FUNCTION public\.set_logbook_entry_submitted\([\s\S]*?\$\$;/i)?.[0] || ''
   ));
+check('browser role cannot directly update submitted_at',
+  /REVOKE UPDATE\\s*\\(submitted_at\\)[\\s\\S]*?FROM authenticated/i.test(submissionTimestampRevocation));
 check('database trigger overwrites submitted_at on the DRAFT-to-SUBMITTED transition',
   contains(serverTimestamp, "IF OLD.status = 'DRAFT' AND NEW.status = 'SUBMITTED' THEN") &&
   contains(serverTimestamp, 'NEW.submitted_at := statement_timestamp()') &&
