@@ -10,6 +10,7 @@ import {
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
 const main = await read('src/main.js');
+const admin = await read('src/admin-workspace.js');
 
 const version = {
   schema_definition: {
