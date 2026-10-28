@@ -47,8 +47,8 @@ BEGIN
     RAISE EXCEPTION 'Add source notes describing the clinical reviewer/source and scope (at least 20 characters)' USING ERRCODE = '22023';
   END IF;
 
-  IF jsonb_typeof(p_schema_definition) <> 'object'
-     OR jsonb_typeof(p_schema_definition -> 'fields') <> 'array' THEN
+  IF jsonb_typeof(p_schema_definition) IS DISTINCT FROM 'object'
+     OR jsonb_typeof(p_schema_definition -> 'fields') IS DISTINCT FROM 'array' THEN
     RAISE EXCEPTION 'Schema must be an object containing a fields array' USING ERRCODE = '22023';
   END IF;
 
@@ -57,13 +57,13 @@ BEGIN
     RAISE EXCEPTION 'A draft schema must contain between 1 and 100 fields' USING ERRCODE = '22023';
   END IF;
 
-  IF jsonb_typeof(coalesce(p_template_definition, '{}'::jsonb)) <> 'object' THEN
+  IF jsonb_typeof(coalesce(p_template_definition, '{}'::jsonb)) IS DISTINCT FROM 'object' THEN
     RAISE EXCEPTION 'Template definition must be a JSON object' USING ERRCODE = '22023';
   END IF;
 
   FOR v_field IN SELECT value FROM jsonb_array_elements(p_schema_definition -> 'fields')
   LOOP
-    IF jsonb_typeof(v_field) <> 'object'
+    IF jsonb_typeof(v_field) IS DISTINCT FROM 'object'
        OR coalesce(v_field ->> 'key', '') !~ '^[a-z][a-z0-9_]{0,63}$'
        OR length(trim(coalesce(v_field ->> 'label', ''))) < 1
        OR length(coalesce(v_field ->> 'label', '')) > 160
@@ -72,7 +72,7 @@ BEGIN
     END IF;
 
     IF coalesce(v_field ->> 'type', '') = 'select'
-       AND (jsonb_typeof(v_field -> 'options') <> 'array'
+       AND (jsonb_typeof(v_field -> 'options') IS DISTINCT FROM 'array'
             OR jsonb_array_length(v_field -> 'options') < 2
             OR jsonb_array_length(v_field -> 'options') > 50) THEN
       RAISE EXCEPTION 'Select fields need between 2 and 50 options' USING ERRCODE = '22023';
