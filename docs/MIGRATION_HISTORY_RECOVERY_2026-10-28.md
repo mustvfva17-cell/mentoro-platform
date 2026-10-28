@@ -15,7 +15,7 @@ Recover a reproducible database history for MENTORO, verify its existing test sc
 
 ## Migration history in the database
 
-The test database currently reports these ten applied migration records:
+The test database currently reports these eleven applied migration records:
 
 | Version | Name | SQL file in recovery branch? |
 | --- | --- | --- |
@@ -29,6 +29,7 @@ The test database currently reports these ten applied migration records:
 | 20261028090137 | least_privilege_browser_write_columns | Present |
 | 20261028092340 | restrict_app_private_helper_execute | Present |
 | 20261028093412 | harden_trainee_verification_bucket | Present |
+| 20261028093532 | enforce_server_submission_timestamp | Present |
 
 The first five migration records existed in the database history but were absent from the trainee-auth branch. The SQL files were recovered from the existing `feature/independent-training-enrollments` branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
 
@@ -67,6 +68,12 @@ The live default-ACL inventory also reports broad defaults for objects created b
 
 The current migration connection is `postgres` and does not have membership in `supabase_admin`, so it cannot change that role's default privileges. This is a **follow-up for a Supabase project owner** to review and harden in a controlled way. No attempt was made to bypass role ownership. The existing objects in the current app schema were separately checked and do not inherit those permissions automatically; the concern is future objects created by that role.
 
+## Logbook submission timestamp integrity
+
+The trainee client previously sent `submitted_at` directly when transitioning an entry from `DRAFT` to `SUBMITTED`. A caller using the API directly could supply an arbitrary timestamp even though row ownership and state transitions were restricted.
+
+Migration `20261028093532_enforce_server_submission_timestamp.sql` adds a `BEFORE UPDATE` trigger that overwrites `submitted_at` with the database statement timestamp for the allowed `DRAFT` → `SUBMITTED` transition. The trigger function has no EXECUTE grants to browser roles and does not use `SECURITY DEFINER`; the trigger itself remains active. A read-only catalog check confirmed the trigger is enabled and direct EXECUTE is denied to both `anon` and `authenticated`.
+
 ## Verification storage limits
 
 The `trainee-verification` bucket is private and now enforces the client UI's upload constraints at the Storage layer:
@@ -104,4 +111,4 @@ The GitHub Actions workflow now runs `npm run check:contracts` before the produc
 
 ## Current state
 
-The five missing migration files, both security/storage hardening migrations, and this audit note are present on the recovery branch. The latest privilege-hardening migration was applied only to `mentoro-platform-test` and was checked afterward with read-only privilege queries. Production was not accessed or modified. No PR was merged and no production deployment was made.
+The five missing migration files, the security/storage/logbook hardening migrations, and this audit note are present on the recovery branch. The latest privilege-hardening migration was applied only to `mentoro-platform-test` and was checked afterward with read-only privilege queries. Production was not accessed or modified. No PR was merged and no production deployment was made.
