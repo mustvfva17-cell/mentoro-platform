@@ -51,7 +51,7 @@ Every insert or payload/instance update on `public.logbook_entries` is validated
 - The original `/logbooks/medical-oncology/index.html` is retained.
 - An enrollment-linked launch uses `?instance={uuid}` and reads/saves the full existing HTML state with `get_my_logbook_html_state` and `save_my_logbook_html_state`.
 - The bridge uses same-origin `postMessage` with source/origin checks. Cloud writes are revision-checked, limited to the active assigned trainee, and rejected for archived/cancelled/revoked enrollments or unregistered HTML assets.
-- Mentors assigned to an HTML-backed enrollment can open the existing UI in read-only mode. It loads state from the same access-scoped RPC; the child page disables data-editing controls and the parent refuses write messages in read-only mode.
+- Mentors assigned to an HTML-backed enrollment can open the existing UI in read-only mode. It loads state from the same access-scoped RPC; the child page disables data-editing controls and the parent refuses write messages in read-only mode. The rollback-only integration test confirms an assigned mentor can read but cannot save the trainee’s state.
 - `?mode=preview` remains local-only for design inspection. It is not a confirmed training record.
 - The native mentor workflow does not yet collect per-session/per-case review decisions for legacy HTML state. The whole HTML state is one revisioned JSON record, not separate native `logbook_entries`.
 - The HTML template remains a draft and is not assignable until an authorized human has completed the required clinical review.
@@ -64,7 +64,7 @@ Every insert or payload/instance update on `public.logbook_entries` is validated
 
 ## Verification checklist
 
-1. Check Vercel reports the source ref as `feat/admin-workspace-mvp`.
+1. Check Vercel reports the source ref as `feat/logbook-template-drafts`.
 2. Confirm the two Vite variables remain scoped to Preview and the branch.
 3. Confirm the warning remains gone.
 4. After branch-scoped Preview variables and the Auth redirect allow-list are set, test signup/email confirmation and sign-in with a dedicated test user.
