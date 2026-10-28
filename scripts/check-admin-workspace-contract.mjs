@@ -203,4 +203,28 @@ check(
   'existing Medical Oncology HTML is preserved with isolated preview storage and a clear local-only warning'
 );
 
+
+const htmlPublicationWrapper = await read('../supabase/migrations/20261028165257_fix_html_template_publication_wrapper.sql');
+const htmlScopeMigration = await read('../supabase/migrations/20261028165610_scope_html_state_rpc_to_registered_assets.sql');
+const htmlSeedMigration = await read('../supabase/migrations/20261028165736_seed_medical_oncology_html_logbook_draft.sql');
+check(
+  admin.includes("const isRegisteredHtml = templateDefinition.renderer === 'HTML'") &&
+  admin.includes("templateDefinition.html_path === '/logbooks/medical-oncology/index.html'") &&
+  admin.includes("Preview original HTML logbook") &&
+  admin.includes("const canPublishReviewedRuntime = isRegisteredHtml || version.fields.length > 0") &&
+  admin.includes("data-publish-template") &&
+  admin.includes("Pending clinical review. Publishing remains disabled until the HTML asset and source are reviewed."),
+  'existing HTML templates are shown as HTML, can be previewed, and are publication-eligible only through the registered asset review path'
+);
+check(
+  htmlPublicationWrapper.includes('SECURITY INVOKER') &&
+  htmlScopeMigration.includes("v_template_definition ->> 'renderer' IS DISTINCT FROM 'HTML'") &&
+  htmlScopeMigration.includes("v_template_definition ->> 'html_path' IS DISTINCT FROM '/logbooks/medical-oncology/index.html'") &&
+  htmlScopeMigration.includes("Only the assigned trainee can save this HTML logbook") &&
+  htmlSeedMigration.includes('medical-oncology-html') &&
+  htmlSeedMigration.includes("'DRAFT'") &&
+  htmlSeedMigration.includes('ON CONFLICT (id) DO NOTHING'),
+  'HTML publication wrapper, registered-asset access boundary, and non-assignable existing HTML seed migration are source-controlled'
+);
+
 console.log('Administrator workspace safety contracts passed.');
