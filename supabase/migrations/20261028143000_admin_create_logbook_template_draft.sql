@@ -108,7 +108,7 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION app_private.admin_create_logbook_template_draft(uuid, text, text, text, jsonb, jsonb, text)
-  FROM PUBLIC, anon, service_role;
+  FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION app_private.admin_create_logbook_template_draft(uuid, text, text, text, jsonb, jsonb, text)
   TO authenticated;
 
