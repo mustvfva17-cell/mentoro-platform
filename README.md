@@ -1,14 +1,22 @@
 # MENTORO Platform
 
-MENTORO is a medical training and mentorship platform. This repository is currently being scaffolded from the accepted architecture and decision documents.
+MENTORO is a medical clinical-mentorship platform built around independent training enrollments and per-enrollment specialty logbooks.
 
 ## Stack
 
-- Frontend: Vite, vanilla JavaScript, CSS
-- Protected API: Vercel Node.js Functions
-- Identity: Supabase Auth (integration not enabled yet)
-- Database: Supabase PostgreSQL with reviewed grants, RLS, and atomic database workflows (schema not created yet)
-- Specialty payload validation: Ajv 8 with JSON Schema Draft 2020-12 (not installed or wired yet)
+- Frontend: Vite, vanilla JavaScript, CSS.
+- Protected API: Vercel Node.js Functions, verifying Supabase Auth tokens and relying on JWT-scoped RLS/RPC workflows.
+- Identity: Supabase Auth.
+- Database: Supabase PostgreSQL with explicit grants, Row Level Security, scoped functions, and atomic booking confirmation.
+- Logbooks: one shared engine with versioned specialty templates and one independent instance per enrollment.
+
+## Current status
+
+The independent-enrollment data model and initial schema are implemented in the isolated Supabase test project only. Four versioned migrations are committed under `supabase/migrations/`. All 17 application tables in test have RLS enabled; Supabase Security Advisor reported no findings after the last migration.
+
+The application shell/API is not yet an end-to-end product. Real-user signup, profile provisioning, ID-document review, booking, enrollment, mentor-scoped review, logbook persistence, and browser/build tests remain in progress. The General Surgery template version is deliberately `DRAFT` and cannot be booked until the clinical payload schema is reviewed.
+
+Production Supabase and the existing public `mentoro` website have not been changed by the test migrations.
 
 ## Local development
 
@@ -19,7 +27,7 @@ npm install
 npm run dev
 ```
 
-The frontend development server does not emulate Vercel API functions. To test the API locally, install/use the Vercel CLI and run:
+The frontend dev server does not emulate Vercel API functions. To test API routes locally, install/use the Vercel CLI and run:
 
 ```sh
 npm run dev:vercel
@@ -33,19 +41,24 @@ npm run build
 
 ## Environment variables
 
-Use `.env.example` as a names-only template. Copy it to a local `.env` only when the relevant integration is implemented. Never commit real credentials.
+Use `.env.example` as a names-only template. Configure preview/local environments to use the isolated `mentoro-platform-test` Supabase project. Never copy production values into a test environment or commit credentials.
 
-- `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are public browser configuration values for approved client-side Auth use only.
-- `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are used by the server-side token-verification endpoint. A publishable key is not a secret, but keep it in server configuration for this endpoint.
-- `SUPABASE_SECRET_KEY` is reserved for separately reviewed privileged workflows and is not used by `/api/auth/me`. Never prefix secrets with `VITE_`, send them to the browser, or commit them to Git.
-- Configure local/Preview values to the `mentoro-platform-test` Supabase project. Do not copy production credentials into test environments.
+- `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are public browser Auth configuration values.
+- `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are server-only deployment settings for verifying Auth tokens and making JWT-scoped calls.
+- Never expose a Supabase secret/service-role key in a `VITE_*` variable, browser bundle, public asset, or source control.
 
-`@supabase/supabase-js` is used by the server-only `GET /api/auth/me` endpoint to verify a caller-supplied Supabase access token. This endpoint does not create sessions, read application tables, or authorize platform roles. The browser Auth flow, database writes, migrations, RLS policies, RPCs, and Ajv validation are not implemented.
+## Security boundaries
 
-## Architecture and decisions
+- Client-supplied user IDs, roles, verification flags, enrollment owners, and mentor IDs are never authoritative.
+- Training application, review, verification, and booking RPCs derive the actor from the authenticated Supabase JWT or verify that a trusted server-supplied actor matches an active database role.
+- Mentor access is derived from the mentor linked to each enrollment, not a trainee-wide relationship.
+- A logbook entry, review, and assessment belongs to a specific logbook instance/enrollment. A new booking starts with an empty instance.
+- University-ID files must remain in the private `trainee-verification` storage bucket. Do not store patient-identifying information in logbook payloads.
+- A `DRAFT` template is never assignable. Publishing a template version requires explicit review and should not alter existing instances.
 
-Read `ARCHITECTURE.md` and the documents under `docs/` before implementing protected workflows. Accepted design decisions remain binding. Sensitive multi-step writes require a reviewed atomic boundary and audit writes must commit or roll back with the protected operation.
+## Key documents
 
-## Current scope
+- `docs/decisions/ADR-03-INDEPENDENT-TRAINING-ENROLLMENTS.md`
+- `docs/MENTORO_TARGET_DATA_MODEL_V2.md`
+- `docs/IMPLEMENTATION_STATUS.md`
 
-This is an early foundation. `/api/health` reports application-shell status only, not database readiness. `GET /api/auth/me` verifies a Supabase access token and returns minimal identity information; it is not a platform-role authorization check. No database schema, RLS policies, privileged RPCs, or production data writes exist yet. Do not enter patient-identifying information.
