@@ -10,7 +10,7 @@ The template-schema branch has a Ready Vercel deployment at the stable branch al
 
 `https://mentoro-platform-git-feat-logbook-templa-2a615c-mustvfva17-3787.vercel.app`
 
-The latest checked runtime deployment is `READY` for commit `9f7bf23670e0558bb2201d4d792f65e5c6861c9f` on `feat/logbook-template-drafts`. It includes both registered HTML assets (Medical Oncology and General Surgery), the trainee launch wiring, and read-only mentor launch wiring. The current branch head `b805f12b32892152ddf6a44c970679d0ad1df3cf` contains a contract-test correction only, not a runtime change. The two browser variables are scoped to this branch and Preview target only. Vercel blocks automated page inspection with deployment protection, so the owner should open the alias manually to validate the rendered UI and cloud-sync notices.
+The latest previously verified runtime deployment was `READY` for commit `9f7bf23670e0558bb2201d4d792f65e5c6861c9f` on `feat/logbook-template-drafts`; it includes both registered HTML assets (Medical Oncology and General Surgery), trainee launch wiring, and read-only mentor launch wiring. The latest copy update is commit `9b400ccf87e6040c811559dca3b57eb4be7cca85`, and GitHub Actions Run #559 passed. A READY deployment for this newest commit has not yet been independently verified. The two browser variables remain scoped to this branch and Preview target only. Vercel deployment protection blocks automated page inspection, so the owner still needs to open the Preview manually for rendered-UI and cloud-sync checks.
 
 ## Preview-only environment variables
 
@@ -53,7 +53,7 @@ Every insert or payload/instance update on `public.logbook_entries` is validated
 - The bridge uses same-origin `postMessage` with source/origin checks. Cloud writes are revision-checked, limited to the active assigned trainee, and rejected for archived/cancelled/revoked enrollments or unregistered HTML assets.
 - Mentors assigned to an HTML-backed enrollment can open the existing UI in read-only mode. It loads state from the same access-scoped RPC; the child page disables data-editing controls and the parent refuses write messages in read-only mode. The rollback-only integration test confirms an assigned mentor can read but cannot save the trainee’s state.
 - `?mode=preview` remains local-only for design inspection. It is not a confirmed training record.
-- The native mentor workflow does not yet collect per-session/per-case review decisions for legacy HTML state. The whole HTML state is one revisioned JSON record, not separate native `logbook_entries`.
+- Item-level mentor decisions for legacy HTML sessions/cases are now supported through the `logbook_html_item_reviews` audit trail and the `mentor_review_html_logbook_item` / `get_my_logbook_html_item_reviews` RPCs. The complete HTML logbook content remains one revisioned JSON state record, separate from native `logbook_entries`; mentor decisions are stored separately and scoped to the training instance.
 - Both `medical-oncology-html` and `general-surgery-html` remain `DRAFT`, `is_assignable=false`. Neither has been published. An authorized clinical reviewer must assess each template before publication.
 ## Current functional boundaries
 
