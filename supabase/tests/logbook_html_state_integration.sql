@@ -23,6 +23,8 @@ DECLARE
   v_revision bigint;
   v_second_revision bigint;
   v_read jsonb;
+  v_review jsonb;
+  v_reviews jsonb;
   v_state_a jsonb := jsonb_build_object(
     'sessions', jsonb_build_array(jsonb_build_object('id','session-fixture','date','2026-10-28','focus','Synthetic integration test')),
     'cases', jsonb_build_array(),
@@ -73,6 +75,8 @@ BEGIN
     INSERT INTO public.mentor_profiles(profile_id, display_name, professional_title, profile_status, is_public)
     VALUES (v_mentor, 'Rollback-only HTML state fixture', 'Test fixture', 'APPROVED', false)
     ON CONFLICT (profile_id) DO NOTHING;
+    INSERT INTO public.profile_roles(user_id, role, granted_by)
+    VALUES (v_mentor, 'MENTOR', v_admin);
   END IF;
 
   INSERT INTO public.logbook_templates(specialty_id, slug, title, description, is_active)
@@ -179,8 +183,35 @@ BEGIN
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'Stale revision should have been rejected'; END IF;
 
-  -- The assigned mentor may read the logbook but cannot modify trainee-owned state.
+  -- The assigned mentor can review a saved item using the separate review audit trail.
   PERFORM set_config('request.jwt.claim.sub', v_mentor::text, true);
+  v_review := public.mentor_review_html_logbook_item(
+    v_instance_a, 'session-fixture', 'session', 'FEEDBACK', 'Discuss the differential diagnosis.'
+  );
+  IF v_review ->> 'item_id' <> 'session-fixture'
+     OR v_review ->> 'decision' <> 'FEEDBACK'
+     OR v_review ->> 'feedback' <> 'Discuss the differential diagnosis.' THEN
+    RAISE EXCEPTION 'Mentor item review did not return the saved decision';
+  END IF;
+
+  v_reviews := public.get_my_logbook_html_item_reviews(v_instance_a);
+  IF jsonb_array_length(v_reviews) <> 1
+     OR v_reviews -> 0 ->> 'item_id' <> 'session-fixture'
+     OR v_reviews -> 0 ->> 'decision' <> 'FEEDBACK' THEN
+    RAISE EXCEPTION 'Mentor item review did not round-trip';
+  END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.mentor_review_html_logbook_item(
+      v_instance_a, 'missing-session', 'session', 'VERIFIED', NULL
+    );
+  EXCEPTION WHEN SQLSTATE '22023' THEN
+    v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Mentor review should reject an item absent from the saved logbook state'; END IF;
+
+  -- The assigned mentor may read the logbook but cannot modify trainee-owned state.
   v_read := public.get_my_logbook_html_state(v_instance_a);
   IF (v_read ->> 'revision')::bigint <> 2 OR v_read -> 'state' <> v_state_b THEN
     RAISE EXCEPTION 'Assigned mentor could not read the current logbook state';
@@ -193,6 +224,17 @@ BEGIN
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'Assigned mentor must not be able to save trainee state'; END IF;
 
+  PERFORM set_config('request.jwt.claim.sub', v_trainee::text, true);
+  v_rejected := false;
+  BEGIN
+    PERFORM public.mentor_review_html_logbook_item(
+      v_instance_a, 'session-fixture', 'session', 'VERIFIED', NULL
+    );
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Trainee must not be able to issue mentor review decisions'; END IF;
+
   -- Even a platform admin may read a trainee's logbook, but cannot save as that trainee.
   PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
   v_rejected := false;
@@ -203,7 +245,7 @@ BEGIN
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'Non-trainee writer should have been rejected'; END IF;
 
-  RAISE NOTICE 'HTML state RPC checks passed: save/reload, revision increment, per-enrollment isolation, stale-write conflict, assigned-mentor read-only access, stale-write rejection, and trainee-only write permission.';
+  RAISE NOTICE 'HTML state and mentor-review checks passed: save/reload, per-enrollment isolation, revision conflicts, assigned-mentor read-only access, per-item review round-trip, unknown-item rejection, and trainee review denial.';
 END
 $test$;
 
