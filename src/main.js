@@ -59,11 +59,44 @@ window.addEventListener('message', async (event) => {
       if (!sync) return;
       sync.revision = Number(data?.revision ?? 0);
       postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_LOAD_STATE', state: data?.state && typeof data.state === 'object' ? data.state : null, revision: sync.revision, hasCloudState: sync.revision > 0, readOnly: sync.readOnly === true });
+      const { data: reviews, error: reviewsError } = await supabase.rpc('get_my_logbook_html_item_reviews', { p_instance_id: instanceId });
+      postHTMLLogbookMessage(instanceId, {
+        type: 'MENTORO_LOGBOOK_LOAD_REVIEWS',
+        reviews: Array.isArray(reviews) ? reviews : [],
+        error: reviewsError?.message || null
+      });
     } catch (error) {
       postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_LOAD_ERROR', error: error?.message || 'Could not load this training logbook.' });
     }
     return;
   }
+  if (type === 'MENTORO_LOGBOOK_MENTOR_REVIEW') {
+    const sync = htmlLogbookSync.get(instanceId);
+    if (!sync || !sync.readOnly) {
+      postHTMLLogbookMessage(instanceId, {
+        type: 'MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT',
+        ok: false,
+        error: 'Mentor review actions are available only in the assigned read-only review view.'
+      });
+      return;
+    }
+    const { data: review, error } = await supabase.rpc('mentor_review_html_logbook_item', {
+      p_instance_id: instanceId,
+      p_item_id: event.data.itemId,
+      p_item_type: event.data.itemType,
+      p_decision: event.data.decision,
+      p_feedback: event.data.feedback || null
+    });
+    postHTMLLogbookMessage(instanceId, {
+      type: 'MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT',
+      ok: !error,
+      review: error ? null : review,
+      itemId: event.data.itemId,
+      error: error?.message || null
+    });
+    return;
+  }
+
   if (type === 'MENTORO_LOGBOOK_STATE_CHANGED' && event.data.state && typeof event.data.state === 'object') {
     const sync = htmlLogbookSync.get(instanceId);
     if (!sync) return;
