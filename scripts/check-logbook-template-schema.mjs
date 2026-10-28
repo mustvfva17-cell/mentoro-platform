@@ -97,6 +97,22 @@ assert.ok(main.includes("renderPayloadSummary(entry.payload, templateFields)"));
 
 console.log('Schema-driven logbook rendering, explicit boolean answers, duplicate-key handling, payload persistence, edit support, and safe output passed.');
 
+const payloadIntegrationTest = await read('supabase/tests/logbook_entry_payload_validation.sql');
+assert.ok(payloadIntegrationTest.startsWith('-- Rollback-only integration test'));
+assert.ok(payloadIntegrationTest.includes('BEGIN;'));
+assert.ok(payloadIntegrationTest.trimEnd().endsWith('ROLLBACK;'));
+for (const expectedCase of [
+  'Missing-required rejection',
+  'Invalid-select rejection',
+  'Unknown-field rejection',
+  'Invalid-type rejection',
+  'Out-of-range rejection',
+  'Invalid-date rejection',
+  'Oversized-payload rejection'
+]) {
+  assert.ok(payloadIntegrationTest.includes(expectedCase), `Integration test is missing case: ${expectedCase}`);
+}
+console.log('Rollback-only database payload integration scenarios are present.');
 const payloadMigration = await read('supabase/migrations/20261028155601_validate_logbook_entry_payload.sql');
 assert.ok(payloadMigration.includes('CREATE OR REPLACE FUNCTION app_private.validate_logbook_entry_payload()'));
 assert.ok(payloadMigration.includes('SECURITY DEFINER'));
