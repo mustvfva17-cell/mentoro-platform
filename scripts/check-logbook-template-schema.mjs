@@ -189,5 +189,34 @@ assert.ok(htmlLimitFix.includes("SELECT count(*) FROM jsonb_object_keys(p_state 
 assert.ok(!htmlLimitFix.includes('jsonb_object_length(p_state'));
 console.log('Rollback-only HTML cloud-state isolation/revision tests and PostgreSQL-compatible JSON size guards are present.');
 
+const generalSurgeryStateTest = await read('supabase/tests/general_surgery_html_state_integration.sql');
+assert.ok(generalSurgeryStateTest.startsWith('-- Rollback-only integration test'));
+assert.ok(generalSurgeryStateTest.includes('BEGIN;'));
+assert.ok(generalSurgeryStateTest.trimEnd().endsWith('ROLLBACK;'));
+for (const scenario of [
+  'General Surgery HTML template must remain an unassignable DRAFT',
+  'Initial General Surgery HTML state should be empty at revision zero',
+  'General Surgery HTML save should create revision one',
+  'General Surgery HTML state did not round-trip',
+  'Assigned mentor must not write trainee-owned General Surgery state'
+]) {
+  assert.ok(generalSurgeryStateTest.includes(scenario), `General Surgery HTML integration test missing case: ${scenario}`);
+}
+const generalSurgeryMigration = await read('supabase/migrations/20261028175703_register_general_surgery_html_logbook.sql');
+assert.ok(generalSurgeryMigration.includes("'/logbooks/general-surgery/index.html'"));
+assert.ok(generalSurgeryMigration.includes("'/logbooks/medical-oncology/index.html'"));
+assert.ok(generalSurgeryMigration.includes("'general-surgery-html'"));
+assert.ok(generalSurgeryMigration.includes("'DRAFT', false"));
+assert.ok(generalSurgeryMigration.includes('app_private.get_my_logbook_html_state'));
+assert.ok(generalSurgeryMigration.includes('app_private.save_my_logbook_html_state'));
+assert.ok(generalSurgeryMigration.includes('app_private.admin_publish_logbook_template_version'));
+assert.ok(generalSurgeryMigration.includes('app_private.guard_logbook_template_version_schema'));
+assert.ok(main.includes("REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)"));
+assert.ok(main.includes("htmlPath: button.dataset.htmlPath"));
+assert.ok(main.includes("data-html-path"));
+assert.ok(admin.includes("href=\"/logbooks/general-surgery/index.html?mode=preview\""));
+console.log('General Surgery HTML asset registration, per-enrollment cloud bridge, admin preview, and read-only mentor integration checks passed.');
+
+
 console.log('Database-boundary payload validation checks against the attached immutable template version passed.');
 
