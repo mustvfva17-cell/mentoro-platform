@@ -35,8 +35,16 @@ check(
   admin.includes("version.template.specialty_id") &&
   admin.includes("templateOption.dataset.specialtyId !== specialtyId") &&
   admin.includes("templateOption.dataset.templateStatus !== 'PUBLISHED'") &&
-  admin.includes("templateOption.dataset.assignable !== 'true'"),
-  'offering creation filters template versions by specialty and checks publish prerequisites'
+  admin.includes("templateOption.dataset.assignable !== 'true'") &&
+  admin.includes("publishToggle.disabled = !canPublish") &&
+  admin.includes("const mentorPublic = mentorOption?.dataset.isPublic === 'true'"),
+  'offering creation filters template versions by specialty and disables publishing until prerequisites are met'
+);
+
+check(
+  admin.includes("card?.querySelector('[data-verification-note]')?.value?.trim() || ''") &&
+  admin.includes("if (decision === 'REJECT' && !reason)"),
+  'rejecting trainee verification requires an explanation that is saved by the review RPC'
 );
 
 check(
