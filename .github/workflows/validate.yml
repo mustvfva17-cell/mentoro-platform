@@ -25,13 +25,6 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
-      - name: Export npm-generated lockfile for review
-        uses: actions/upload-artifact@v4
-        with:
-          name: mentoro-package-lock-bootstrap
-          path: package-lock.json
-          if-no-files-found: error
-          retention-days: 1
       - name: Validate migration filename/content history
         run: npm run check:migrations
       - name: Validate frontend/schema contracts
