@@ -20,6 +20,20 @@ check(
 );
 
 check(
+  admin.includes('id="admin-mentor-register-form"') &&
+  admin.includes("supabase.rpc('admin_register_mentor'") &&
+  admin.includes(".eq('email', email)") &&
+  admin.includes("roles.has('ADMIN') || roles.has('SUPER_ADMIN')") &&
+  admin.includes("applicationHistory.data") &&
+  admin.includes("enrollmentHistory.data") &&
+  admin.includes("verificationHistory.data") &&
+  admin.includes("profile.id === user.id") &&
+  adminSetup.includes('CREATE OR REPLACE FUNCTION public.admin_register_mentor') &&
+  adminSetup.includes("IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()"),
+  'admin mentor registration uses an existing account, protects administrator identities, checks trainee history, and calls the admin-authorized RPC'
+);
+
+check(
   admin.includes("supabase.rpc('admin_review_trainee_verification'") &&
   admin.includes("supabase.rpc('admin_confirm_my_application'") &&
   admin.includes("supabase.rpc('admin_create_training_offering'") &&
