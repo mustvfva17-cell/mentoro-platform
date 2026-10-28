@@ -137,7 +137,7 @@ check(
   publicationMigration.includes('is_assignable = true') &&
   publicationMigration.includes('LOGBOOK_TEMPLATE_VERSION_PUBLISHED') &&
   publicationMigration.includes('FROM PUBLIC, anon, authenticated, service_role'),
-  'template publication is admin-only, draft-only, audited, and keeps the private RPC inaccessible'
+  'template publication is admin-only, draft-only, audited, and its private implementation remains role-guarded'
 );
 check(
   publicationVersioningMigration.includes('SET is_assignable = false') &&
@@ -182,7 +182,7 @@ check(
   templateMigration.includes('IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()') &&
   templateVersionDraftMigration.includes('IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()') &&
   publicationMigration.includes('IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()'),
-  'invoker wrappers delegate only to private SECURITY DEFINER implementations that check the active admin role'
+  'public template RPCs use invoker wrappers; authenticated execution on private helpers is required for delegation, and each helper enforces the active-admin role'
 );
 
 console.log('Administrator workspace safety contracts passed.');
