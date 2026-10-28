@@ -1,12 +1,10 @@
 # MENTORO Platform Architecture
 
 ## Project Vision
-MENTORO is a centralized medical training platform supporting three initial specialty logbooks:
-1. General Surgery
-2. Neurology
-3. Anaesthesia & Critical Care
 
-Existing logbook projects are kept outside this repository and must remain untouched. We may consult them later as references, but do not copy or import their code.
+MENTORO is a centralized medical training and mentorship platform. One trainee account may enroll in several independent trainings at the same time, including multiple trainings in one specialty. Each confirmed enrollment gets its own independent logbook instance, linked to one mentor, one specialty, one training period/status, and one published version of the specialty template.
+
+Existing specialty logbooks are retained as reference sources while their schemas and UI behaviors are assessed. Do not copy an old app wholesale or deploy an unvalidated ZIP; migrate the approved clinical requirements into the shared logbook engine and keep each specialty definition versioned.
 
 ## Technology Stack
 - Frontend: Vite, Vanilla JavaScript, and CSS.
@@ -16,28 +14,21 @@ Existing logbook projects are kept outside this repository and must remain untou
 - Specialty payload validation: Ajv 8 with JSON Schema Draft 2020-12 in the trusted backend.
 - Hosting/version control: Vercel, Git, and GitHub.
 
-The approved security and atomicity boundaries are defined in ADR-01 in the decisions register. This stack decision is design-only; it does not authorize implementation or migrations.
+The protected-write boundary remains Vercel API + Supabase Auth + PostgreSQL RLS/scoped RPCs. The current test schema is implemented and tracked by the migrations under `supabase/migrations/`; the full UI/API flow is still under development. No production migration or deployment has been made.
 
 ## Roles, Identity, and Enrollment Flow
-- One central identity per user.
-- A trainee may have multiple specialty assignments.
-- Each assignment links a trainee to a specialty and a specific logbook template/version.
-- Activation codes must be single-use, securely stored as hashes, and must not grant Admin privileges.
-- Subsequent access uses authenticated sessions.
+- One central identity per person, with a trainee profile and optionally a mentor profile when the role is granted by an authorized admin.
+- A trainee can hold multiple concurrent applications/enrollments, including the same specialty and same mentor.
+- Each enrollment has exactly one trainee and one mentor, and creates exactly one independent logbook instance pinned to a published template version.
+- Account signup and university-ID verification are separate from training application, mentor review, and admin booking confirmation.
+- Mentor authorization is scoped to the mentor on each enrollment. A mentor cannot access unrelated enrollments of the same trainee.
+- Prior activation-code and one-active-assignment rules are superseded by ADR-03.
 
-## Preliminary Core Entities
-This is a preliminary list of core entities. (No columns, finalized relationships, or migrations are defined yet):
-- `profiles`
-- `specialties`
-- `logbook_templates`
-- `trainee_assignments`
-- `log_entries`
-- `roadmap_targets`
-- `log_entry_targets`
-- `contexts`
-- `procedures`
-- `activation_codes`
-- `audit_logs`
+## Core Entities
+
+The current schema includes `profiles`, `profile_roles`, `trainee_profiles`, `mentor_profiles`, `verification_documents`, `specialties`, `training_offerings`, `training_slots`, `training_applications`, `training_enrollments`, `logbook_templates`, `logbook_template_versions`, `logbook_instances`, `logbook_entries`, `entry_reviews`, `assessments`, and `audit_logs`. The canonical relationships and lifecycle rules are documented in `docs/MENTORO_TARGET_DATA_MODEL_V2.md`.
+
+The four current migration files are applied only to the isolated test Supabase project. The production project and public website are unchanged.
 
 ## Trusted Backend, Security, and Atomicity (ADR-01)
 - Protected write workflows pass through a Vercel-hosted Node.js API that verifies the Supabase Auth session and derives the actor from verified authentication state.
@@ -69,10 +60,12 @@ Exact SQL types, constraints, grants, RLS policies, RPC signatures, locking/isol
 - Never run destructive database resets against production.
 
 ## Implementation Phases
-- Phase 01 — Architecture & Data Model
-- Phase 02 — Foundation
-- Phase 03 — Security & Authentication
-- Phase 04 — Product Modules
+- Phase 01 — Canonical architecture and data model (completed for the initial test schema).
+- Phase 02 — Database security/RLS baseline (applied to isolated test; authenticated actor-level and concurrency tests still required).
+- Phase 03 — Auth, account verification, role dashboards, and booking workflow (in progress).
+- Phase 04 — General Surgery logbook vertical slice and mentor review (pending).
+- Phase 05 — Migrate and validate remaining specialty templates (pending).
+- Phase 06 — Preview acceptance testing before any production rollout (pending).
 
 ## Architectural Change Control
 All architectural changes must be recorded, reviewed, and approved via Architectural Decision Records (ADRs), which are tracked in the `docs/decisions/` directory.
@@ -80,7 +73,7 @@ All architectural changes must be recorded, reviewed, and approved via Architect
 
 ## ADR-01 — Trusted Backend and Atomic Write Boundary (accepted)
 
-**Status:** Accepted by project owner on 2026-10-11. **Design-only:** no application code, migrations, database changes, or tests are authorized by this ADR.
+**Status:** Accepted by project owner on 2026-10-11. ADR-01 defines the intended trusted write boundary; implementation details and migration status are tracked in `docs/IMPLEMENTATION_STATUS.md`.
 
 ### Decision
 - Use a Vercel-hosted Node.js API as the trusted application backend for protected write workflows and other operations requiring server-side authorization or schema validation.
