@@ -560,7 +560,7 @@ const store={
 };
 if(previewMode){
  const note=document.getElementById('legacy-preview-banner');
- if(note) note.hidden=false;
+ if(note){note.hidden=false;note.style.display='block';}
 }
 var data={
  sessions:JSON.parse(store.get('mentoro_v4_sessions')||store.get('mentoro_v3_sessions')||'[]'),
