@@ -15,7 +15,7 @@ Recover a reproducible database history for MENTORO, verify its existing test sc
 
 ## Migration history in the database
 
-The test database currently reports these twelve applied migration records:
+The test database currently reports these thirteen applied migration records:
 
 | Version | Name | SQL file in recovery branch? |
 | --- | --- | --- |
@@ -31,6 +31,7 @@ The test database currently reports these twelve applied migration records:
 | 20261028093412 | harden_trainee_verification_bucket | Present |
 | 20261028093532 | enforce_server_submission_timestamp | Present |
 | 20261028094412 | fix_scoped_logbook_submission_rpc | Present |
+| 20261028100024 | fix_application_offering_slot_binding | Present |
 
 The first five migration records existed in the database history but were absent from the trainee-auth branch. The SQL files were recovered from the existing `feature/independent-training-enrollments` branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
 
@@ -81,6 +82,16 @@ The trainee client previously sent `submitted_at` directly when transitioning an
 
 Migration `20261028093532_enforce_server_submission_timestamp.sql` adds a `BEFORE UPDATE` trigger that overwrites `submitted_at` with the database statement timestamp for the allowed `DRAFT` → `SUBMITTED` transition. The trigger function has no EXECUTE grants to browser roles and does not use `SECURITY DEFINER`; the trigger itself remains active. A read-only catalog check confirmed the trigger is enabled and direct EXECUTE is denied to both `anon` and `authenticated`.
 
+## Application-to-slot RLS binding fix
+
+A transactional negative test confirmed that the original `applications_submit_own` policy could accept an application whose `offering_id` referenced Offering A while its `slot_id` referenced Offering B. Inside the policy's `EXISTS` subquery, the unqualified `offering_id` name resolved to the joined `training_slots.offering_id` column instead of the outer application's column, making that part of the predicate ineffective.
+
+Migration `20261028100024_fix_application_offering_slot_binding.sql` recreates the policy and explicitly qualifies both outer-row references:
+- `o.id = training_applications.offering_id`
+- `s.id = training_applications.slot_id`
+
+The fix was applied to `mentoro-platform-test` only. A rollback-only transaction demonstrated that the normal matching offering/slot application is accepted while a mismatched pairing is rejected by RLS. The same transaction was rolled back; follow-up catalog/count checks confirmed no synthetic auth users, applications, enrollments, logbook entries, reviews, or storage rows remained. The migration version in the Git filename matches the test database's migration ledger.
+
 ## Verification storage limits
 
 The `trainee-verification` bucket is private and now enforces the client UI's upload constraints at the Storage layer:
@@ -96,7 +107,7 @@ Migration `20261028093412_harden_trainee_verification_bucket.sql` creates/config
 - The exact SQL originally applied for the five recovered historical migrations cannot be proven from migration version/name metadata alone.
 - A clean-room replay is still outstanding. An attempt to create a disposable Supabase development branch returned `Branching is supported only on the Pro plan or above`; no branch was created and no branch compute charges started. The quoted branch rate was $0.01344/hour, but the plan entitlement blocked creation.
 - Vercel preview setup is still blocked: the previous attempt to create a separate project returned 403. A Vercel team owner must authorize/create a preview project and configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
-- Browser/e2e tests with real trainee, mentor, and admin identities have not been run. The current test database has no trainee/mentor profiles, offerings, slots, applications, enrollments, logbook instances, entries, reviews, or assessments, so it cannot exercise the full booking/logbook flow without approved fixtures.
+- Browser/e2e tests with real trainee, mentor, and admin identities have not been run. The current test database has no persistent trainee/mentor profiles, offerings, slots, applications, enrollments, logbook instances, entries, reviews, or assessments. Rollback-only SQL workflow tests have exercised the booking/logbook path with synthetic identities, but browser/auth end-to-end tests are still outstanding.
 
 ## Next steps
 
@@ -118,4 +129,4 @@ The GitHub Actions workflow now runs `npm run check:contracts` before the produc
 
 ## Current state
 
-The five missing migration files, all three hardening migrations, and this audit note are present on the recovery branch. The helper-function ACL, verification-bucket limits, and server-side submission timestamp trigger were applied only to `mentoro-platform-test` and then checked through read-only catalog/configuration queries. Production was not accessed or modified. No PR was merged and no production deployment was made.
+The five missing historical migration files, eight subsequent hardening/repair migrations, and this audit note are present on the recovery branch. The helper-function ACL, verification-bucket limits, and server-side submission timestamp trigger were applied only to `mentoro-platform-test` and then checked through read-only catalog/configuration queries. Production was not accessed or modified. No PR was merged and no production deployment was made.
