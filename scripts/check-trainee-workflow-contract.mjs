@@ -26,7 +26,8 @@ const [
   browserMaintainPrivilege,
   mentorInboxMigration,
   secureMentorInboxMigration,
-  logbookReviewMigration
+  logbookReviewMigration,
+  returnedSubmissionTriggerFix
 ] = await Promise.all([
   read('src/main.js'),
   read('supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql'),
@@ -42,7 +43,8 @@ const [
   read('supabase/migrations/20261028113918_revoke_browser_maintain_privilege.sql'),
   read('supabase/migrations/20261028115852_mentor_scoped_application_inbox.sql'),
   read('supabase/migrations/20261028115928_secure_mentor_inbox_wrapper.sql'),
-  read('supabase/migrations/20261028120703_logbook_review_return_workflow.sql')
+  read('supabase/migrations/20261028120703_logbook_review_return_workflow.sql'),
+  read('supabase/migrations/20261028121500_fix_returned_submission_trigger_conditions.sql')
 ]);
 
 // Authentication and identity provisioning.
@@ -100,6 +102,14 @@ check('resubmission from RETURNED uses a private wrapper and refreshes database 
   contains(logbookReviewMigration, "OLD.status IN ('DRAFT', 'RETURNED') AND NEW.status = 'SUBMITTED'") &&
   contains(logbookReviewMigration, "THEN 'LOGBOOK_ENTRY_RESUBMITTED'") &&
   contains(logbookReviewMigration, "status IN ('DRAFT', 'RETURNED')"));
+
+check('submission timestamp and audit triggers explicitly fire on both DRAFT and RETURNED resubmissions',
+  contains(returnedSubmissionTriggerFix, "WHEN (OLD.status IN ('DRAFT', 'RETURNED') AND NEW.status = 'SUBMITTED')") &&
+  contains(returnedSubmissionTriggerFix, 'DROP TRIGGER IF EXISTS logbook_entry_submission_timestamp') &&
+  contains(returnedSubmissionTriggerFix, 'DROP TRIGGER IF EXISTS logbook_entry_submission_audit') &&
+  contains(returnedSubmissionTriggerFix, 'EXECUTE FUNCTION app_private.enforce_entry_submission_timestamp()') &&
+  contains(returnedSubmissionTriggerFix, 'EXECUTE FUNCTION app_private.audit_entry_submission()'));
+
 
 check('administrator roles are recognized without opening the trainee workspace',
   contains(frontend, "roles.has('SUPER_ADMIN')") &&
