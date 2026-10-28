@@ -5,9 +5,11 @@ on:
     branches:
       - main
       - chore/recover-migration-history
+      - feat/mentor-workspace-mvp
   push:
     branches:
       - main
+      - feat/admin-workspace-mvp
 
 permissions:
   contents: read
