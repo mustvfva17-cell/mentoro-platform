@@ -148,6 +148,12 @@ assert.ok(main.includes("'MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT'"), 'Parent bridg
 assert.ok(main.includes("'mentor_review_html_logbook_item'"), 'Parent bridge must call the trusted review RPC');
 const mentorReviewMigration = await read('supabase/migrations/20261028182751_mentor_review_html_logbook_items.sql');
 assert.ok(mentorReviewMigration.includes('CREATE TABLE public.logbook_html_item_reviews'));
+const reviewOrderMigration = await read('supabase/migrations/20261028183806_fix_html_item_review_order.sql');
+assert.ok(reviewOrderMigration.includes('GENERATED ALWAYS AS IDENTITY'));
+assert.ok(reviewOrderMigration.includes('ORDER BY r.item_id, r.review_order DESC'));
+for (const runtime of [mentorReadOnlyRuntime, generalSurgeryHtml]) {
+  assert.ok(runtime.includes('data.sessions=[];data.cases=[];data.procedures=[];data.roadmap={};data.emergency=[];data.reflection={}'), 'Read-only mentor view must not display local cached state when no cloud state exists');
+}
 assert.ok(mentorReviewMigration.includes('app_private.get_my_logbook_html_item_reviews'));
 assert.ok(mentorReviewMigration.includes('app_private.mentor_review_html_logbook_item'));
 assert.ok(mentorReviewMigration.includes('v_actor_id <> v_mentor_id OR NOT app_private.is_mentor()'));
