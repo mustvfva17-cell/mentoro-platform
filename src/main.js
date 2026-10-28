@@ -342,7 +342,7 @@ function bindEntryForms(user) {
     setBusy(button, true, 'Saving…');
     const { error } = await supabase.from('logbook_entries').insert({
       instance_id: form.dataset.instanceId,
-      entry_type: 'CLINICAL_ACTIVITY',
+      entry_type: 'LEARNING_ACTIVITY',
       title: String(data.get('title')).trim(),
       entry_date: data.get('date'),
       payload: {},
