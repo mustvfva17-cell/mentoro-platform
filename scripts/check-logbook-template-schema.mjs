@@ -138,5 +138,26 @@ assert.ok(payloadMigration.includes('must match one of its configured options'))
 assert.ok(payloadMigration.includes('must be a valid calendar date'));
 assert.ok(payloadMigration.includes('must be at least'));
 assert.ok(payloadMigration.includes('must be at most'));
+
+const htmlStateTest = await read('supabase/tests/logbook_html_state_integration.sql');
+assert.ok(htmlStateTest.startsWith('-- Rollback-only integration test'));
+assert.ok(htmlStateTest.includes('BEGIN;'));
+assert.ok(htmlStateTest.trimEnd().endsWith('ROLLBACK;'));
+for (const scenario of [
+  'First cloud save should create revision 1',
+  'Reload did not return the saved state',
+  'A second enrollment must not inherit',
+  'Stale revision should have been rejected',
+  'Non-trainee writer should have been rejected'
+]) {
+  assert.ok(htmlStateTest.includes(scenario), `HTML state integration test missing case: ${scenario}`);
+}
+const htmlLimitFix = await read('supabase/migrations/20261028170000_fix_html_state_object_limits.sql');
+assert.ok(htmlLimitFix.includes('CREATE OR REPLACE FUNCTION app_private.save_my_logbook_html_state'));
+assert.ok(htmlLimitFix.includes("SELECT count(*) FROM jsonb_object_keys(p_state -> 'roadmap')"));
+assert.ok(htmlLimitFix.includes("SELECT count(*) FROM jsonb_object_keys(p_state -> 'reflection')"));
+assert.ok(!htmlLimitFix.includes('jsonb_object_length(p_state'));
+console.log('Rollback-only HTML cloud-state isolation/revision tests and PostgreSQL-compatible JSON size guards are present.');
+
 console.log('Database-boundary payload validation checks against the attached immutable template version passed.');
 
