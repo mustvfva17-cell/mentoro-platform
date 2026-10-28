@@ -270,9 +270,7 @@ async function renderMentorDashboard(user) {
     const [profileResult, mentorResult, applicationsResult, enrollmentsResult] = await Promise.all([
       supabase.from('profiles').select('id,full_name,email').eq('id', user.id).maybeSingle(),
       supabase.from('mentor_profiles').select('profile_id,display_name,professional_title,institution').eq('profile_id', user.id).maybeSingle(),
-      supabase.from('training_applications')
-        .select('id,status,created_at,applicant_note,training_offerings(title,description,delivery_mode,specialties(name_en)),training_slots(starts_at,ends_at)')
-        .order('created_at', { ascending: false }),
+      supabase.rpc('mentor_list_my_applications', { p_limit: 100 }),
       supabase.from('training_enrollments')
         .select('id,status,starts_at,ends_at,training_offerings(title,specialties(name_en)),logbook_instances(id,logbook_entries(id,status))')
         .order('starts_at', { ascending: true })
@@ -339,27 +337,33 @@ async function renderMentorDashboard(user) {
 }
 
 function mentorApplicationCard(item) {
-  const offering = item.training_offerings || {};
-  const specialty = offering.specialties || {};
-  const slot = item.training_slots || {};
   const isPending = item.status === 'SUBMITTED';
-  const deliveryMode = (offering.delivery_mode || 'IN_PERSON').replaceAll('_', ' ');
+  const deliveryMode = (item.delivery_mode || 'IN_PERSON').replaceAll('_', ' ');
+  const education = [
+    item.university_name,
+    item.faculty_name,
+    item.year_of_study ? `Year ${item.year_of_study}` : null
+  ].filter(Boolean).join(' · ');
   return '<article class="activity-card mentor-application-card" data-application-card>' +
     '<div class="activity-main">' +
-      '<span class="specialty-label">' + esc(specialty.name_en || 'Clinical training') + '</span>' +
-      '<h3>' + esc(offering.title || 'Training application') + '</h3>' +
-      '<p>' + esc(deliveryMode) + ' · ' + esc(dateTime(slot.starts_at)) + ' — ' + esc(dateTime(slot.ends_at)) + '</p>' +
+      '<span class="specialty-label">' + esc(item.specialty_name || 'Clinical training') + '</span>' +
+      '<h3>' + esc(item.offering_title || 'Training application') + '</h3>' +
+      '<p><strong>Applicant:</strong> ' + esc(item.trainee_name || 'Trainee') + '</p>' +
+      (education ? '<p class="mentor-trainee-education">' + esc(education) + '</p>' : '') +
+      '<p>' + esc(deliveryMode) + ' · ' + esc(dateTime(item.slot_starts_at)) + ' — ' + esc(dateTime(item.slot_ends_at)) + '</p>' +
       '<p class="mentor-applicant-note">' + (item.applicant_note ? '<strong>Applicant note:</strong> ' + esc(item.applicant_note) : 'No note was included with this application.') + '</p>' +
       '<small>Received ' + esc(dateTime(item.created_at)) + '</small>' +
       (isPending
         ? '<div class="mentor-review-actions">' +
-            '<input class="mentor-review-reason" type="text" maxlength="500" data-mentor-reason="' + esc(item.id) + '" placeholder="Optional feedback for the trainee">' +
+            '<input class="mentor-review-reason" type="text" maxlength="500" data-mentor-reason="' + esc(item.application_id) + '" placeholder="Optional feedback for the trainee">' +
             '<div class="mentor-review-buttons">' +
-              '<button class="button button--primary button--small" type="button" data-mentor-decision="APPROVE" data-application-id="' + esc(item.id) + '">Approve</button>' +
-              '<button class="button button--secondary button--small" type="button" data-mentor-decision="REJECT" data-application-id="' + esc(item.id) + '">Reject</button>' +
+              '<button class="button button--primary button--small" type="button" data-mentor-decision="APPROVE" data-application-id="' + esc(item.application_id) + '">Approve</button>' +
+              '<button class="button button--secondary button--small" type="button" data-mentor-decision="REJECT" data-application-id="' + esc(item.application_id) + '">Reject</button>' +
             '</div>' +
           '</div>'
-        : '<div class="mentor-review-actions"><span class="status-chip status-chip--neutral">' + esc((item.status || 'REVIEWED').replaceAll('_', ' ')) + '</span></div>') +
+        : '<div class="mentor-review-actions"><span class="status-chip status-chip--neutral">' + esc((item.status || 'REVIEWED').replaceAll('_', ' ')) + '</span>' +
+          (item.mentor_decision_reason ? '<p class="mentor-applicant-note"><strong>Decision note:</strong> ' + esc(item.mentor_decision_reason) + '</p>' : '') +
+          '</div>') +
     '</div>' +
   '</article>';
 }
