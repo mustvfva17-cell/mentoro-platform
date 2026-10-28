@@ -8,7 +8,8 @@
     "dev:vercel": "vercel dev",
     "build": "vite build",
     "preview": "vite preview",
-    "check:contracts": "node scripts/check-logbook-entry-types.mjs && node scripts/check-trainee-workflow-contract.mjs"
+    "check:contracts": "node scripts/check-logbook-entry-types.mjs && node scripts/check-trainee-workflow-contract.mjs",
+    "check:migrations": "node scripts/check-migration-history.mjs"
   },
   "devDependencies": {
     "vite": "^6.4.1"
