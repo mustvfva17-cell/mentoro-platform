@@ -124,7 +124,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
           }).join('') + '</div>' : '<div class="empty-state"><strong>No bookings need confirmation</strong><p>Applications approved by mentors will appear here.</p></div>') +
         '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">EXISTING HTML LOGBOOKS</p><h2>Use a logbook you already have</h2></div><span class="status-chip status-chip--neutral">Existing asset</span></div>' +
-          '<p class="workspace-note">These are existing interactive HTML logbooks, not forms we need to rebuild in JSON. Start by previewing the original UI; cloud sync and per-entry mentor review still need to be connected before using it for a real enrollment.</p>' +
+          '<p class="workspace-note">These are existing interactive HTML logbooks, not forms we need to rebuild in JSON. Preview the original UI and complete end-to-end trainee and assigned-mentor checks before any clinical template is approved for real enrollment.</p>' +
           '<div class="mentor-queue-grid">' +
             '<article class="training-card admin-existing-logbook-card"><div class="training-card-heading"><span class="specialty-label">Medical Oncology</span><span class="status-chip status-chip--neutral">HTML · Draft</span></div>' +
               '<h3>Medical Oncology Logbook</h3><p class="mentor-line">Original interactive logbook with Roadmap, Sessions, Clinical Cases, Procedures, Emergency, Reflection, and progress views.</p>' +
