@@ -124,7 +124,7 @@ check('submission RPC cannot directly update submitted_at or updated_at',
     scopedSubmission.match(/CREATE OR REPLACE FUNCTION public\.set_logbook_entry_submitted\([\s\S]*?\$\$;/i)?.[0] || ''
   ));
 check('browser role cannot directly update submitted_at',
-  /REVOKE UPDATE\\s*\\(submitted_at\\)[\\s\\S]*?FROM authenticated/i.test(submissionTimestampRevocation));
+  /REVOKE UPDATE\s*\(submitted_at\)[\s\S]*?FROM authenticated/i.test(submissionTimestampRevocation));
 check('database trigger overwrites submitted_at on the DRAFT-to-SUBMITTED transition',
   contains(serverTimestamp, "IF OLD.status = 'DRAFT' AND NEW.status = 'SUBMITTED' THEN") &&
   contains(serverTimestamp, 'NEW.submitted_at := statement_timestamp()') &&
