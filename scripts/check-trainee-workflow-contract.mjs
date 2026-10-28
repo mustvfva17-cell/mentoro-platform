@@ -22,7 +22,8 @@ const [
   serverTimestamp,
   scopedSubmission,
   submissionTimestampRevocation,
-  traineeRoleGuard
+  traineeRoleGuard,
+  browserMaintainPrivilege
 ] = await Promise.all([
   read('src/main.js'),
   read('supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql'),
@@ -34,7 +35,8 @@ const [
   read('supabase/migrations/20261028093532_enforce_server_submission_timestamp.sql'),
   read('supabase/migrations/20261028094412_fix_scoped_logbook_submission_rpc.sql'),
   read('supabase/migrations/20261028101524_revoke_submission_timestamp_client_write.sql'),
-  read('supabase/migrations/20261028103649_prevent_nontrainee_self_provisioning.sql')
+  read('supabase/migrations/20261028103649_prevent_nontrainee_self_provisioning.sql'),
+  read('supabase/migrations/20261028114000_revoke_browser_maintain_privilege.sql')
 ]);
 
 // Authentication and identity provisioning.
@@ -53,6 +55,10 @@ check('existing profiles cannot self-provision a TRAINEE role without an active 
   contains(traineeRoleGuard, 'Account is not assigned to the trainee workspace'));
 check('new confirmed identities without a profile can still provision as trainees',
   contains(traineeRoleGuard, 'RETURN public.provision_trainee_profile(v_user_id, v_email, p_full_name)'));
+
+check('PostgreSQL 17+ MAINTAIN privilege is revoked from browser roles on existing public tables',
+  contains(browserMaintainPrivilege, 'current_setting(\'server_version_num\')::integer >= 170000') &&
+  contains(browserMaintainPrivilege, 'REVOKE MAINTAIN ON ALL TABLES IN SCHEMA public FROM anon, authenticated'));
 
 // University ID verification: client checks are backed by Storage and RPC restrictions.
 check('client allows only JPEG, PNG and PDF uploads', contains(frontend, "const allowed = ['image/jpeg', 'image/png', 'application/pdf'];"));
