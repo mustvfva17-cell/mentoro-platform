@@ -116,7 +116,8 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
                   '<div class="field"><label for="admin-offering-mode">Delivery mode</label><select id="admin-offering-mode" name="deliveryMode" required><option value="IN_PERSON">In person</option><option value="ONLINE">Online</option><option value="HYBRID">Hybrid</option></select></div>' +
                   '<div class="field admin-form-wide"><label for="admin-offering-description">Description</label><textarea id="admin-offering-description" name="description" rows="3" maxlength="2000" placeholder="Describe the training scope and learning experience"></textarea></div>' +
                 '</div>' +
-                '<label class="admin-publish-option"><input type="checkbox" name="publishNow" value="yes"> Publish immediately (requires a public approved mentor and matching published/assignable template)</label>' +
+                '<label class="admin-publish-option"><input type="checkbox" name="publishNow" value="yes" disabled> Publish immediately</label>' +
+                '<p class="workspace-note" data-admin-publish-hint>Publish availability will update when you select a mentor and matching template version.</p>' +
                 '<button class="button button--primary" type="submit">Create offering</button>' +
               '</form>'
             : '<div class="empty-state"><strong>Setup prerequisites are missing</strong><p>' +
@@ -143,6 +144,9 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
     if (offeringForm) {
       const specialtySelect = offeringForm.querySelector('[name="specialtyId"]');
       const templateSelect = offeringForm.querySelector('[name="templateVersionId"]');
+      const mentorSelect = offeringForm.querySelector('[name="mentorProfileId"]');
+      const publishToggle = offeringForm.querySelector('[name="publishNow"]');
+      const publishHint = offeringForm.querySelector('[data-admin-publish-hint]');
       const filterTemplatesForSpecialty = () => {
         const specialtyId = specialtySelect?.value;
         let firstValidValue = '';
@@ -156,8 +160,32 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
           templateSelect.value = firstValidValue;
         }
       };
-      specialtySelect?.addEventListener('change', filterTemplatesForSpecialty);
+      const refreshPublishAvailability = () => {
+        const templateOption = [...(templateSelect?.options || [])].find((option) => option.value === templateSelect?.value && !option.disabled);
+        const mentorOption = [...(mentorSelect?.options || [])].find((option) => option.value === mentorSelect?.value);
+        const templateReady = templateOption?.dataset.templateStatus === 'PUBLISHED' && templateOption?.dataset.assignable === 'true';
+        const mentorPublic = mentorOption?.dataset.isPublic === 'true';
+        const canPublish = Boolean(templateReady && mentorPublic);
+        if (publishToggle) {
+          publishToggle.disabled = !canPublish;
+          if (!canPublish) publishToggle.checked = false;
+        }
+        if (publishHint) {
+          publishHint.textContent = !templateReady
+            ? 'This template version is not published and assignable yet. You can create a draft offering, but it cannot be booked.'
+            : !mentorPublic
+              ? 'This mentor profile is not public. Make it public before publishing the offering.'
+              : 'Ready to publish. The database will validate mentor, specialty, and template eligibility.';
+        }
+      };
+      specialtySelect?.addEventListener('change', () => {
+        filterTemplatesForSpecialty();
+        refreshPublishAvailability();
+      });
+      templateSelect?.addEventListener('change', refreshPublishAvailability);
+      mentorSelect?.addEventListener('change', refreshPublishAvailability);
       filterTemplatesForSpecialty();
+      refreshPublishAvailability();
 
       offeringForm.addEventListener('submit', async (event) => {
         event.preventDefault();
