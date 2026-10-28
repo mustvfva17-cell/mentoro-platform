@@ -101,6 +101,10 @@ The `trainee-verification` bucket is private and now enforces the client UI's up
 
 Migration `20261028093412_harden_trainee_verification_bucket.sql` creates/configures the bucket idempotently and applies these limits during replay, rather than relying only on client-side checks.
 
+## Transactional verification smoke test
+
+A rollback-only database smoke test confirmed that an authenticated user with a confirmed email can provision a pending trainee profile; an unconfirmed identity is rejected and receives no profile. It then registered a synthetic university-ID object in the private verification bucket, submitted the document through the current-user RPC, and approved it through the admin review wrapper. The result was a `VERIFIED` trainee profile and an `APPROVED` verification document. A follow-up read confirmed that the synthetic identities, verification row, and Storage object were all removed by transaction rollback.
+
 ## Findings and limits
 
 - The database contains 17 public tables and helper routines/policies. Reconstructing a migration from current schema alone can lose historical intent, ordering, grants, triggers, storage policies, and edge-case safeguards.
@@ -129,4 +133,4 @@ The GitHub Actions workflow now runs `npm run check:contracts` before the produc
 
 ## Current state
 
-The five missing historical migration files, eight subsequent hardening/repair migrations, and this audit note are present on the recovery branch. The helper-function ACL, verification-bucket limits, and server-side submission timestamp trigger were applied only to `mentoro-platform-test` and then checked through read-only catalog/configuration queries. Production was not accessed or modified. No PR was merged and no production deployment was made.
+The five missing historical migration files, eight subsequent hardening/repair migrations, and this audit note are present on the recovery branch. The helper-function ACL, verification-bucket limits, server-side submission timestamp trigger, and application-to-slot RLS fix were applied only to `mentoro-platform-test` and then checked through catalog queries and rollback-only functional tests. Production was not accessed or modified. No PR was merged and no production deployment was made.
