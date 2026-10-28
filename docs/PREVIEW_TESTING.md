@@ -10,14 +10,14 @@ The template-schema branch has its own Ready Vercel deployment:
 
 `https://mentoro-platform-git-feat-logbook-templa-2a615c-mustvfva17-3787.vercel.app`
 
-The branch's latest deployment metadata is available from Vercel and reports `READY` for `feat/logbook-template-drafts`; the stable branch alias above should resolve to the latest deployment. The branch-specific environment variables have **not** been confirmed. Vercel settings requests from this workflow return `Project not found`, and deployment-content access returns `403`, so authentication/database actions must not be considered tested until the variables are configured and the Preview is opened manually.
+The branch's latest deployment metadata is available from Vercel and reports `READY` for `feat/logbook-template-drafts`; the stable branch alias above should resolve to the latest deployment. The two browser variables are now configured for this branch only and Preview target only. Vercel reports the newest deployment as `READY` for commit `a14f902a4238dde11ffeb691a06278176aaeb2b2`. The owner should open the stable branch alias and confirm the warning is gone; tool-side access to the page itself remains blocked by Vercel's deployment protection.
 
 ## Preview-only environment variables
 
 - `VITE_SUPABASE_URL` — `https://dkqrpndqfwmyevylbbse.supabase.co`.
 - `VITE_SUPABASE_PUBLISHABLE_KEY` — the public publishable key for `mentoro-platform-test`.
 
-These were confirmed on the Preview target for `feat/admin-workspace-mvp`. In Vercel, open the `mentoro-platform` project → Settings → Environment Variables. Duplicate the two working Preview entries and set **Git Branch** to `feat/logbook-template-drafts`, with target **Preview only**. Keep the same test project values. Do not change Production or expose a Supabase secret/service-role key in a `VITE_` variable. Never copy credentials into this document or commit them to Git.
+Both variables are now configured in Vercel with target `Preview` and Git Branch `feat/logbook-template-drafts`; they point to `mentoro-platform-test`. Do not change Production or expose a Supabase secret/service-role key in a `VITE_` variable. Never copy credentials into this document or commit them to Git.
 
 ## Auth configuration status
 
