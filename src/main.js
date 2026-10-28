@@ -24,7 +24,7 @@ function openHTMLLogbook(instanceId, options = {}) {
   const child = window.open(htmlPath + '?' + query.toString(), '_blank');
   if (!child) { message('Your browser blocked the logbook window. Allow pop-ups for this site and try again.', 'error'); return; }
   htmlLogbookWindows.set(instanceId, child);
-  htmlLogbookSync.set(instanceId, { revision: null, timer: null, saving: false, state: null, readOnly });
+  htmlLogbookSync.set(instanceId, { revision: null, timer: null, saving: false, state: null, readOnly, cloudStateLoaded: false });
 }
 function postHTMLLogbookMessage(instanceId, payload) {
   const child = htmlLogbookWindows.get(instanceId);
@@ -32,7 +32,7 @@ function postHTMLLogbookMessage(instanceId, payload) {
 }
 async function flushHTMLLogbookState(instanceId) {
   const sync = htmlLogbookSync.get(instanceId);
-  if (!sync || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;
+  if (!sync || !sync.cloudStateLoaded || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;
   sync.saving = true;
   const stateToSave = sync.state;
   try {
@@ -58,6 +58,7 @@ window.addEventListener('message', async (event) => {
       const sync = htmlLogbookSync.get(instanceId);
       if (!sync) return;
       sync.revision = Number(data?.revision ?? 0);
+      sync.cloudStateLoaded = true;
       postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_LOAD_STATE', state: data?.state && typeof data.state === 'object' ? data.state : null, revision: sync.revision, hasCloudState: sync.revision > 0, readOnly: sync.readOnly === true });
       const { data: reviews, error: reviewsError } = await supabase.rpc('get_my_logbook_html_item_reviews', { p_instance_id: instanceId });
       postHTMLLogbookMessage(instanceId, {
@@ -110,6 +111,7 @@ window.addEventListener('message', async (event) => {
   if (type === 'MENTORO_LOGBOOK_STATE_CHANGED' && event.data.state && typeof event.data.state === 'object') {
     const sync = htmlLogbookSync.get(instanceId);
     if (!sync) return;
+    if (!sync.cloudStateLoaded) return;
     if (sync.readOnly) {
       postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: false, error: 'This is a read-only mentor review. Changes are not saved.' });
       return;
