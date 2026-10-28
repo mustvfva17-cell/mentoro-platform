@@ -211,7 +211,8 @@ async function renderDashboard(user) {
     if (enrollmentsResult.error) throw enrollmentsResult.error;
     if (docResult.error) throw docResult.error;
     const latestDoc = docResult.data?.[0] || null;
-    const isVerified = profile.account_status === 'VERIFIED';
+    const accountStatus = profile.account_status || 'PENDING';
+    const isVerified = accountStatus === 'VERIFIED';
     const enrollments = enrollmentsResult.data || [];
     const applications = applicationsResult.data || [];
     shell(`
@@ -223,7 +224,7 @@ async function renderDashboard(user) {
         <section class="stats-grid">
           <article class="stat-card"><span>Training applications</span><strong>${applications.length}</strong><small>Across all specialties</small></article>
           <article class="stat-card"><span>My trainings</span><strong>${enrollments.length}</strong><small>Each has its own logbook</small></article>
-          <article class="stat-card"><span>Account status</span><strong class="stat-status">${esc(profile.account_status.replaceAll('_', ' '))}</strong><small>Reviewed by MENTORO admin</small></article>
+          <article class="stat-card"><span>Account status</span><strong class="stat-status">${esc(accountStatus.replaceAll('_', ' '))}</strong><small>Reviewed by MENTORO admin</small></article>
         </section>
         ${!isVerified ? verificationPanel(latestDoc, profile) : ''}
         <section class="section-block">
@@ -330,7 +331,12 @@ async function loadOfferings(user, isVerified) {
     .select('id,title,description,delivery_mode,specialties(name_en,name_ar),mentor_profiles(display_name,professional_title,institution),training_slots(id,starts_at,ends_at,capacity,status)')
     .eq('status', 'PUBLISHED').order('created_at', { ascending: false });
   if (error) {
-    target.innerHTML = '<div class="empty-state"><strong>Training listings are temporarily unavailable</strong><p>Please try again later.</p></div>';
+    target.innerHTML = '<div class="empty-state"><strong>Training listings are temporarily unavailable</strong><p>Check your connection and try loading the listings again.</p><button class="button button--secondary" id="retry-offerings" type="button">Retry loading</button></div>';
+    target.querySelector('#retry-offerings')?.addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      setBusy(button, true, 'Loading…');
+      await loadOfferings(user, isVerified);
+    });
     return;
   }
   const offerings = (data || []).map((offering) => ({
