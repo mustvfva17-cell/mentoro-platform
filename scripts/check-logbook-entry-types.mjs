@@ -54,7 +54,7 @@ if (!usesScopedSubmissionRpc) {
   throw new Error('Logbook submission must use the scoped set_logbook_entry_submitted RPC.');
 }
 
-const submissionMigrationPath = new URL('../supabase/migrations/20261028094110_fix_scoped_logbook_submission_rpc.sql', import.meta.url);
+const submissionMigrationPath = new URL('../supabase/migrations/20261028094412_fix_scoped_logbook_submission_rpc.sql', import.meta.url);
 let submissionMigration = null;
 try {
   submissionMigration = await readFile(submissionMigrationPath, 'utf8');
