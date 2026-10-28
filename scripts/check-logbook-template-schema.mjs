@@ -286,7 +286,7 @@ for (const [name, runtime] of [
   assert.ok(runtime.includes('setCloudLoading(false);'), `${name} must release the UI after load or report a load failure`);
   const loadingGuardAt = runtime.indexOf('function setCloudLoading(loading)');
   const loadingGuard = runtime.slice(loadingGuardAt, runtime.indexOf('function notifyCloudStateChanged', loadingGuardAt));
-  assert.match(loadingGuard, /content\\.inert\\s*=\\s*loading\\s*\\|\\|\\s*!htmlCloudReady/, `${name} must keep edits locked when cloud hydration fails`);
+  assert.match(loadingGuard, /content\.inert\s*=\s*loading\s*\|\|\s*!htmlCloudReady/, name + ' must keep edits locked when cloud hydration fails');
   assert.ok(runtime.includes('Editing is disabled. Close and reopen this logbook after the connection is restored.'), `${name} must explain the recovery path after a failed cloud load`);
   assert.match(runtime, /htmlCloudReady\s*=\s*true/, `${name} must mark cloud state ready after the load response`);
   const loadStateAt = runtime.indexOf("if(msg.type==='MENTORO_LOGBOOK_LOAD_STATE')");
