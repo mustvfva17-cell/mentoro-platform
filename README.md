@@ -13,16 +13,19 @@ MENTORO connects medical trainees with structured clinical training and mentorsh
 - Draft logbook entries and submission to the assigned mentor for review.
 - Supabase RLS, scoped workflow RPCs, database-generated submission timestamps, and least-privilege browser grants.
 
-The trainee and mentor workspaces are implemented as MVPs, and the administrator workspace is under active review. The admin workspace can review trainee verification using short-lived signed document URLs, confirm mentor-approved bookings, create training offerings, and add future slots to published offerings. Authoring and publishing logbook template versions, full template-driven logbook forms, browser end-to-end tests, and specialty-by-specialty template migration remain incomplete.
+The trainee and mentor workspaces are implemented as MVPs. The admin workspace can review trainee verification through short-lived signed document URLs, confirm mentor-approved bookings, create offerings/slots, and create and inspect inactive logbook-template drafts. The trainee UI now renders supported fields from the assigned template version and saves them to the entry payload; returned-entry revisions preserve the entry type and update the payload. Clinical review/activation/publication, specialty-by-specialty medical template migration, and browser end-to-end testing remain incomplete, so no template is made bookable by this change.
 
 ## Branch and migration safety
 
-The work is intentionally split across stacked draft pull requests:
+The work is split across pull requests to keep review and deployment boundaries explicit:
 
-- **PR #1 — trainee foundation:** trainee-facing UI and Auth workflow.
-- **PR #2 — migration recovery/security:** the restored core schema, migration history, and subsequent database hardening. PR #2 targets the PR #1 branch.
+- **PR #1 — trainee foundation:** merged into `main`.
+- **PR #2 — migration recovery/security:** restored migration history, lockfile, and CI checks; draft for review.
+- **PR #3 — mentor workspace:** scoped mentor inbox and logbook review workflow; stacked on PR #2.
+- **PR #4 — administrator workspace:** admin verification, booking control, and training operations; stacked on PR #3.
+- **PR #5 — logbook template drafts/schema UI:** template draft creation, review queue, database schema guard, and schema-driven entry fields; stacked on PR #4.
 
-**Do not merge or deploy PR #1 on its own.** Its frontend depends on database objects supplied by the stacked migration branch. Neither pull request is approved for production. Production has not been changed by this work.
+Do not merge the draft stack out of order. PRs #2–#5 remain under review. No Production database migration or deployment was performed for the draft-template work.
 
 The test Supabase project is `mentoro-platform-test`. Do not replay the recovered migrations on that project because its migration ledger already records them as applied. A clean-room migration replay still requires an isolated disposable database. Do not run development migrations against production.
 
@@ -55,7 +58,7 @@ Use only the test Supabase project for local development and Preview deployments
 
 The publishable key is intended for browser use; database access must still be constrained by RLS and grants. Never expose a Supabase secret/service-role key through a `VITE_` variable or commit credentials to Git.
 
-The independent Preview project and environment configuration are not yet verified. A Vercel team owner must authorize or create the Preview project and connect this repository before browser-based end-to-end testing can be completed.
+The `feat/admin-workspace-mvp` branch Preview was manually opened by the owner with the test Supabase connection and Auth redirect allow-list. The newer `feat/logbook-template-drafts` branch has not yet been verified in a browser with branch-specific Vercel Preview variables. Keep any such variables scoped to the Preview target and this branch; do not change Production variables.
 
 ## Expected trainee flow
 
