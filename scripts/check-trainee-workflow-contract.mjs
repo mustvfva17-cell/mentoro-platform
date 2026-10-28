@@ -36,7 +36,7 @@ const [
   read('supabase/migrations/20261028094412_fix_scoped_logbook_submission_rpc.sql'),
   read('supabase/migrations/20261028101524_revoke_submission_timestamp_client_write.sql'),
   read('supabase/migrations/20261028103649_prevent_nontrainee_self_provisioning.sql'),
-  read('supabase/migrations/20261028114000_revoke_browser_maintain_privilege.sql')
+  read('supabase/migrations/20261028113918_revoke_browser_maintain_privilege.sql')
 ]);
 
 // Authentication and identity provisioning.
