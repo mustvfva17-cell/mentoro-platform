@@ -6,11 +6,11 @@ The dedicated branch deployment is available at:
 
 Vercel has reported the admin deployment as `READY` for Git ref `feat/admin-workspace-mvp`. The owner confirmed that its in-app Supabase configuration warning disappeared after the two public browser variables were configured for that branch.
 
-The template-schema branch has its own Ready Vercel deployment:
+The template-schema branch has a Ready Vercel deployment at the stable branch alias:
 
 `https://mentoro-platform-git-feat-logbook-templa-2a615c-mustvfva17-3787.vercel.app`
 
-The latest checked deployment metadata reported `READY` for `feat/logbook-template-drafts`; the stable branch alias above points to an older commit. The two browser variables are configured for this branch only and Preview target only. A fresh direct deployment was rejected by Vercel's free-plan daily API limit (`api-deployments-free-per-day`), so the new General Surgery asset and routing are CI-validated but not yet available in the deployed Preview. Check the deployed commit before expecting the newest review UI. The owner should open the stable branch alias and confirm the warning is gone; tool-side access to the page itself remains blocked by Vercel's deployment protection.
+The latest checked runtime deployment is `READY` for commit `9f7bf23670e0558bb2201d4d792f65e5c6861c9f` on `feat/logbook-template-drafts`. It includes both registered HTML assets (Medical Oncology and General Surgery), the trainee launch wiring, and read-only mentor launch wiring. The current branch head `b805f12b32892152ddf6a44c970679d0ad1df3cf` contains a contract-test correction only, not a runtime change. The two browser variables are scoped to this branch and Preview target only. Vercel blocks automated page inspection with deployment protection, so the owner should open the alias manually to validate the rendered UI and cloud-sync notices.
 
 ## Preview-only environment variables
 
