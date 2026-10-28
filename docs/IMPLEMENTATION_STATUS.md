@@ -1,10 +1,21 @@
 # MENTORO — Implementation Status
 
 **Updated:** 2026-10-28
-**Phase:** Reconciling canonical enrollment/logbook model before implementation
-**Implementation status:** Application shell and design documents only. No database schema, migrations, protected workflows, or database tests are implemented or claimed.
+**Phase:** Core test schema established; connecting safe user-scoped workflows
+**Implementation status:** Four database migrations are applied to the isolated Supabase test project and version-controlled on this branch. The application UI/API and end-to-end user tests are not complete. Production has not been changed.
 
-> **Current implementation direction (2026-10-28):** Use `docs/MENTORO_TARGET_DATA_MODEL_V2.md` as the canonical target model. Each confirmed training enrollment binds one trainee, one mentor, one specialty, a period and status, and exactly one independent logbook instance. Multiple simultaneous enrollments per trainee are allowed. Earlier single-active-assignment and invitation-code workflows are superseded by ADR-03. The application/database integration is still not implemented; Supabase test connectivity must be verified before migrations or protected writes are attempted.
+> **Current implementation direction (2026-10-28):** Use `docs/MENTORO_TARGET_DATA_MODEL_V2.md` and ADR-03 as canonical. Each training enrollment binds one trainee, one mentor, one specialty, a period/status, and exactly one isolated logbook instance; trainees may have concurrent and same-specialty enrollments. Older one-active-assignment and invitation-code rules are superseded.
+
+## Current verified environment snapshot — 2026-10-28
+
+- The isolated Supabase project `mentoro-platform-test` is `ACTIVE_HEALTHY`. The production-named Supabase project is `INACTIVE`; no migration was applied to it.
+- Four migrations are applied to the test project and mirrored under `supabase/migrations/`: `20261028060841_restrict_rls_auto_enable_function`, `20261028061628_core_independent_enrollment_schema_v1`, `20261028061834_rls_policy_and_foreign_key_hardening`, and `20261028062421_current_user_workflow_wrappers`.
+- The test database has 17 application tables; all 17 report RLS enabled. It also has six specialty catalogue rows and a General Surgery template/version row that remains `DRAFT` and `is_assignable=false` until its structured clinical schema is reviewed.
+- The RLS auto-enable event trigger was tested by creating a throwaway table, checking that RLS was enabled automatically, then dropping the table. The trigger function no longer grants direct execution to `anon` or `authenticated`.
+- Supabase Security Advisor reported zero findings after policy/execute-grant hardening. Performance Advisor still reports informational unused-index notices because the test DB has no real workload; these are not evidence of a production performance test.
+- End-to-end authentication, verification-document upload/review, booking, enrollment, per-enrollment logbook, mentor review, and UI/API behavior are **not yet tested**. No production deployment or production database change has been made.
+
+Historical notes below are retained for traceability and may describe an earlier design-only stage. The current snapshot and later migration history supersede those status statements.
 
 
 - Added `docs/MENTORO_EXECUTABLE_DB_DESIGN_MATRIX.md` as a table-by-table review matrix for `profiles`, `user_roles`, `pending_enrollments`, `activation_codes`, and `trainee_assignments`. It lists candidate uniqueness predicates, trusted write boundaries, RLS/grant review items, activation atomicity, and minimum test gates. It is design-only; the Super Admin global uniqueness strategy, exact role grants/RLS, FK/check constraints, RPC signature, and lock/isolation design remain open. No migrations or tests were run.
