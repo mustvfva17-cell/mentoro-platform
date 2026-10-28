@@ -20,11 +20,11 @@ The frontend work is still under review. Mentor/admin dashboards, complete templ
 The work is tracked across these pull requests:
 
 - **PR #1 — trainee foundation:** merged into `main` on 2026-10-28. This does not constitute production-readiness approval.
-- **PR #2 — migration recovery/security:** open as a draft and targets `main`; it restores historical migration files and adds database hardening.
+- **PR #2 — migration recovery/security:** open as a draft and targets `main`; it restores historical migration files and adds database hardening. The latest test-database ledger has 20 records, but four newer migration source files are still missing from the repository and must be recovered before the migration history can be considered complete.
 
 **Do not merge PR #2 or deploy to production until it has been reviewed and the outstanding migration/security and end-to-end checks are complete.** The test-only PostgreSQL 17 `MAINTAIN` privilege fix is recorded in PR #2. No production database changes or production deployment were initiated by the work described in the recovery PR.
 
-The test Supabase project is `mentoro-platform-test`. Do not replay the recovered migrations on that project because its migration ledger already records them as applied. A clean-room migration replay still requires an isolated disposable database. Do not run development migrations against production.
+The test Supabase project is `mentoro-platform-test`. Do not replay migrations on that project because its ledger already records them as applied. Four recorded migration versions currently lack matching SQL files in the checked branches; recover the exact originals before attempting a clean-room replay in an isolated disposable database. Do not run development migrations against production.
 
 ## Requirements and local setup
 
