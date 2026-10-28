@@ -13,7 +13,7 @@ MENTORO connects medical trainees with structured clinical training and mentorsh
 - Draft logbook entries and submission to the assigned mentor for review.
 - Supabase RLS, scoped workflow RPCs, database-generated submission timestamps, and least-privilege browser grants.
 
-The trainee and mentor workspaces are implemented as MVPs. The admin workspace can review trainee verification through short-lived signed document URLs, confirm mentor-approved bookings, create offerings/slots, and create and inspect inactive logbook-template drafts. The trainee UI now renders supported fields from the assigned template version and saves them to the entry payload; returned-entry revisions preserve the entry type and update the payload. Clinical review/activation/publication, specialty-by-specialty medical template migration, and browser end-to-end testing remain incomplete, so no template is made bookable by this change.
+The trainee and mentor workspaces are implemented as MVPs. The admin workspace can review trainee verification through short-lived signed document URLs, confirm mentor-approved bookings, create offerings/slots, create and inspect inactive logbook-template drafts, and submit a draft for an audited publication workflow. The trainee UI renders supported fields from the template version attached to that specific logbook instance, saves them to the entry payload, and preserves the entry type when revising a returned entry. The review/publication controls and database guards exist, but no template has been clinically reviewed or published in the test database; no template is made bookable by this change. Specialty-by-specialty medical template migration and browser end-to-end testing remain incomplete.
 
 ## Branch and migration safety
 
@@ -34,20 +34,19 @@ The test Supabase project is `mentoro-platform-test`. Do not replay the recovere
 Requirements: a supported Node.js LTS release and npm.
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
-Build and run the current source-contract check:
+Run the migration-history and source-contract checks, then build:
 
 ```sh
+npm run check:migrations
 npm run check:contracts
 npm run build
 ```
 
-The contract suite now also checks administrator workspace safeguards: private document links are short-lived, privileged changes use admin-checked RPCs, and the browser does not directly write administrative tables.
-
-The repository currently has no committed npm lockfile, so `npm install` is not yet fully reproducible. Before relying on repeatable dependency resolution, generate and review `package-lock.json` using the intended Node/npm toolchain, commit it, and switch CI to `npm ci`. Do not hand-author a lockfile.
+The lockfile is committed and CI installs dependencies with `npm ci`. The migration-history guard rejects malformed filenames, duplicate version prefixes, empty SQL, and identical migration contents under different versions. The source-contract suite checks admin-only RPC usage, short-lived private document links, template schema validation, and safe logbook workflow boundaries.
 
 ## Preview environment
 
@@ -58,7 +57,7 @@ Use only the test Supabase project for local development and Preview deployments
 
 The publishable key is intended for browser use; database access must still be constrained by RLS and grants. Never expose a Supabase secret/service-role key through a `VITE_` variable or commit credentials to Git.
 
-The `feat/admin-workspace-mvp` branch Preview was manually opened by the owner with the test Supabase connection and Auth redirect allow-list. The newer `feat/logbook-template-drafts` branch has not yet been verified in a browser with branch-specific Vercel Preview variables. Keep any such variables scoped to the Preview target and this branch; do not change Production variables.
+The `feat/admin-workspace-mvp` branch Preview was manually opened by the owner with the test Supabase connection and Auth redirect allow-list. The `feat/logbook-template-drafts` branch has a Ready Vercel deployment, but its branch-specific Vercel Preview variables could not be verified through the current settings connection. Open it manually and confirm the Supabase configuration warning is gone before testing authentication. Keep variables scoped to Preview and this branch; do not change Production variables.
 
 ## Expected trainee flow
 
@@ -81,7 +80,7 @@ Outstanding before considering a merge:
 
 - Clean-room migration replay on an isolated database.
 - Resolve/review broad default privileges owned by `supabase_admin` for future public objects.
-- Generate and commit a reviewed npm lockfile, then use `npm ci` in CI.
+- Confirm the Vercel Preview branch variables and manually test the schema-driven template/logbook flow.
 - Configure an independent Vercel Preview and test the full trainee-to-mentor/admin journey.
 - Add browser end-to-end tests and complete mentor/admin workspaces.
 - Review both stacked pull requests together; do not merge PR #1 alone.
