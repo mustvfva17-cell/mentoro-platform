@@ -101,4 +101,22 @@ check(
   'database trigger validates schema fields and blocks publishing without structure and source notes'
 );
 
+
+check(
+  admin.includes("import { getTemplateFields } from './logbook-schema.js';") &&
+  admin.includes("const allTemplateVersions = (templateVersionResult.data || []).map") &&
+  admin.includes("LOGBOOK REVIEW") &&
+  admin.includes("const templateVersions = allTemplateVersions.filter((version) => version.template?.is_active)") &&
+  admin.includes("Pending clinical review. Publishing remains disabled"),
+  'template drafts are visible to admins but inactive draft templates cannot be selected for offerings'
+);
+check(
+  schemaGuardMigration.includes("CREATE TRIGGER guard_logbook_template_version_schema") &&
+  schemaGuardMigration.includes("Select options must be non-empty strings") &&
+  schemaGuardMigration.includes("Logbook schema field keys must be unique") &&
+  schemaGuardMigration.includes("A published/assignable template requires structured fields") &&
+  schemaGuardMigration.includes("A published/assignable template requires source and clinical review notes"),
+  'database trigger validates structured schemas and blocks publication without fields and review/source notes'
+);
+
 console.log('Administrator workspace safety contracts passed.');
