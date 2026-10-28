@@ -121,6 +121,15 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
             '<div class="mentor-review-buttons"><button class="button button--primary button--small" type="button" data-confirm-application="' + escape(item.id) + '">Confirm booking & create logbook</button></div></div></article>';
           }).join('') + '</div>' : '<div class="empty-state"><strong>No bookings need confirmation</strong><p>Applications approved by mentors will appear here.</p></div>') +
         '</section>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">EXISTING HTML LOGBOOKS</p><h2>Use a logbook you already have</h2></div><span class="status-chip status-chip--neutral">Existing asset</span></div>' +
+          '<p class="workspace-note">These are existing interactive HTML logbooks, not forms we need to rebuild in JSON. Start by previewing the original UI; cloud sync and per-entry mentor review still need to be connected before using it for a real enrollment.</p>' +
+          '<article class="training-card admin-existing-logbook-card"><div class="training-card-heading"><span class="specialty-label">Medical Oncology</span><span class="status-chip status-chip--neutral">HTML</span></div>' +
+            '<h3>Medical Oncology Logbook</h3><p class="mentor-line">Existing interactive logbook with Roadmap, Sessions, Clinical Cases, Procedures, Emergency, Reflection, and progress views.</p>' +
+            '<div class="mentor-entry-stats"><span>Original UI preserved</span><span>Preview data stays in this browser</span></div>' +
+            '<a class="button button--primary button--small" href="/logbooks/medical-oncology/index.html?mode=preview" target="_blank" rel="noopener noreferrer">Preview existing logbook</a>' +
+          '</article>' +
+          '<p class="workspace-note">Only the Medical Oncology HTML file is currently available in this repository workspace. Add the other specialty HTML files to the same assets folder to list and wire them here too.</p>' +
+        '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">LOGBOOK REVIEW</p><h2>Template versions</h2></div><span class="count-badge">' + allTemplateVersions.length + '</span></div>' +
           '<p class="workspace-note">Review the structure and source notes before any clinical template can be marked assignable. Draft templates are not bookable; this screen does not publish or activate them.</p>' +
           (allTemplateVersions.length ? '<div class="mentor-queue-grid">' + allTemplateVersions.map((version) => {
@@ -142,8 +151,9 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
               '</div></article>';
           }).join('') + '</div>' : '<div class="empty-state"><strong>No logbook templates yet</strong><p>Create the first specialty-specific draft below.</p></div>') +
         '</section>' +
-        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">LOGBOOK DESIGN</p><h2>Create logbook template draft</h2></div><span class="status-chip status-chip--neutral">Draft only</span></div>' +
-          '<p class="workspace-note">Create a specialty-specific draft with a structured field schema and source/reviewer notes. Saving a draft does not make it bookable. Publishing stays blocked until the template is clinically reviewed and the trainee logbook UI fully supports its schema.</p>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">OPTIONAL ADVANCED TOOL</p><h2>Manual template creation</h2></div><span class="status-chip status-chip--neutral">Draft only</span></div>' +
+          '<details class="admin-advanced-template-details"><summary>Build a new template from scratch (JSON)</summary>' +
+          '<p class="workspace-note">Use this only when no existing HTML logbook is available. It creates a draft definition, not a copy of an existing HTML UI. Saving does not make it bookable; clinical review and a compatible runtime are still required.</p>' +
           (specialties.length ? '<form id="admin-template-form" class="admin-form-card">' +
             '<div class="admin-form-grid">' +
               '<div class="field"><label for="admin-template-title">Template title</label><input id="admin-template-title" name="title" maxlength="160" required placeholder="e.g. General Surgery Clinical Logbook"></div>' +
@@ -155,9 +165,11 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
               '<div class="field admin-form-wide"><label for="admin-template-source">Clinical source / reviewer notes</label><textarea id="admin-template-source" name="sourceNotes" rows="3" minlength="20" maxlength="4000" required placeholder="Record the curriculum/source and who must review this draft before publication."></textarea></div>' +
             '</div><button class="button button--primary" type="submit">Save template draft</button></form>' :
             '<div class="empty-state"><strong>No active specialties</strong><p>Add an active specialty before drafting a logbook template.</p></div>') +
+          '</details>' +
         '</section>' +
-        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">VERSION CONTROL</p><h2>Create a new template version</h2></div><span class="status-chip status-chip--neutral">Immutable versions</span></div>' +
-          '<p class="workspace-note">Create the next draft version under an existing template. This keeps older published versions linked to their original training records; saving a version does not publish it or make it assignable.</p>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">OPTIONAL ADVANCED TOOL</p><h2>Manual template versioning</h2></div><span class="status-chip status-chip--neutral">Immutable versions</span></div>' +
+          '<details class="admin-advanced-template-details"><summary>Create a version using JSON</summary>' +
+          '<p class="workspace-note">Use this advanced fallback when a template already exists and its schema needs a new version. The current HTML asset does not need to be re-created here.</p>' +
           (existingTemplates.length ? '<form id="admin-template-version-form" class="admin-form-card">' +
             '<div class="admin-form-grid">' +
               '<div class="field admin-form-wide"><label for="admin-template-version-base">Existing template</label><select id="admin-template-version-base" name="templateId" required>' +
@@ -168,6 +180,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
               '<div class="field admin-form-wide"><label for="admin-version-source">New version source / change / reviewer notes</label><textarea id="admin-version-source" name="sourceNotes" rows="3" minlength="20" maxlength="4000" required placeholder="Describe this version’s source, changes, and required clinical reviewer."></textarea></div>' +
             '</div><button class="button button--primary" type="submit">Save next version as draft</button></form>' :
             '<div class="empty-state"><strong>No existing templates to version</strong><p>Create a new specialty template first.</p></div>') +
+          '</details>' +
         '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">CLINICAL GOVERNANCE</p><h2>Logbook template review</h2></div><span class="count-badge">' + allTemplateVersions.filter((version) => version.status === 'DRAFT').length + '</span></div>' +
           '<p class="workspace-note">Review the schema and clinical source notes before publishing. Publication makes this version assignable to new training offerings; it does not change existing logbook instances.</p>' +
