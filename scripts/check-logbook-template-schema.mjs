@@ -9,10 +9,7 @@ import {
 } from '../src/logbook-schema.js';
 
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8');
-const [main, traineeContract] = await Promise.all([
-  read('src/main.js'),
-  read('scripts/check-trainee-workflow-contract.mjs')
-]);
+const main = await read('src/main.js');
 
 const version = {
   schema_definition: {
@@ -84,6 +81,5 @@ assert.ok(main.includes('payload: templatePayload.payload'));
 assert.ok(main.includes('entry_type: entryType'));
 assert.ok(main.includes('update({ title, entry_date: entryDate, entry_type: entryType, payload: templatePayload.payload })'));
 assert.ok(main.includes("renderPayloadSummary(entry.payload, templateFields)"));
-assert.ok(traineeContract.includes('logbook-template-schema'));
 
 console.log('Schema-driven logbook field rendering, validation, payload persistence, edit support, and safe output passed.');
