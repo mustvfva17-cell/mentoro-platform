@@ -70,7 +70,7 @@ BEGIN
   END IF;
 
   IF v_mentor IS NULL THEN
-    -- A temporary mentor profile may be used as an FK fixture; no user role is granted.
+    -- The temporary mentor profile/role exists only inside this rollback-only transaction.
     v_mentor := v_admin;
     INSERT INTO public.mentor_profiles(profile_id, display_name, professional_title, profile_status, is_public)
     VALUES (v_mentor, 'Rollback-only HTML state fixture', 'Test fixture', 'APPROVED', false)
