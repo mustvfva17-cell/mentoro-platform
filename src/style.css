@@ -143,6 +143,7 @@ h1,h2,h3,p { margin-top: 0; }
 .mentor-application-card .activity-main { width: 100%; min-width: 0; }
 .mentor-applicant-note { margin: 10px 0; color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .mentor-applicant-note strong { color: var(--navy); }
+.mentor-trainee-education { margin: -2px 0 9px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .mentor-review-actions { display: grid; gap: 9px; margin-top: 14px; }
 .mentor-review-reason { width: 100%; min-height: 39px; padding: 9px 11px; border: 1px solid #dfe5ee; border-radius: 9px; color: var(--navy); background: #fff; font: inherit; font-size: 12px; }
 .mentor-review-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
