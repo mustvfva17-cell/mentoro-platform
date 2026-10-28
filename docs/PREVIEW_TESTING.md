@@ -10,7 +10,7 @@ The template-schema branch has its own Ready Vercel deployment:
 
 `https://mentoro-platform-git-feat-logbook-templa-2a615c-mustvfva17-3787.vercel.app`
 
-The branch's latest deployment metadata is available from Vercel and reports `READY` for `feat/logbook-template-drafts`; the stable branch alias above should resolve to the latest deployment. The two browser variables are now configured for this branch only and Preview target only. Vercel reports the newest deployment as `READY` for commit `a14f902a4238dde11ffeb691a06278176aaeb2b2`. The owner should open the stable branch alias and confirm the warning is gone; tool-side access to the page itself remains blocked by Vercel's deployment protection.
+The branch's latest deployment metadata is available from Vercel and reports `READY` for `feat/logbook-template-drafts`; the stable branch alias above should resolve to the latest deployment. The two browser variables are now configured for this branch only and Preview target only. Vercel's latest successful deployment may lag subsequent commits because the free-tier daily deployment limit was hit; check the deployed commit before expecting the newest review UI. The owner should open the stable branch alias and confirm the warning is gone; tool-side access to the page itself remains blocked by Vercel's deployment protection.
 
 ## Preview-only environment variables
 
@@ -46,6 +46,15 @@ Do not mark a trainee verified until the submitted document has actually been re
 
 Every insert or payload/instance update on `public.logbook_entries` is validated by a private trigger against the immutable schema definition attached to that logbook instance. It rejects unknown field keys, missing required values, wrong types, invalid ISO dates/select options, numeric values outside configured bounds, and payloads larger than 64 KiB. A rollback-only test using a synthetic template, enrollment, and logbook instance accepted a valid payload and rejected the invalid cases, then confirmed all fixture rows were rolled back. The repeatable test is checked into `supabase/tests/logbook_entry_payload_validation.sql`; run it only in the test/disposable database via SQL Editor. It starts a transaction and ends in `ROLLBACK`.
 
+## Existing HTML logbook cloud-state integration
+
+- The original `/logbooks/medical-oncology/index.html` is retained.
+- An enrollment-linked launch uses `?instance={uuid}` and reads/saves the full existing HTML state with `get_my_logbook_html_state` and `save_my_logbook_html_state`.
+- The bridge uses same-origin `postMessage` with source/origin checks. Cloud writes are revision-checked, limited to the active assigned trainee, and rejected for archived/cancelled/revoked enrollments or unregistered HTML assets.
+- Mentors assigned to an HTML-backed enrollment can open the existing UI in read-only mode. It loads state from the same access-scoped RPC; the child page disables data-editing controls and the parent refuses write messages in read-only mode.
+- `?mode=preview` remains local-only for design inspection. It is not a confirmed training record.
+- The native mentor workflow does not yet collect per-session/per-case review decisions for legacy HTML state. The whole HTML state is one revisioned JSON record, not separate native `logbook_entries`.
+- The HTML template remains a draft and is not assignable until an authorized human has completed the required clinical review.
 ## Current functional boundaries
 
 - Opening the deployed app and connecting its browser client to the test Supabase project are confirmed by the owner observing that the configuration warning disappeared.
