@@ -71,6 +71,7 @@ check(
   templateMigration.includes("VALUES (v_template_id, 1, 'DRAFT', false") &&
   templateMigration.includes('LOGBOOK_TEMPLATE_DRAFT_CREATED') &&
   templateMigration.includes('REVOKE ALL ON FUNCTION app_private.admin_create_logbook_template_draft') &&
+  templateMigration.includes('FROM PUBLIC, anon, authenticated, service_role') &&
   templateMigration.includes('CREATE OR REPLACE FUNCTION public.admin_create_logbook_template_draft'),
   'template draft creation is admin-checked, audited, non-assignable, and exposed only through a checked wrapper'
 );
