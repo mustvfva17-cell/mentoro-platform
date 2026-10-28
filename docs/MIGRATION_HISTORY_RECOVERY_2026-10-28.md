@@ -19,16 +19,16 @@ The test database reports these eight applied migration records:
 
 | Version | Name | SQL file in current repository branch? |
 | --- | --- | --- |
-| 20261028060841 | restrict_rls_auto_enable_function | Missing |
-| 20261028061628 | core_independent_enrollment_schema_v1 | Missing |
-| 20261028061834 | rls_policy_and_foreign_key_hardening | Missing |
-| 20261028062421 | current_user_workflow_wrappers | Missing |
-| 20261028062818 | mentor_reviews_and_admin_training_setup | Missing |
+| 20261028060841 | restrict_rls_auto_enable_function | Recovered |
+| 20261028061628 | core_independent_enrollment_schema_v1 | Recovered |
+| 20261028061834 | rls_policy_and_foreign_key_hardening | Recovered |
+| 20261028062421 | current_user_workflow_wrappers | Recovered |
+| 20261028062818 | mentor_reviews_and_admin_training_setup | Recovered |
 | 20261028090042 | restrict_current_browser_table_privileges | Present |
 | 20261028090059 | restrict_postgres_default_table_privileges | Present |
 | 20261028090137 | least_privilege_browser_write_columns | Present |
 
-The first five migration records existed in the database history but were absent from the trainee-auth branch. The exact five SQL files were recovered from the existing `feature/independent-training-enrollments` branch and copied into this recovery branch. This restores the missing files in Git, but does not by itself prove that their current contents are byte-for-byte identical to the SQL originally applied to the database.
+The first five migration records existed in the database history but were absent from the trainee-auth branch. The exact five SQL files were recovered from the existing `feature/independent-training-enrollments` branch and copied into this recovery branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
 
 ## Findings requiring care
 
@@ -40,7 +40,7 @@ The first five migration records existed in the database history but were absent
 ## Safe recovery plan
 
 1. Compare the recovered SQL against the current test database definitions: tables/columns/constraints/indexes, RLS policies, grants/default privileges, functions and their ACLs, triggers/event triggers, private-schema helpers, storage buckets/policies, and seed data.
-2. Verify the recovered files are identical to the blobs on the source feature branch and inspect the source branch history to establish provenance.
+2. Verify the recovered files are identical to the blobs on the source feature branch and inspect the source branch history to establish provenance. (Blob SHA comparison passed.)
 3. Run a clean-room replay on a *disposable, newly created* Supabase project and compare its schema/security inventory with the current test project.
 4. Resolve any differences and confirm all migrations are replayable in timestamp order without manual SQL-editor steps.
 5. Do not replay these migrations on `mentoro-platform-test`; the existing database already records them as applied. Do not run anything against production.
@@ -54,4 +54,4 @@ The first five migration records existed in the database history but were absent
 
 ## Current state
 
-No schema changes were made by this recovery audit. No production deployment, PR merge, or production database change was performed.
+The five missing migration files and this audit note are present on the recovery branch. No SQL was executed and no schema changes were made by this recovery audit. No production deployment, PR merge, or production database change was performed.
