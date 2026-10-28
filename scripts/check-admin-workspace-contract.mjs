@@ -143,7 +143,7 @@ check(
   publicationVersioningMigration.includes('WHERE template_id = v_template_id') &&
   publicationVersioningMigration.includes('AND id <> p_version_id') &&
   publicationVersioningMigration.includes('SET status = \'PUBLISHED\'') &&
-  publicationVersioningMigration.includes('Existing offerings, enrollments, and logbook instances still reference them'),
+  publicationVersioningMigration.toLowerCase().includes('because existing offerings, enrollments, and logbook instances still reference them'),
   'publishing a new version stops assigning older versions to new offerings while preserving historical references'
 );
 
