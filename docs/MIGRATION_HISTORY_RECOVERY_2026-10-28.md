@@ -189,3 +189,36 @@ The GitHub Actions workflow now runs `npm run check:contracts` before the produc
 ## Current state
 
 The five recovered historical migration files, eleven available hardening/repair migrations including the PostgreSQL 17 browser-privilege fix, and this audit note are present on the recovery branch. Four later ledger entries remain without matching source files and are an explicit release blocker. The helper-function ACL, verification-bucket limits, server-side submission timestamp trigger, application-to-slot RLS fix, and direct submitted_at write revocation were applied only to `mentoro-platform-test` and then checked through catalog queries and rollback-only functional tests. PR #1 was merged into `main` on 2026-10-28 at 11:21:59 UTC. PR #2 remains an open draft targeting `main`; this work session did not merge it. The `mentoro-platform-test` database alone was modified by the documented test migrations. Production was not accessed or modified during this work session, and no production deployment was initiated by this session.
+
+
+## Fresh verification snapshot — 2026-10-28
+
+This section supersedes earlier status statements in this document where the recovery work was still pending.
+
+### GitHub and migration inventory
+
+- PR #1 is merged into `main`; its merge commit is `fe8e6238fc7815979c1107f4431dcc6c71226461`.
+- PR #2 remains open as a draft, based on `main`, with head branch `chore/recover-migration-history`.
+- GitHub's comparison reports `chore/recover-migration-history` as **96 commits ahead and 0 behind** `main`, with the latest `main` commit as the merge base. This is a long forward history, not a currently reported divergence; do not rebase or force-push merely to change the commit count.
+- The test database has 20 migration-ledger records. The recovery branch's changed files contain 17 migration files; three earlier migration files remain on the shared base, giving a reconciled set of 20 SQL migration sources for the 20 recorded versions.
+- The redundant `20261028121500_fix_returned_submission_trigger_conditions.sql` was removed from the stacked mentor-workspace branch because its exact Git blob SHA and contents duplicated ledger-matched migration `20261028121405_fix_returned_submission_trigger_conditions.sql`, and version `20261028121500` is absent from the test ledger.
+- CI run [40690614144](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40690614144) failed at the static contract step because `scripts/check-trainee-workflow-contract.mjs` still referenced the removed duplicate filename. The reference has been changed to the canonical `20261028121405` filename. This snapshot does not claim that the post-fix run has passed.
+
+### Latest read-only test-database inspection
+
+- Project `mentoro-platform-test` is `ACTIVE_HEALTHY`; PostgreSQL is `17.11.0.003`.
+- All 17 current public application tables have RLS enabled.
+- Direct table-level privilege inventory across the 17 public relations returned zero `MAINTAIN`, `TRUNCATE`, `REFERENCES`, and `TRIGGER` grants for both `anon` and `authenticated`.
+- The same inventory found 6 public relations with table-level `SELECT` for `anon`, and all 17 with table-level `SELECT` for `authenticated`. `authenticated` has table-level `DELETE` on one relation; this is intentionally constrained by the `logbook_entries_delete_own_drafts` RLS policy. The table-level aggregate does not count column-level `INSERT`/`UPDATE` grants, so it must not be interpreted as an absence of all browser write capability.
+- `pg_default_acl` confirms that the `postgres` role's defaults in `public` do not grant table/sequence/function access to `anon` or `authenticated`. The separate reserved `supabase_admin` defaults remain broad for future public tables, sequences, and functions, including `anon`, `authenticated`, and `service_role`. The current `postgres` session cannot change those reserved-role defaults.
+- The current catalog reports zero public relations and zero public functions owned by `supabase_admin`; this remains a future-object/platform ownership concern rather than evidence of current objects owned by that role.
+- Supabase Security Advisor returned zero security lints. Performance Advisor reported 19 `unused_index` informational findings during this low-activity test workload; no index was removed.
+- These checks are read-only. No test migration was replayed, and Production was not inspected or modified.
+
+### Preview deployment
+
+The currently accessible Vercel project list contains the public marketing project `mentoro` and several standalone logbook projects, but no `mentoro-platform` project. A direct lookup for `mentoro-platform` returned 404 `Project not found`. This confirms that the platform Preview is not currently available in the selected Vercel scope; it does not justify changing the existing marketing project's Production configuration. An authorized team owner must create/authorize the dedicated Preview project and configure Preview-only test Supabase variables and Auth redirects.
+
+### Static migration history guard
+
+A new `scripts/check-migration-history.mjs` contract is being added to reject malformed migration filenames, duplicate 14-digit version prefixes, empty SQL files, and byte-identical migration contents under different versions. The CI workflow now includes a dedicated migration check and is configured to validate both `main` PRs and the stacked `chore/recover-migration-history` target. Its validation result must be read from a post-change workflow run before it is considered passed.
