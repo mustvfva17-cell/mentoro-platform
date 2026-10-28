@@ -179,6 +179,20 @@ BEGIN
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'Stale revision should have been rejected'; END IF;
 
+  -- The assigned mentor may read the logbook but cannot modify trainee-owned state.
+  PERFORM set_config('request.jwt.claim.sub', v_mentor::text, true);
+  v_read := public.get_my_logbook_html_state(v_instance_a);
+  IF (v_read ->> 'revision')::bigint <> 2 OR v_read -> 'state' <> v_state_b THEN
+    RAISE EXCEPTION 'Assigned mentor could not read the current logbook state';
+  END IF;
+  v_rejected := false;
+  BEGIN
+    PERFORM public.save_my_logbook_html_state(v_instance_a, v_state_a, 2);
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Assigned mentor must not be able to save trainee state'; END IF;
+
   -- Even a platform admin may read a trainee's logbook, but cannot save as that trainee.
   PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
   v_rejected := false;
@@ -189,7 +203,7 @@ BEGIN
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'Non-trainee writer should have been rejected'; END IF;
 
-  RAISE NOTICE 'HTML state RPC checks passed: save/reload, revision increment, per-enrollment isolation, stale-write conflict, and trainee-only write permission.';
+  RAISE NOTICE 'HTML state RPC checks passed: save/reload, revision increment, per-enrollment isolation, stale-write conflict, assigned-mentor read-only access, stale-write rejection, and trainee-only write permission.';
 END
 $test$;
 
