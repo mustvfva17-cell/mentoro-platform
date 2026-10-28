@@ -25,7 +25,7 @@ const [
   read('src/main.js'),
   read('supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql'),
   read('supabase/migrations/20261028061834_rls_policy_and_foreign_key_hardening.sql'),
-  read('supabase/migrations/20261028100800_fix_application_offering_slot_binding.sql'),
+  read('supabase/migrations/20261028100024_fix_application_offering_slot_binding.sql'),
   read('supabase/migrations/20261028062421_current_user_workflow_wrappers.sql'),
   read('supabase/migrations/20261028062818_mentor_reviews_and_admin_training_setup.sql'),
   read('supabase/migrations/20261028093412_harden_trainee_verification_bucket.sql'),
