@@ -1,9 +1,12 @@
 # MENTORO MVP — Enrollment & Activation API Contract
 
-**Status:** Design draft for review; not implemented.
+**Status:** Superseded legacy workflow contract; not implemented.
 **Scope:** Minimum trusted API/database contract for issuing/replacing activation invitations and redeeming a single-use activation code.
 **Architecture:** Vercel Node.js API, Supabase Auth, Supabase PostgreSQL, RLS/grants, narrowly scoped atomic database operations.
 **Explicit boundary:** This document does not authorize code, migrations, database changes, deployment, or claims of passing tests.
+
+> **Architecture supersession notice — 2026-10-28:** The canonical booking/logbook model is now `docs/MENTORO_TARGET_DATA_MODEL_V2.md`, adopted with `docs/decisions/ADR-03-INDEPENDENT-TRAINING-ENROLLMENTS.md`. Any content in this legacy document that requires one active assignment/logbook per trainee, a trainee-wide mentor relationship, one pending enrollment per email, or activation-code-based training enrollment is superseded and must not be used to implement migrations or protected workflows. Shared security, audit, privacy, role-integrity, correction-history, and immutable-template-version principles remain relevant only where consistent with the new model. No SQL or database changes are authorized by this notice.
+
 
 ## 1. Non-negotiable invariants
 
