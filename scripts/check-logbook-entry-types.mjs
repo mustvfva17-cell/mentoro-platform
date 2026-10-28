@@ -84,5 +84,22 @@ if (!frontend.includes('const instanceRelation = enrollment.logbook_instances;')
   throw new Error('Logbook instance rendering must support one-to-one PostgREST embedding.');
 }
 
+const localDateContract = frontend.includes('const localDateISO = () => {') &&
+  frontend.includes('now.getFullYear()') &&
+  frontend.includes('now.getMonth() + 1') &&
+  frontend.includes('now.getDate()') &&
+  frontend.includes('value="${localDateISO()}"') &&
+  !frontend.includes('new Date().toISOString().slice(0,10)');
+if (!localDateContract) {
+  throw new Error('Logbook default date must use the trainee local calendar date, not UTC.');
+}
+
+const startupSource = frontend.match(/async function start\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+if (!startupSource.includes('error: sessionError') ||
+    !startupSource.includes('if (sessionError) throw sessionError;') ||
+    !startupSource.includes("message(errorText(error), 'error');")) {
+  throw new Error('Auth startup must handle session restoration failures with a visible message.');
+}
+
 console.log('Account-role entry and one-to-one logbook embedding contracts passed.');
 console.log(`Logbook entry-type and scoped-submission contracts passed: ${[...new Set(usedTypes)].join(', ')}.`);
