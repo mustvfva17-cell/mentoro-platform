@@ -595,7 +595,7 @@ function setCloudLoading(loading){
  if(!instanceId||!window.opener)return;
  const content=document.querySelector('main.content');
  if(!content)return;
- content.inert=loading;
+ content.inert=loading || !htmlCloudReady;
  if(loading)content.setAttribute('aria-busy','true');else content.removeAttribute('aria-busy');
 }
 function notifyCloudStateChanged(options={}){
@@ -978,7 +978,7 @@ window.addEventListener('message',event=>{
  }
  const setCloudNotice=(text,kind='info')=>{
   let note=document.getElementById('cloud-sync-notice');
-  if(!note){note=document.createElement('div');note.id='cloud-sync-notice';note.className='privacy-note';note.setAttribute('role','status');document.querySelector('main.content')?.prepend(note);}
+  if(!note){note=document.createElement('div');note.id='cloud-sync-notice';note.className='privacy-note';note.setAttribute('role','status');const content=document.querySelector('main.content');if(kind==='error'&&content)content.before(note);else content?.prepend(note);}
   note.textContent=text;note.style.display='block';note.hidden=false;note.style.borderColor=kind==='error'?'var(--danger)':'';
  };
  if(msg.type==='MENTORO_LOGBOOK_LOAD_STATE'){
@@ -1012,7 +1012,7 @@ window.addEventListener('message',event=>{
   }
  }else if(msg.type==='MENTORO_LOGBOOK_LOAD_ERROR'){
   setCloudLoading(false);
-  setCloudNotice('Could not connect this logbook to MENTORO: ' + String(msg.error||'Unknown error'), 'error');
+  setCloudNotice('Could not connect this logbook to MENTORO: ' + String(msg.error||'Unknown error') + '. Editing is disabled. Close and reopen this logbook after the connection is restored.', 'error');
  }else if(msg.type==='MENTORO_LOGBOOK_SAVE_RESULT'){
   if(msg.ok){window.__mentoroCloudRevision=Number(msg.revision||window.__mentoroCloudRevision||0);setCloudNotice('Saved to this training’s secure cloud logbook. Do not enter patient-identifying information.');}
   else setCloudNotice(String(msg.error||'Cloud save failed. Export a backup before closing this tab.'),'error');
