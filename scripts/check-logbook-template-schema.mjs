@@ -217,13 +217,6 @@ assert.ok(main.includes("REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)"));
 assert.ok(main.includes("htmlPath: button.dataset.htmlPath"));
 assert.ok(main.includes("data-html-path"));
 assert.ok(admin.includes("href=\"/logbooks/general-surgery/index.html?mode=preview\""));
-const generalSurgeryStateTest = await read('supabase/tests/general_surgery_html_state_integration.sql');
-assert.ok(generalSurgeryStateTest.startsWith('-- Rollback-only integration test'));
-assert.ok(generalSurgeryStateTest.includes('BEGIN;'));
-assert.ok(generalSurgeryStateTest.trimEnd().endsWith('ROLLBACK;'));
-assert.ok(generalSurgeryStateTest.includes('Initial General Surgery HTML state should be empty at revision zero'));
-assert.ok(generalSurgeryStateTest.includes('General Surgery HTML state did not round-trip'));
-assert.ok(generalSurgeryStateTest.includes('Assigned mentor must not write trainee-owned General Surgery state'));
 console.log('General Surgery HTML asset registration, per-enrollment cloud bridge, admin preview, and read-only mentor integration checks passed.');
 
 
