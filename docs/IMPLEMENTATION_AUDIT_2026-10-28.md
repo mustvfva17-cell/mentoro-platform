@@ -49,3 +49,12 @@ The UI uses the existing RLS-protected tables and does not introduce a service-r
 - Creating a separate Vercel Preview project was attempted but the Vercel API returned `403 forbidden` (no permission to create a project). No existing project was modified and no environment-variable values or secrets were changed. A team owner must create/authorize the preview project and connect `mentoro-platform`, then configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` for the preview branch.
 - No end-to-end tests were run against real trainee, mentor, or admin accounts.
 - The current branch is a review candidate, not a production deployment. Admin and mentor dashboards, robust end-to-end tests, full template-driven logbook fields, and the six specialty template migrations remain to be implemented.
+
+## Follow-up fixes after the initial audit
+
+Two application issues were found during the continued review:
+
+- **Role-safe trainee entry:** the client now checks the authenticated user's active roles before opening the trainee workspace, instead of invoking trainee provisioning unconditionally for every existing profile. The corresponding server-side guard is in stacked migration `20261028103649_prevent_nontrainee_self_provisioning.sql` on PR #2. It rejects existing profiles without an active `TRAINEE` role, while allowing a new confirmed identity with no profile to provision as a trainee. The migration was applied only to `mentoro-platform-test`; a rollback-only test confirmed an ADMIN-only identity is denied without gaining a TRAINEE role, and a separate new confirmed identity can still provision.
+- **One-to-one logbook relation:** each `logbook_instances.enrollment_id` is unique, so the embedded relation from an enrollment may be returned as a single object rather than an array. The trainee UI now normalizes either shape instead of assuming `logbook_instances[0]`, which could have hidden the enrollment's logbook.
+
+The base-branch source contract script and the stacked workflow-contract script now assert these behaviors. CI run `40673210115` passed on the frontend commit containing the role gate and relation fix. Further contract assertions and the server-side migration were added afterward; a CI run for the latest stacked branch head has not yet been confirmed. Database security advisor checks after the new migration returned no findings. No production database or deployment was changed.
