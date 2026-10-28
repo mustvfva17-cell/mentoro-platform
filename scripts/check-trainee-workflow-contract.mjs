@@ -99,6 +99,9 @@ check('application RLS explicitly binds the outer application offering and slot 
   contains(applicationPolicyFix, 'AND s.id = training_applications.slot_id'));
 
 // An independent enrollment/logbook is anchored to the confirmed application and its template version.
+check('one-to-one logbook instance embedding is handled as an object or array',
+  contains(frontend, 'const instanceRelation = enrollment.logbook_instances;') &&
+  contains(frontend, 'Array.isArray(instanceRelation) ? instanceRelation[0] : instanceRelation'));
 check('one enrollment per source application is enforced by a unique constraint',
   contains(coreSchema, 'source_application_id uuid NOT NULL UNIQUE'));
 check('one logbook instance per enrollment is enforced by a unique constraint',
