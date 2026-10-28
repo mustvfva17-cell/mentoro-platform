@@ -139,7 +139,7 @@ export function renderPayloadSummary(payload, fields, maxFields = 3) {
   const labelMap = new Map(fields.map((field) => [field.key, field.label]));
   const items = Object.entries(payload).filter(([key, value]) =>
     KEY_PATTERN.test(key) && value !== null && value !== undefined && value !== '' &&
-    (typeof value !== 'object' || Array.isArray(value) === false)
+    (typeof value !== 'object' || value === null)
   ).slice(0, maxFields);
   if (!items.length) return '';
   return '<div class="entry-payload-summary">' + items.map(([key, value]) =>
