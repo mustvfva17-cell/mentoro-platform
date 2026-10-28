@@ -132,6 +132,11 @@ check('RLS only permits a trainee to insert their own draft into an owned instan
   contains(accessPolicies, "status = 'DRAFT' AND submitted_at IS NULL") &&
   contains(accessPolicies, 'created_by = (SELECT auth.uid())') &&
   contains(accessPolicies, 'app_private.owns_instance(instance_id)'));
+
+check('logbook entry deletion is restricted to owned DRAFT entries',
+  contains(accessPolicies, 'CREATE POLICY logbook_entries_delete_own_drafts ON public.logbook_entries') &&
+  contains(accessPolicies, 'FOR DELETE TO authenticated') &&
+  contains(accessPolicies, "USING (status = 'DRAFT' AND app_private.owns_instance(instance_id))"));
 check('submission uses the scoped RPC instead of direct client timestamp writes',
   /supabase\.rpc\(['"]set_logbook_entry_submitted['"]/.test(frontend) &&
   contains(scopedSubmission, "IF p_actor_id IS DISTINCT FROM auth.uid()") &&
