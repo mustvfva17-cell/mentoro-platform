@@ -20,30 +20,27 @@ The owner configured the test project's Site URL as `http://localhost:3000` and 
 The app sets `emailRedirectTo: window.location.origin`, so the Preview origin must remain on the allow-list. Do not enable a broad wildcard covering every Vercel deployment. Vite's usual local development port is `5173`; add a localhost redirect only if local Auth testing is needed.
 
 
-## Testing the admin review workflow safely
+## Admin review test status
 
-The test database currently has one active `TRAINEE` role and no `ADMIN` or `SUPER_ADMIN` role. The already-used trainee account must stay a trainee; do not elevate that account to admin.
+The test database now has a dedicated initial `SUPER_ADMIN` identity created through the owner-only bootstrap function. The bootstrap is a one-time operation and refuses to proceed after an active platform administrator exists; **do not run the bootstrap command again**. Do not promote the existing trainee account or change its status directly in SQL.
 
-1. In the Preview URL above, create a **second dedicated test account** using an email address you control. Confirm the email, then sign in once so MENTORO provisions its profile. Do not upload a verification document or submit a training application from this second account.
-2. Open the **test** project SQL Editor only: [mentoro-platform-test SQL Editor](https://supabase.com/dashboard/project/dkqrpndqfwmyevylbbse/sql/new).
-3. Execute the statement below, replacing the example address locally with the confirmed email for the dedicated test account. Do not send that email or the returned UUID in chat.
+The owner has already signed in to the admin Preview and confirmed that the dashboard lists the pending trainee verification, provides a five-minute signed document link, and shows approve/request-new-document actions.
 
-```sql
-SELECT app_private.bootstrap_initial_super_admin('admin-test@example.com') AS admin_profile_id;
-```
+Next manual test, using only the test project:
 
-The migration intentionally provides no `public` RPC wrapper and revokes execution from `PUBLIC`, `anon`, `authenticated`, and `service_role`; it is callable only by a database owner/operator through the SQL Editor. It serializes concurrent attempts, refuses to run when an active platform administrator exists, requires exactly one confirmed identity with exactly one active trainee role, rejects accounts with verification/training activity, revokes that unused trainee role, grants the single `SUPER_ADMIN` role, and records an audit event. It does not create an open browser bootstrap path.
+1. Sign in to the existing dedicated admin test identity in the Preview.
+2. Open the trainee’s private document and check that it opens only from the signed link.
+3. After reviewing the document, choose the appropriate review decision in the admin UI.
+4. Sign in as the trainee and confirm the displayed account status reflects the database decision.
+5. If an operation fails, capture the visible error without sharing passwords, signed URLs, or secret keys.
 
-4. Return to the Preview and sign out of the trainee account. Sign in with the dedicated admin test account. It should route to **ADMIN WORKSPACE**.
-5. Confirm the trainee account appears in the verification queue, open its private document, then approve or request a new document. Sign back into the trainee account to verify the resulting status. Use only test identities and the test database.
-
-This step changes a role in the test database only when the operator explicitly runs the owner-only SQL statement. Do not run it in Production.
+Do not mark a trainee verified until the submitted document has actually been reviewed. Production roles and data must remain unchanged.
 
 ## Current functional boundaries
 
 - Opening the deployed app and connecting its browser client to the test Supabase project are confirmed by the owner observing that the configuration warning disappeared.
-- Sign-up/email confirmation still needs an end-to-end test using a dedicated test identity after the redirect URL is allow-listed.
-- The test database has no published, assignable logbook template version. Offerings can be drafted, but publishable bookings require a clinically reviewed template first.
+- Trainee sign-up, email confirmation, sign-in, private document upload, and the admin queue have been manually smoke-tested by the owner. The approve/reject state transition still needs to be completed and verified from both roles.
+- The test database has no published, assignable logbook template version. The new branch adds a schema-driven trainee form and draft-template review queue, but no template can be activated or booked until clinical review/publication is designed and verified.
 - A separate new Vercel project and direct deployment creation were denied by current Vercel connector permissions; this branch is deployed to the existing `mentoro-platform` project's branch alias. No Production deployment or database migration was performed for this Preview setup.
 
 ## Verification checklist
