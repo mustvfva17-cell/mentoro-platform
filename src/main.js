@@ -37,7 +37,14 @@ const setBusy = (button, busy, label = 'Please wait…') => {
     button.textContent = button.dataset.originalText || button.textContent;
   }
 };
-async function requireTraineeWorkspace(user) {
+async function provisionCurrentTrainee(user) {
+  const { error: provisionError } = await supabase.rpc('provision_current_trainee', {
+    p_full_name: user.user_metadata?.full_name || ''
+  });
+  if (provisionError) throw provisionError;
+}
+
+async function resolveWorkspaceRole(user) {
   const { data: existingProfile, error: profileError } = await supabase
     .from('profiles')
     .select('id')
@@ -45,29 +52,38 @@ async function requireTraineeWorkspace(user) {
     .maybeSingle();
   if (profileError) throw profileError;
 
-  // Do not silently grant a trainee role to existing mentor/admin accounts.
-  if (existingProfile) {
-    const { data: activeRoles, error: rolesError } = await supabase
-      .from('profile_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .is('revoked_at', null);
-    if (rolesError) throw rolesError;
-
-    if (!(activeRoles || []).some((item) => item.role === 'TRAINEE')) {
-      await supabase.auth.signOut();
-      renderAuth();
-      message('This account is not assigned to the trainee workspace. Mentor and admin workspaces are not available in this preview yet.', 'error');
-      return false;
-    }
+  // A confirmed identity without a MENTORO profile enters the trainee onboarding path.
+  if (!existingProfile) {
+    await provisionCurrentTrainee(user);
+    return 'TRAINEE';
   }
 
-  // New sign-ups have no profile yet; existing trainee accounts are provisioned idempotently.
-  const { error: provisionError } = await supabase.rpc('provision_current_trainee', {
-    p_full_name: user.user_metadata?.full_name || ''
-  });
-  if (provisionError) throw provisionError;
-  return true;
+  const { data: activeRoles, error: rolesError } = await supabase
+    .from('profile_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .is('revoked_at', null);
+  if (rolesError) throw rolesError;
+
+  const roles = new Set((activeRoles || []).map((item) => item.role));
+  // Route to the most privileged assigned workspace first; never add a role during routing.
+  if (roles.has('SUPER_ADMIN') || roles.has('ADMIN')) return 'ADMIN';
+  if (roles.has('MENTOR')) return 'MENTOR';
+  if (roles.has('TRAINEE')) {
+    await provisionCurrentTrainee(user);
+    return 'TRAINEE';
+  }
+
+  await supabase.auth.signOut();
+  renderAuth();
+  message('This account has no active MENTORO workspace role. Ask a platform administrator to review the account.', 'error');
+  return null;
+}
+
+async function renderWorkspace(user, role) {
+  if (role === 'TRAINEE') return renderDashboard(user);
+  if (role === 'MENTOR') return renderMentorDashboard(user);
+  return renderAdminWorkspace(user);
 }
 
 const errorText = (error) => {
@@ -117,7 +133,7 @@ function renderAuth() {
         </div>
       </section>
       <section class="auth-card">
-        <div class="card-heading"><p class="eyebrow">GET STARTED</p><h2>Welcome to MENTORO</h2><p>Sign in or create your trainee account.</p></div>
+        <div class="card-heading"><p class="eyebrow">GET STARTED</p><h2>Welcome to MENTORO</h2><p>Create a trainee account, or sign in with your assigned mentor or administrator account.</p></div>
         <div class="tab-list" role="tablist" aria-label="Account access">
           <button class="tab is-active" type="button" data-auth-tab="signin" role="tab" aria-selected="true">Sign in</button>
           <button class="tab" type="button" data-auth-tab="signup" role="tab" aria-selected="false">Create account</button>
@@ -174,9 +190,8 @@ function renderAuth() {
         });
         if (error) throw error;
         if (result.session) {
-          if (await requireTraineeWorkspace(result.session.user)) {
-            await renderDashboard(result.session.user);
-          }
+          const workspace = await resolveWorkspaceRole(result.session.user);
+          if (workspace) await renderWorkspace(result.session.user, workspace);
         } else {
           document.querySelector('[data-auth-tab="signin"]').click();
           message('Account created. Check your email and confirm your address, then return here to sign in.', 'success');
@@ -184,9 +199,8 @@ function renderAuth() {
       } else {
         const { data: result, error } = await supabase.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
-        if (await requireTraineeWorkspace(result.user)) {
-          await renderDashboard(result.user);
-        }
+        const workspace = await resolveWorkspaceRole(result.user);
+        if (workspace) await renderWorkspace(result.user, workspace);
       }
     } catch (error) {
       message(errorText(error), 'error');
@@ -247,6 +261,166 @@ async function renderDashboard(user) {
     shell(`<main class="dashboard"><div class="empty-state empty-state--error"><strong>Could not load your workspace</strong><p>${esc(errorText(error))}</p><button class="button button--secondary" id="retry">Try again</button></div></main>`, user);
     document.querySelector('#retry')?.addEventListener('click', () => renderDashboard(user));
   }
+}
+
+
+async function renderMentorDashboard(user) {
+  shell('<main class="dashboard"><section class="loading-panel"><span class="spinner"></span><p>Loading your mentor workspace…</p></section></main>', user);
+  try {
+    const [profileResult, mentorResult, applicationsResult, enrollmentsResult] = await Promise.all([
+      supabase.from('profiles').select('id,full_name,email').eq('id', user.id).maybeSingle(),
+      supabase.from('mentor_profiles').select('profile_id,display_name,professional_title,institution').eq('profile_id', user.id).maybeSingle(),
+      supabase.from('training_applications')
+        .select('id,status,created_at,applicant_note,training_offerings(title,description,delivery_mode,specialties(name_en)),training_slots(starts_at,ends_at)')
+        .order('created_at', { ascending: false }),
+      supabase.from('training_enrollments')
+        .select('id,status,starts_at,ends_at,training_offerings(title,specialties(name_en)),logbook_instances(id,logbook_entries(id,status))')
+        .order('starts_at', { ascending: true })
+    ]);
+    if (profileResult.error) throw profileResult.error;
+    if (mentorResult.error) throw mentorResult.error;
+    if (applicationsResult.error) throw applicationsResult.error;
+    if (enrollmentsResult.error) throw enrollmentsResult.error;
+
+    const profile = profileResult.data || {};
+    const mentor = mentorResult.data || {};
+    const applications = applicationsResult.data || [];
+    const enrollments = enrollmentsResult.data || [];
+    const pendingApplications = applications.filter((item) => item.status === 'SUBMITTED');
+    const reviewedApplications = applications.filter((item) => item.status !== 'SUBMITTED');
+    const activeEnrollments = enrollments.filter((item) => ['CONFIRMED', 'ACTIVE'].includes(item.status));
+    const displayName = mentor.display_name || profile.full_name || user.email?.split('@')[0] || 'mentor';
+
+    shell(
+      '<main class="dashboard">' +
+        '<section class="dashboard-welcome">' +
+          '<div><p class="eyebrow">MENTOR WORKSPACE</p><h1>Welcome back, <span>' + esc(displayName) + '</span></h1>' +
+          '<p>Review trainee applications and track the clinical trainings assigned to you. Decisions are validated by the database against your mentor identity.</p></div>' +
+          '<span class="status-chip status-chip--good">Mentor account</span>' +
+        '</section>' +
+        '<section class="stats-grid">' +
+          '<article class="stat-card"><span>Awaiting your decision</span><strong>' + pendingApplications.length + '</strong><small>Submitted applications</small></article>' +
+          '<article class="stat-card"><span>Reviewed applications</span><strong>' + reviewedApplications.length + '</strong><small>Past decisions and outcomes</small></article>' +
+          '<article class="stat-card"><span>Assigned trainings</span><strong>' + activeEnrollments.length + '</strong><small>Confirmed or active enrollments</small></article>' +
+        '</section>' +
+        (!mentor.profile_id ? '<section class="empty-state empty-state--error"><strong>Mentor profile setup is incomplete</strong><p>Your sign-in role is recognized, but MENTORO administration needs to finish your mentor profile before offerings can be assigned to you.</p></section>' : '') +
+        '<section class="section-block">' +
+          '<div class="section-heading"><div><p class="eyebrow">ACTION REQUIRED</p><h2>Applications awaiting your decision</h2></div><span class="count-badge">' + pendingApplications.length + '</span></div>' +
+          '<p class="workspace-note">Only applications within your assigned mentor scope are returned by the database.</p>' +
+          (pendingApplications.length
+            ? '<div class="mentor-queue-grid">' + pendingApplications.map(mentorApplicationCard).join('') + '</div>'
+            : '<div class="empty-state"><strong>You are all caught up</strong><p>New applications for your published training offers will appear here.</p></div>') +
+        '</section>' +
+        '<section class="section-block">' +
+          '<div class="section-heading"><div><p class="eyebrow">YOUR TRAINING</p><h2>Assigned clinical trainings</h2></div><span class="count-badge">' + activeEnrollments.length + '</span></div>' +
+          (activeEnrollments.length
+            ? '<div class="mentor-queue-grid">' + activeEnrollments.map(mentorEnrollmentCard).join('') + '</div>'
+            : '<div class="empty-state"><strong>No confirmed trainings yet</strong><p>Confirmed bookings linked to your mentor account will appear here.</p></div>') +
+        '</section>' +
+        '<section class="section-block">' +
+          '<div class="section-heading"><div><p class="eyebrow">DECISION HISTORY</p><h2>Recently reviewed applications</h2></div><span class="count-badge">' + reviewedApplications.length + '</span></div>' +
+          (reviewedApplications.length
+            ? '<div class="list-stack">' + reviewedApplications.slice(0, 8).map(mentorApplicationCard).join('') + '</div>'
+            : '<div class="empty-state"><strong>No review history yet</strong><p>Once you review an application, the decision will appear here.</p></div>') +
+        '</section>' +
+      '</main>',
+      user
+    );
+    bindMentorApplicationActions(user);
+  } catch (error) {
+    shell(
+      '<main class="dashboard"><div class="empty-state empty-state--error"><strong>Could not load your mentor workspace</strong><p>' +
+        esc(errorText(error)) +
+        '</p><button class="button button--secondary" id="mentor-retry">Try again</button></div></main>',
+      user
+    );
+    document.querySelector('#mentor-retry')?.addEventListener('click', () => renderMentorDashboard(user));
+  }
+}
+
+function mentorApplicationCard(item) {
+  const offering = item.training_offerings || {};
+  const specialty = offering.specialties || {};
+  const slot = item.training_slots || {};
+  const isPending = item.status === 'SUBMITTED';
+  const deliveryMode = (offering.delivery_mode || 'IN_PERSON').replaceAll('_', ' ');
+  return '<article class="activity-card mentor-application-card" data-application-card>' +
+    '<div class="activity-main">' +
+      '<span class="specialty-label">' + esc(specialty.name_en || 'Clinical training') + '</span>' +
+      '<h3>' + esc(offering.title || 'Training application') + '</h3>' +
+      '<p>' + esc(deliveryMode) + ' · ' + esc(dateTime(slot.starts_at)) + ' — ' + esc(dateTime(slot.ends_at)) + '</p>' +
+      '<p class="mentor-applicant-note">' + (item.applicant_note ? '<strong>Applicant note:</strong> ' + esc(item.applicant_note) : 'No note was included with this application.') + '</p>' +
+      '<small>Received ' + esc(dateTime(item.created_at)) + '</small>' +
+      (isPending
+        ? '<div class="mentor-review-actions">' +
+            '<input class="mentor-review-reason" type="text" maxlength="500" data-mentor-reason="' + esc(item.id) + '" placeholder="Optional feedback for the trainee">' +
+            '<div class="mentor-review-buttons">' +
+              '<button class="button button--primary button--small" type="button" data-mentor-decision="APPROVE" data-application-id="' + esc(item.id) + '">Approve</button>' +
+              '<button class="button button--secondary button--small" type="button" data-mentor-decision="REJECT" data-application-id="' + esc(item.id) + '">Reject</button>' +
+            '</div>' +
+          '</div>'
+        : '<div class="mentor-review-actions"><span class="status-chip status-chip--neutral">' + esc((item.status || 'REVIEWED').replaceAll('_', ' ')) + '</span></div>') +
+    '</div>' +
+  '</article>';
+}
+
+function mentorEnrollmentCard(enrollment) {
+  const offering = enrollment.training_offerings || {};
+  const specialty = offering.specialties || {};
+  const instanceRelation = enrollment.logbook_instances;
+  const instance = Array.isArray(instanceRelation) ? instanceRelation[0] : instanceRelation;
+  const entries = instance?.logbook_entries || [];
+  const submittedCount = entries.filter((entry) => entry.status === 'SUBMITTED').length;
+  const statusTone = ['CONFIRMED', 'ACTIVE'].includes(enrollment.status) ? 'good' : 'neutral';
+  return '<article class="training-card mentor-training-card">' +
+    '<div class="training-card-heading"><span class="specialty-label">' + esc(specialty.name_en || 'Clinical training') + '</span>' +
+    '<span class="status-chip status-chip--' + statusTone + '">' + esc((enrollment.status || 'CONFIRMED').replaceAll('_', ' ')) + '</span></div>' +
+    '<h3>' + esc(offering.title || 'Assigned training') + '</h3>' +
+    '<p class="mentor-line">' + esc(dateTime(enrollment.starts_at)) + ' — ' + esc(dateTime(enrollment.ends_at)) + '</p>' +
+    '<div class="mentor-entry-stats"><span>' + entries.length + ' logbook entries</span><span>' + submittedCount + ' awaiting review</span></div>' +
+  '</article>';
+}
+
+function bindMentorApplicationActions(user) {
+  document.querySelectorAll('[data-mentor-decision]').forEach((button) => button.addEventListener('click', async () => {
+    const applicationId = button.dataset.applicationId;
+    const decision = button.dataset.mentorDecision;
+    const card = button.closest('[data-application-card]');
+    const reason = card?.querySelector('[data-mentor-reason]')?.value?.trim() || '';
+    if (!applicationId || !['APPROVE', 'REJECT'].includes(decision)) return;
+
+    card?.querySelectorAll('button').forEach((item) => { item.disabled = true; });
+    setBusy(button, true, decision === 'APPROVE' ? 'Approving…' : 'Rejecting…');
+    const { error } = await supabase.rpc('mentor_review_my_application', {
+      p_application_id: applicationId,
+      p_decision: decision,
+      p_reason: reason || null
+    });
+    if (error) {
+      message(errorText(error), 'error');
+      setBusy(button, false);
+      card?.querySelectorAll('button').forEach((item) => { item.disabled = false; });
+      return;
+    }
+
+    await renderMentorDashboard(user);
+    message(decision === 'APPROVE'
+      ? 'Application approved. MENTORO administration can now confirm the booking.'
+      : 'Application rejected. Your decision has been recorded.', 'success');
+  }));
+}
+
+function renderAdminWorkspace(user) {
+  shell(
+    '<main class="dashboard">' +
+      '<section class="dashboard-welcome"><div><p class="eyebrow">ADMIN WORKSPACE</p><h1>Welcome back, <span>' +
+        esc(user.email || 'administrator') +
+      '</span></h1><p>Your administrator role has been recognized. Administration tools are not part of this preview slice yet.</p></div>' +
+      '<span class="status-chip status-chip--neutral">Administrator</span></section>' +
+      '<section class="empty-state"><strong>Admin dashboard is still being built</strong><p>This account was not converted to a trainee account. You can sign out safely; administrator actions will be added in a separate reviewed change.</p></section>' +
+    '</main>',
+    user
+  );
 }
 
 function verificationPanel(doc, profile) {
@@ -436,9 +610,8 @@ async function start() {
     if (sessionError) throw sessionError;
 
     if (session?.user) {
-      if (await requireTraineeWorkspace(session.user)) {
-        await renderDashboard(session.user);
-      }
+      const workspace = await resolveWorkspaceRole(session.user);
+      if (workspace) await renderWorkspace(session.user, workspace);
     } else {
       renderAuth();
     }
