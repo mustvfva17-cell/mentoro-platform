@@ -19,11 +19,24 @@ The PostgreSQL 17 `MAINTAIN` gap on existing application tables is closed on the
 
 The Supabase performance advisor reported 23 indexes as unused during this check (informational level). The test project currently has no persistent trainee/mentor workflow data or representative application workload, so these usage counters are not a sound basis for removing indexes. In particular, indexes used by foreign-key checks, RLS predicates, mentor/enrollment filtering, and logbook history should be evaluated against representative query plans and real usage before any removal. No index was dropped as part of this audit.
 
-## Required owner-level decision: future defaults for objects owned by supabase_admin
+## Supabase-managed default ACLs: role-level change is not available
 
-The current database session cannot alter `supabase_admin`'s default ACLs. A Supabase project owner should review the platform ownership boundary and determine the supported way to harden these defaults (which may require Supabase support if the managed role is not alterable by the project owner).
+The `pg_default_acl` inventory shows that the internal `supabase_admin` role grants `anon`, `authenticated`, and `service_role` broad defaults for future tables, sequences, and functions created by that role in `public`. Supabase documents that `postgres` cannot alter these defaults or become a member of the reserved `supabase_admin` role; an `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin ...` attempt is expected to fail with a permission error. See the [official Supabase Knowledge Base explanation](https://supabase.com/kb/troubleshooting/cant-change-the-default-privileges-of-supabase_admin-in-the-public-schema).
 
-Before making a change, inspect the current records using:
+This is a **future-object/platform ownership concern**, not a privilege found on the current MENTORO tables:
+
+- The connected `postgres` role's default privileges in `public` are restricted for browser roles: new tables get only the reviewed `service_role` maintenance grants; sequences have no browser-role defaults; new functions are executable by `postgres` by default.
+- A read-only inventory found **no current relation or function in `public` owned by `supabase_admin`** in the test project.
+- Existing MENTORO tables are owned/managed separately, and the PostgreSQL 17 `MAINTAIN` and `TRUNCATE` grants have been removed for `anon` and `authenticated`.
+
+### Practical prevention
+
+1. Keep application tables, policies, and RPCs created through the normal `postgres` migration role with explicit grants and RLS.
+2. Avoid creating extensions in the exposed `public` schema. Where an extension supports it, install it in the `extensions` schema instead; review any existing extension before moving it.
+3. After any extension install, database restore, or platform upgrade, audit which objects in `public` are owned by `supabase_admin` and inspect their actual grants.
+4. If an extension must remain in `public` or its objects cannot be moved safely, consult Supabase's documented guidance/support instead of trying to alter the reserved role's defaults or revoke privileges that `postgres` did not grant.
+
+For a read-only inventory of the defaults:
 
 ```sql
 SELECT
@@ -33,29 +46,31 @@ SELECT
   d.defaclacl::text AS default_acl
 FROM pg_default_acl AS d
 LEFT JOIN pg_namespace AS n ON n.oid = d.defaclnamespace
-WHERE d.defaclrole::regrole::text = 'supabase_admin'
+WHERE d.defaclrole::regrole::text IN ('postgres', 'supabase_admin')
   AND (n.nspname = 'public' OR d.defaclnamespace = 0)
-ORDER BY schema_name, object_type;
+ORDER BY owner_role, schema_name, object_type;
 ```
 
-If owner review confirms that application-facing browser roles should not receive any implicit privileges on future objects created by `supabase_admin` in the exposed `public` schema, the following are candidate statements for the authorized owner/maintenance path, **not instructions to run blindly**:
+And for current relations/functions owned by `supabase_admin` in `public`:
 
 ```sql
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
-  REVOKE ALL PRIVILEGES ON TABLES FROM anon, authenticated;
-
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
-  REVOKE ALL PRIVILEGES ON SEQUENCES FROM anon, authenticated;
-
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
-  REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated;
+SELECT 'relation' AS object_type, c.relname AS object_name
+FROM pg_class AS c
+JOIN pg_namespace AS n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public'
+  AND c.relowner = 'supabase_admin'::regrole
+UNION ALL
+SELECT 'function', p.oid::regprocedure::text
+FROM pg_proc AS p
+JOIN pg_namespace AS n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.proowner = 'supabase_admin'::regrole
+ORDER BY object_type, object_name;
 ```
-
-A project/platform owner must decide whether these defaults are intentionally supporting Supabase-managed objects. If the defaults are changed, explicitly grant only the required privileges to any new API object that is intentionally exposed. Re-run the privilege audit and workflow tests afterward, including public mentor/template/training discovery, trainee verification upload and review, enrollment/logbook creation, and mentor/admin operations.
 
 ## Verification query after an owner-authorized change
 
-Rerun the `pg_default_acl` inspection above and confirm the public-schema entries no longer grant the unintended default privileges to `anon` or `authenticated`. Separately re-check privileges on the 17 existing application tables; default-ACL changes affect future objects and do not replace current-object ACL verification.
+After extension installs, restores, or upgrades, rerun both read-only inventories above and confirm any new `supabase_admin`-owned objects in `public` are intentional and have reviewed grants. Re-check privileges on the 17 existing application tables separately; default ACLs concern future objects and do not replace current-object ACL verification.
 
 ## Release blockers not resolved by this document
 
