@@ -111,4 +111,4 @@ The GitHub Actions workflow now runs `npm run check:contracts` before the produc
 
 ## Current state
 
-The five missing migration files, the security/storage/logbook hardening migrations, and this audit note are present on the recovery branch. The latest privilege-hardening migration was applied only to `mentoro-platform-test` and was checked afterward with read-only privilege queries. Production was not accessed or modified. No PR was merged and no production deployment was made.
+The five missing migration files, all three hardening migrations, and this audit note are present on the recovery branch. The helper-function ACL, verification-bucket limits, and server-side submission timestamp trigger were applied only to `mentoro-platform-test` and then checked through read-only catalog/configuration queries. Production was not accessed or modified. No PR was merged and no production deployment was made.
