@@ -13,18 +13,11 @@ Vercel has reported the deployment as `READY` for Git ref `feat/admin-workspace-
 
 These are scoped to Vercel Preview and `feat/admin-workspace-mvp`. Never use a Supabase secret or service-role key in a `VITE_` variable. Never copy credentials into this document or commit them to Git.
 
-## One remaining Auth dashboard step
+## Auth configuration status
 
-The connected Supabase tools available to this workflow can inspect the database but cannot update the project's Auth URL allow-list. To finish email-confirmation testing:
+The owner configured the test project's Site URL as `http://localhost:3000` and added both the exact Preview origin and its `/**` path pattern under **Redirect URLs**. The owner then completed signup, confirmed the email, signed in, and reached the trainee workspace; the browser also confirmed that a verification document was submitted. Keep the Production site's URL configuration and environment variables unchanged.
 
-1. Open the [test Supabase project's Auth URL Configuration](https://supabase.com/dashboard/project/dkqrpndqfwmyevylbbse/auth/url-configuration).
-2. Under **Redirect URLs**, add this exact URL:
-   `https://mentoro-platform-git-feat-admin-workspace-mvp-mustvfva17-3787.vercel.app`
-3. Also add this Preview-scoped wildcard for same-origin paths:
-   `https://mentoro-platform-git-feat-admin-workspace-mvp-mustvfva17-3787.vercel.app/**`
-4. Save. Leave Production site's URL configuration and environment variables unchanged.
-
-The signup flow explicitly sets `emailRedirectTo: window.location.origin`, so the exact Preview origin must be allow-listed. Do not enable a broad wildcard covering every Vercel deployment and do not change the test project's Site URL unless a separate reviewed need requires it.
+The app sets `emailRedirectTo: window.location.origin`, so the Preview origin must remain on the allow-list. Do not enable a broad wildcard covering every Vercel deployment. Vite's usual local development port is `5173`; add a localhost redirect only if local Auth testing is needed.
 
 
 ## Testing the admin review workflow safely
