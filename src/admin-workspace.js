@@ -85,6 +85,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
               (doc.documentPreviewUrl
                 ? '<p><a class="button button--secondary button--small admin-document-link" href="' + escape(doc.documentPreviewUrl) + '" target="_blank" rel="noopener noreferrer">Open private document · link expires in 5 min</a></p>'
                 : '<p class="empty-inline">Private document preview is unavailable. Check the bucket policy and stored object path.</p>') +
+              '<label class="field-label" for="verification-note-' + escape(doc.id) + '">Reason for requesting a new document</label><textarea id="verification-note-' + escape(doc.id) + '" data-verification-note rows="2" maxlength="1000" placeholder="Explain what the trainee should correct"></textarea>' +
               '<div class="mentor-review-buttons"><button class="button button--primary button--small" type="button" data-verification-decision="APPROVE" data-trainee-id="' + escape(doc.trainee_profile_id) + '" data-document-id="' + escape(doc.id) + '">Approve trainee</button><button class="button button--secondary button--small" type="button" data-verification-decision="REJECT" data-trainee-id="' + escape(doc.trainee_profile_id) + '" data-document-id="' + escape(doc.id) + '">Request new document</button></div></div></article>';
           }).join('') + '</div>' : '<div class="empty-state"><strong>No verification documents waiting</strong><p>New trainee submissions will appear here.</p></div>') +
         '</section>' +
@@ -109,7 +110,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
             ? '<form id="admin-offering-form" class="admin-form-card">' +
                 '<div class="admin-form-grid">' +
                   '<div class="field"><label for="admin-offering-title">Offering title</label><input id="admin-offering-title" name="title" maxlength="160" required placeholder="e.g. General Surgery Clinical Training"></div>' +
-                  '<div class="field"><label for="admin-offering-mentor">Assigned mentor</label><select id="admin-offering-mentor" name="mentorProfileId" required>' + mentors.map((mentor) => '<option value="' + escape(mentor.profile_id) + '">' + escape(mentor.display_name || mentor.professional_title || mentor.profile_id) + (mentor.professional_title ? ' · ' + escape(mentor.professional_title) : '') + '</option>').join('') + '</select></div>' +
+                  '<div class="field"><label for="admin-offering-mentor">Assigned mentor</label><select id="admin-offering-mentor" name="mentorProfileId" required>' + mentors.map((mentor) => '<option value="' + escape(mentor.profile_id) + '" data-is-public="' + String(mentor.is_public) + '">' + escape(mentor.display_name || mentor.professional_title || mentor.profile_id) + (mentor.professional_title ? ' · ' + escape(mentor.professional_title) : '') + (mentor.is_public ? ' · public' : ' · profile not public') + '</option>').join('') + '</select></div>' +
                   '<div class="field"><label for="admin-offering-specialty">Specialty</label><select id="admin-offering-specialty" name="specialtyId" required>' + specialties.map((specialty) => '<option value="' + escape(specialty.id) + '">' + escape(specialty.name_en || specialty.name_ar || 'Specialty') + '</option>').join('') + '</select></div>' +
                   '<div class="field"><label for="admin-offering-template">Logbook template version</label><select id="admin-offering-template" name="templateVersionId" required>' + templateVersions.map((version) => '<option value="' + escape(version.id) + '" data-specialty-id="' + escape(version.template.specialty_id) + '" data-template-status="' + escape(version.status) + '" data-assignable="' + String(version.is_assignable) + '">' + escape(version.template.title || version.template.slug) + ' · v' + escape(version.version_number) + ' · ' + escape(version.status) + (version.is_assignable ? ' · assignable' : ' · not assignable') + '</option>').join('') + '</select></div>' +
                   '<div class="field"><label for="admin-offering-mode">Delivery mode</label><select id="admin-offering-mode" name="deliveryMode" required><option value="IN_PERSON">In person</option><option value="ONLINE">Online</option><option value="HYBRID">Hybrid</option></select></div>' +
@@ -124,7 +125,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
                 (!templateVersions.length ? 'Add an active logbook template and version before creating an offering.' : '') +
                 '</p></div>') +
         '</section>' +
-        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">TRAINING OPERATIONS</p><h2>Published offerings & slots</h2></div><span class="count-badge">' + offerings.length + '</span></div>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">TRAINING OPERATIONS</p><h2>Training offerings & slots</h2></div><span class="count-badge">' + offerings.length + '</span></div>' +
           (offerings.length ? '<div class="mentor-queue-grid">' + offerings.map((offering) => {
             const mentor = offering.mentor_profiles || {};
             const specialty = offering.specialties || {};
@@ -177,6 +178,12 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
           showMessage('This logbook template version is not published and assignable. Create a draft offering or select an assignable version.', 'error');
           return;
         }
+        const mentorOption = [...offeringForm.querySelector('[name="mentorProfileId"]').options]
+          .find((option) => option.value === mentorProfileId);
+        if (publishNow && mentorOption?.dataset.isPublic !== 'true') {
+          showMessage('This mentor profile is not public yet. Create a draft offering or make the approved mentor profile public first.', 'error');
+          return;
+        }
         const button = offeringForm.querySelector('button[type="submit"]');
         busy(button, true, publishNow ? 'Publishing offering…' : 'Creating draft…');
         const { error } = await supabase.rpc('admin_create_training_offering', {
@@ -203,7 +210,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       const traineeId = button.dataset.traineeId;
       const documentId = button.dataset.documentId;
       const decision = button.dataset.verificationDecision;
-      const reason = decision === 'REJECT' ? 'Please upload a clearer or valid university verification document.' : '';
+      const reason = decision === 'REJECT' ? (card?.querySelector('[data-verification-note]')?.value?.trim() || '') : '';
       if (!traineeId || !documentId || !['APPROVE', 'REJECT'].includes(decision)) return;
       if (decision === 'REJECT' && !reason) {
         showMessage('Add a short reason when requesting a new document.', 'error');
