@@ -56,6 +56,16 @@ After applying this migration to the **test project only**, read-only checks con
 
 The security advisor had no lints, but its result did not reveal this permission issue; direct privilege inspection was necessary.
 
+## Remaining default-privilege ownership issue
+
+The live default-ACL inventory also reports broad defaults for objects created by role `supabase_admin` in schema `public`:
+
+- Future tables: grants to `anon`, `authenticated`, and `service_role`.
+- Future sequences: grants to `anon`, `authenticated`, and `service_role`.
+- Future functions in `public`: EXECUTE grants to `anon`, `authenticated`, and `service_role`.
+
+The current migration connection is `postgres` and does not have membership in `supabase_admin`, so it cannot change that role's default privileges. This is a **follow-up for a Supabase project owner** to review and harden in a controlled way. No attempt was made to bypass role ownership. The existing objects in the current app schema were separately checked and do not inherit those permissions automatically; the concern is future objects created by that role.
+
 ## Findings and limits
 
 - The database contains 17 public tables and helper routines/policies. Reconstructing a migration from current schema alone can lose historical intent, ordering, grants, triggers, storage policies, and edge-case safeguards.
