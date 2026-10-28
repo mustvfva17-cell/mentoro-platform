@@ -71,12 +71,23 @@ if (submissionSource !== null) {
 }
 
 const provisioningCallCount = frontend.split("supabase.rpc('provision_current_trainee'").length - 1;
+const roleResolverCallCount = frontend.split('resolveWorkspaceRole(').length - 1;
 if (provisioningCallCount !== 1 ||
     !frontend.includes("from('profile_roles')") ||
     !frontend.includes(".is('revoked_at', null)") ||
-    !frontend.includes("item.role === 'TRAINEE'") ||
-    (frontend.split('requireTraineeWorkspace(').length - 1) !== 4) {
-  throw new Error('Existing platform accounts must be role-checked before trainee provisioning.');
+    !frontend.includes("roles.has('TRAINEE')") ||
+    !frontend.includes("roles.has('MENTOR')") ||
+    !frontend.includes("roles.has('ADMIN')") ||
+    !frontend.includes("roles.has('SUPER_ADMIN')") ||
+    !frontend.includes("if (role === 'MENTOR') return renderMentorDashboard(user);") ||
+    !frontend.includes("return renderAdminWorkspace(user);") ||
+    roleResolverCallCount !== 4) {
+  throw new Error('Existing platform accounts must be role-checked and routed without cross-role provisioning.');
+}
+if (!frontend.includes("supabase.rpc('mentor_review_my_application'") ||
+    !frontend.includes('data-mentor-decision="APPROVE"') ||
+    !frontend.includes('data-mentor-decision="REJECT"')) {
+  throw new Error('Mentor decisions must use the scoped current-user review RPC.');
 }
 
 if (!frontend.includes('const instanceRelation = enrollment.logbook_instances;') ||
