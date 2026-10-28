@@ -143,6 +143,22 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
             '</div><button class="button button--primary" type="submit">Save template draft</button></form>' :
             '<div class="empty-state"><strong>No active specialties</strong><p>Add an active specialty before drafting a logbook template.</p></div>') +
         '</section>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">CLINICAL GOVERNANCE</p><h2>Logbook template review</h2></div><span class="count-badge">' + allTemplateVersions.filter((version) => version.status === 'DRAFT').length + '</span></div>' +
+          '<p class="workspace-note">Review the schema and clinical source notes before publishing. Publication makes this version assignable to new training offerings; it does not change existing logbook instances.</p>' +
+          (allTemplateVersions.filter((version) => version.status === 'DRAFT').length
+            ? '<div class="mentor-queue-grid">' + allTemplateVersions.filter((version) => version.status === 'DRAFT').map((version) =>
+              '<article class="activity-card admin-template-review-card" data-template-review-card="' + escape(version.id) + '">' +
+                '<div class="activity-main"><span class="specialty-label">' + escape(version.template?.slug || 'Logbook template') + ' · v' + escape(version.version_number) + '</span>' +
+                '<h3>' + escape(version.template?.title || 'Untitled template') + '</h3>' +
+                '<p>' + escape(version.template?.description || 'No description provided.') + '</p>' +
+                '<p><strong>Clinical source / notes</strong><br>' + escape(version.source_notes || 'Missing clinical source notes.') + '</p>' +
+                '<p><strong>Fields (' + version.fields.length + ')</strong><br>' + escape(version.fields.map((field) => field.label + ' · ' + field.type + (field.required ? ' · required' : '')).join(', ') || 'No valid structured fields') + '</p>' +
+                '<label class="field-label" for="template-review-' + escape(version.id) + '">Clinical review decision / notes</label>' +
+                '<textarea id="template-review-' + escape(version.id) + '" data-template-review-notes rows="3" minlength="20" maxlength="4000" required placeholder="Record what was reviewed, the clinical source/curriculum, and any limitations."></textarea>' +
+                '<button class="button button--primary" type="button" data-publish-template="' + escape(version.id) + '"' + (version.fields.length ? '' : ' disabled') + '>Approve review & publish version</button>' +
+              '</div></article>').join('') + '</div>'
+            : '<div class="empty-state"><strong>No template drafts awaiting review</strong><p>New drafts will appear here for clinical review before they can be assigned to training.</p></div>') +
+        '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">TRAINING SETUP</p><h2>Create training offering</h2></div><span class="status-chip status-chip--neutral">Admin only</span></div>' +
           '<p class="workspace-note">Create a draft offering while its logbook template is being prepared, or publish immediately when the mentor is approved/public and the matching template version is published and assignable. The database validates all constraints.</p>' +
           (mentors.length && specialties.length && templateVersions.length
@@ -224,6 +240,30 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         showMessage('Logbook template draft saved. It is not published or assignable yet.', 'success');
       });
     }
+
+    document.querySelectorAll('[data-publish-template]').forEach((button) => button.addEventListener('click', async () => {
+      const card = button.closest('[data-template-review-card]');
+      const versionId = button.dataset.publishTemplate;
+      const reviewNotes = card?.querySelector('[data-template-review-notes]')?.value?.trim() || '';
+      if (!versionId || reviewNotes.length < 20) {
+        showMessage('Add substantive clinical review notes (at least 20 characters) before publication.', 'error');
+        return;
+      }
+      const confirmed = window.confirm('Publish this reviewed logbook template version? It will become assignable to new training offerings.');
+      if (!confirmed) return;
+      busy(button, true, 'Publishing reviewed version…');
+      const { error } = await supabase.rpc('admin_publish_logbook_template_version', {
+        p_version_id: versionId,
+        p_review_notes: reviewNotes
+      });
+      if (error) {
+        showMessage((errorText || ((err) => err?.message || 'Could not publish this template version.'))(error), 'error');
+        busy(button, false);
+        return;
+      }
+      await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
+      showMessage('Template version published and made assignable. Existing logbook instances remain attached to their original version.', 'success');
+    }));
 
     const offeringForm = document.querySelector('#admin-offering-form');
     if (offeringForm) {
