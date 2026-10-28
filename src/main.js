@@ -12,6 +12,13 @@ const esc = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({
 const dateTime = (value) => value ? new Date(value).toLocaleString(undefined, {
   dateStyle: 'medium', timeStyle: 'short'
 }) : 'Date to be announced';
+const localDateISO = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 const message = (text, kind = 'info') => {
   const node = document.querySelector('#notice');
   if (!node) return;
@@ -281,7 +288,7 @@ function logbookCard(enrollment) {
         <form class="entry-form" data-instance-id="${esc(instance.id)}">
           <label for="entry-title-${esc(instance.id)}">Add a clinical learning entry</label>
           <input id="entry-title-${esc(instance.id)}" name="title" placeholder="e.g. Observed central line insertion" maxlength="160" required>
-          <div class="entry-form-row"><input name="date" type="date" aria-label="Activity date" required value="${new Date().toISOString().slice(0,10)}"><button class="button button--secondary button--small" type="submit">Save draft</button></div>
+          <div class="entry-form-row"><input name="date" type="date" aria-label="Activity date" required value="${localDateISO()}"><button class="button button--secondary button--small" type="submit">Save draft</button></div>
         </form>
         ${entries.length ? `<div class="entry-list">${entries.slice(0,4).map((entry) => `<div class="entry-row"><span class="entry-dot entry-dot--${entry.status === 'APPROVED' ? 'good' : 'neutral'}"></span><div><strong>${esc(entry.title)}</strong><small>${esc(entry.entry_date)} · ${esc(entry.status.replaceAll('_',' '))}</small></div>${entry.status === 'DRAFT' ? `<button class="text-button" data-submit-entry="${esc(entry.id)}">Submit</button>` : ''}</div>`).join('')}</div>` : '<p class="empty-inline">Your first entry will appear here.</p>'}
       ` : '<p class="empty-inline">The logbook template is not yet attached to this training.</p>'}
@@ -413,22 +420,26 @@ async function start() {
     message('Preview is not connected to Supabase yet. Authentication will work after the two public Vite environment variables are configured.', 'error');
     return;
   }
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) {
-    try {
+
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+
+    if (session?.user) {
       if (await requireTraineeWorkspace(session.user)) {
         await renderDashboard(session.user);
       }
-    } catch (error) {
+    } else {
       renderAuth();
-      message(errorText(error), 'error');
     }
-  } else {
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) renderAuth();
+    });
+  } catch (error) {
     renderAuth();
+    message(errorText(error), 'error');
   }
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT' || !session) renderAuth();
-  });
 }
 
 start();
