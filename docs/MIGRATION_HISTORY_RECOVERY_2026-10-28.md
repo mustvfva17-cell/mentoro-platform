@@ -15,7 +15,7 @@ Recover a reproducible database history for MENTORO, verify its existing test sc
 
 ## Migration history in the database
 
-The test database currently reports these twenty applied migration records. Only sixteen matching migration files are currently present on this branch; four newer records were discovered during the latest verification and their original SQL files are missing from all branches checked so far:
+The test database currently reports these twenty applied migration records. The recovery branch initially contained sixteen matching SQL migration files. During review, the four remaining source files were found in the stacked `feat/mentor-workspace-mvp` branch and copied byte-for-byte into this recovery branch. The database ledger stores version/name metadata only, so this source recovery does not independently prove that the test database originally received identical SQL bytes:
 
 | Version | Name | SQL file in recovery branch? |
 | --- | --- | --- |
@@ -35,12 +35,14 @@ The test database currently reports these twenty applied migration records. Only
 | 20261028101524 | revoke_submission_timestamp_client_write | Present |
 | 20261028103649 | prevent_nontrainee_self_provisioning | Present |
 | 20261028113918 | revoke_browser_maintain_privilege | Present |
-| 20261028115852 | mentor_scoped_application_inbox | **Missing — recover original SQL** |
-| 20261028115928 | secure_mentor_inbox_wrapper | **Missing — recover original SQL** |
-| 20261028120703 | logbook_review_return_workflow | **Missing — recover original SQL** |
-| 20261028121405 | fix_returned_submission_trigger_conditions | **Missing — recover original SQL** |
+| 20261028115852 | mentor_scoped_application_inbox | Recovered from stacked branch (`f96bcb62d69c7c59ffe6c289c795dbffb1d19802) |
+| 20261028115928 | secure_mentor_inbox_wrapper | Recovered from stacked branch (`29f1786fb41d3a41908a2cb0cde846b47b29fcd0) |
+| 20261028120703 | logbook_review_return_workflow | Recovered from stacked branch (`5f3694760eb0999ef500854075f842c5dedaa209) |
+| 20261028121405 | fix_returned_submission_trigger_conditions | Recovered from stacked branch (`4c02f9fd8b0cb4338c292b67bf426f17b5fa632d) |
 
 The first five migration records existed in the database history but were absent from the trainee-auth branch. The SQL files were recovered from the existing `feature/independent-training-enrollments` branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
+
+The four later migration files were recovered from the stacked `feat/mentor-workspace-mvp` branch and copied into this branch without altering their SQL bodies. Their source blob SHAs are recorded in the table above. This makes the repository history complete for the twenty version records currently in the test database, but the database metadata alone cannot prove the exact original SQL bytes that were executed. Do not re-apply these files to the existing test database; use an isolated disposable database for clean-room migration replay.
 
 ## Privilege audit and fix
 
