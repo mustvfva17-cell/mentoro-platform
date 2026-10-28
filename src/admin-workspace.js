@@ -65,6 +65,19 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
     });
     // Only active templates may be selected for draft offerings. Inactive drafts remain visible in the review queue.
     const templateVersions = allTemplateVersions.filter((version) => version.template?.is_active);
+    const latestTemplateById = new Map();
+    for (const version of allTemplateVersions) {
+      if (!version.template?.id) continue;
+      const previous = latestTemplateById.get(version.template.id);
+      if (!previous || Number(version.version_number) > Number(previous.latestVersion.version_number)) {
+        latestTemplateById.set(version.template.id, { template: version.template, latestVersion: version });
+      }
+    }
+    const existingTemplates = [...latestTemplateById.values()]
+      .sort((a, b) => String(a.template.title || a.template.slug).localeCompare(String(b.template.title || b.template.slug)));
+    const initialTemplateVersion = existingTemplates[0]?.latestVersion || null;
+    const initialVersionSchema = JSON.stringify(initialTemplateVersion?.schema_definition || { fields: [] }, null, 2);
+    const initialVersionLayout = JSON.stringify(initialTemplateVersion?.template_definition || { sections: [] }, null, 2);
     const applications = applicationResult.data || [];
     const offerings = offeringResult.data || [];
     const pendingSlots = (offering) => (offering.training_slots || []).filter((slot) => slot.status === 'OPEN').length;
@@ -143,6 +156,19 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
             '</div><button class="button button--primary" type="submit">Save template draft</button></form>' :
             '<div class="empty-state"><strong>No active specialties</strong><p>Add an active specialty before drafting a logbook template.</p></div>') +
         '</section>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">VERSION CONTROL</p><h2>Create a new template version</h2></div><span class="status-chip status-chip--neutral">Immutable versions</span></div>' +
+          '<p class="workspace-note">Create the next draft version under an existing template. This keeps older published versions linked to their original training records; saving a version does not publish it or make it assignable.</p>' +
+          (existingTemplates.length ? '<form id="admin-template-version-form" class="admin-form-card">' +
+            '<div class="admin-form-grid">' +
+              '<div class="field admin-form-wide"><label for="admin-template-version-base">Existing template</label><select id="admin-template-version-base" name="templateId" required>' +
+                existingTemplates.map(({ template, latestVersion }) => '<option value="' + escape(template.id) + '">' + escape(template.title || template.slug) + ' · ' + escape(template.slug) + ' · latest v' + escape(latestVersion.version_number) + ' (' + escape(latestVersion.status) + ')</option>').join('') +
+              '</select></div>' +
+              '<div class="field admin-form-wide"><label for="admin-version-schema">New version field schema (JSON)</label><textarea id="admin-version-schema" name="schemaDefinition" rows="8" required spellcheck="false">' + escape(initialVersionSchema) + '</textarea></div>' +
+              '<div class="field admin-form-wide"><label for="admin-version-layout">New version sections (JSON)</label><textarea id="admin-version-layout" name="templateDefinition" rows="4" required spellcheck="false">' + escape(initialVersionLayout) + '</textarea></div>' +
+              '<div class="field admin-form-wide"><label for="admin-version-source">New version source / change / reviewer notes</label><textarea id="admin-version-source" name="sourceNotes" rows="3" minlength="20" maxlength="4000" required placeholder="Describe this version’s source, changes, and required clinical reviewer."></textarea></div>' +
+            '</div><button class="button button--primary" type="submit">Save next version as draft</button></form>' :
+            '<div class="empty-state"><strong>No existing templates to version</strong><p>Create a new specialty template first.</p></div>') +
+        '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">CLINICAL GOVERNANCE</p><h2>Logbook template review</h2></div><span class="count-badge">' + allTemplateVersions.filter((version) => version.status === 'DRAFT').length + '</span></div>' +
           '<p class="workspace-note">Review the schema and clinical source notes before publishing. Publication makes this version assignable to new training offerings; it does not change existing logbook instances.</p>' +
           (allTemplateVersions.filter((version) => version.status === 'DRAFT').length
@@ -194,6 +220,58 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       '</main>',
       user
     );
+
+    const templateVersionForm = document.querySelector('#admin-template-version-form');
+    if (templateVersionForm) {
+      const baseSelect = templateVersionForm.querySelector('[name="templateId"]');
+      const schemaInput = templateVersionForm.querySelector('[name="schemaDefinition"]');
+      const layoutInput = templateVersionForm.querySelector('[name="templateDefinition"]');
+      const latestByTemplateId = new Map(existingTemplates.map((item) => [item.template.id, item.latestVersion]));
+      const refreshVersionDefaults = () => {
+        const latest = latestByTemplateId.get(baseSelect?.value);
+        if (!latest) return;
+        schemaInput.value = JSON.stringify(latest.schema_definition || { fields: [] }, null, 2);
+        layoutInput.value = JSON.stringify(latest.template_definition || { sections: [] }, null, 2);
+      };
+      baseSelect?.addEventListener('change', refreshVersionDefaults);
+      templateVersionForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(templateVersionForm);
+        let schemaDefinition;
+        let templateDefinition;
+        try {
+          schemaDefinition = JSON.parse(String(data.get('schemaDefinition') || ''));
+          templateDefinition = JSON.parse(String(data.get('templateDefinition') || ''));
+        } catch {
+          showMessage('New version schema and sections must be valid JSON.', 'error');
+          return;
+        }
+        const templateId = String(data.get('templateId') || '');
+        const sourceNotes = String(data.get('sourceNotes') || '').trim();
+        if (!templateId || sourceNotes.length < 20 ||
+            !schemaDefinition || typeof schemaDefinition !== 'object' || Array.isArray(schemaDefinition) ||
+            !Array.isArray(schemaDefinition.fields) || !schemaDefinition.fields.length ||
+            !templateDefinition || typeof templateDefinition !== 'object' || Array.isArray(templateDefinition)) {
+          showMessage('Select a template, define at least one field, provide valid sections, and add source/reviewer notes.', 'error');
+          return;
+        }
+        const button = templateVersionForm.querySelector('button[type="submit"]');
+        busy(button, true, 'Saving version draft…');
+        const { error } = await supabase.rpc('admin_create_logbook_template_version_draft', {
+          p_template_id: templateId,
+          p_schema_definition: schemaDefinition,
+          p_template_definition: templateDefinition,
+          p_source_notes: sourceNotes
+        });
+        if (error) {
+          showMessage((errorText || ((err) => err?.message || 'Could not create this template version.'))(error), 'error');
+          busy(button, false);
+          return;
+        }
+        await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
+        showMessage('The next template version was saved as a draft. Older versions and existing logbooks were left unchanged.', 'success');
+      });
+    }
 
     const templateForm = document.querySelector('#admin-template-form');
     if (templateForm) {
