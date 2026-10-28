@@ -5,6 +5,7 @@ const admin = await read('../src/admin-workspace.js');
 const wrappers = await read('../supabase/migrations/20261028062421_current_user_workflow_wrappers.sql');
 const adminSetup = await read('../supabase/migrations/20261028062818_mentor_reviews_and_admin_training_setup.sql');
 const schema = await read('../supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql');
+const legacyHtml = await read('../public/logbooks/medical-oncology/index.html');
 
 function check(condition, message) {
   if (!condition) throw new Error(`Admin workspace contract failed: ${message}`);
@@ -183,6 +184,23 @@ check(
   templateVersionDraftMigration.includes('IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()') &&
   publicationMigration.includes('IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()'),
   'public template RPCs use invoker wrappers; authenticated execution on private helpers is required for delegation, and each helper enforces the active-admin role'
+);
+
+check(
+  admin.includes('EXISTING HTML LOGBOOKS') &&
+  admin.includes('/logbooks/medical-oncology/index.html?mode=preview') &&
+  admin.includes('<details class="admin-advanced-template-details">'),
+  'existing HTML logbooks are surfaced first and the manual JSON authoring tools are optional/collapsed'
+);
+
+check(
+  legacyHtml.includes('id="roadmap"') &&
+  legacyHtml.includes('id="logbook"') &&
+  legacyHtml.includes('id="emergency"') &&
+  legacyHtml.includes("pageParams.get('mode')==='preview'") &&
+  legacyHtml.includes('mentoro_medical_oncology_preview_') &&
+  legacyHtml.includes('not linked to a confirmed training'),
+  'existing Medical Oncology HTML is preserved with isolated preview storage and a clear local-only warning'
 );
 
 console.log('Administrator workspace safety contracts passed.');
