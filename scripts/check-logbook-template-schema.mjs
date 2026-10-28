@@ -133,7 +133,28 @@ assert.ok(mentorReadOnlyRuntime.includes('function applyReadOnlyMode()'));
 assert.ok(mentorReadOnlyRuntime.includes("button.hasAttribute('data-view')||button.id==='themeToggle'"));
 assert.ok(mentorReadOnlyRuntime.includes('if(readonlyMode)return;'));
 assert.ok(mentorReadOnlyRuntime.includes('Read-only mentor review loaded.'));
-console.log('HTML templates use the original runtime in trainee cards and expose a guarded, non-writing mentor review mode.');
+for (const runtime of [mentorReadOnlyRuntime, generalSurgeryHtml]) {
+  assert.ok(runtime.includes('function renderMentorReviewPanel()'), 'HTML logbook is missing its item-level mentor review panel');
+  assert.ok(runtime.includes('MENTORO_LOGBOOK_LOAD_REVIEWS'), 'HTML logbook is missing the review-load bridge');
+  assert.ok(runtime.includes('MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT'), 'HTML logbook is missing the review-result bridge');
+  assert.ok(runtime.includes('MENTORO_LOGBOOK_MENTOR_REVIEW'), 'HTML logbook is missing the review submission bridge');
+  assert.ok(runtime.includes('data-submit-mentor-review'), 'HTML logbook is missing the per-item review action');
+  assert.ok(runtime.includes('data-review-decision'), 'HTML logbook is missing decision selection');
+  assert.ok(runtime.includes('data-review-feedback'), 'HTML logbook is missing feedback capture');
+  assert.ok(runtime.includes('renderMentorReviewPanel()'), 'HTML logbook does not refresh the mentor review panel');
+}
+assert.ok(main.includes("'MENTORO_LOGBOOK_LOAD_REVIEWS'"), 'Parent bridge must load trusted review records');
+assert.ok(main.includes("'MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT'"), 'Parent bridge must return review results/errors');
+assert.ok(main.includes("'mentor_review_html_logbook_item'"), 'Parent bridge must call the trusted review RPC');
+const mentorReviewMigration = await read('supabase/migrations/20261028182751_mentor_review_html_logbook_items.sql');
+assert.ok(mentorReviewMigration.includes('CREATE TABLE public.logbook_html_item_reviews'));
+assert.ok(mentorReviewMigration.includes('app_private.get_my_logbook_html_item_reviews'));
+assert.ok(mentorReviewMigration.includes('app_private.mentor_review_html_logbook_item'));
+assert.ok(mentorReviewMigration.includes('v_actor_id <> v_mentor_id OR NOT app_private.is_mentor()'));
+assert.ok(mentorReviewMigration.includes('The selected item is not present in this training logbook'));
+assert.ok(mentorReviewMigration.includes("'VERIFIED', 'FEEDBACK', 'NEEDS_REVISION'"));
+assert.ok(htmlStateTest.includes('Mentor item review did not round-trip') || (await read('supabase/tests/logbook_html_state_integration.sql')).includes('Mentor item review did not round-trip'));
+console.log('Both legacy HTML logbooks expose item-level mentor decisions through the assigned-mentor-only review bridge.');
 
 console.log('Existing HTML logbook launch, origin-checked cloud state bridge, per-instance local cache, and revisioned RPC integration passed.');
 
