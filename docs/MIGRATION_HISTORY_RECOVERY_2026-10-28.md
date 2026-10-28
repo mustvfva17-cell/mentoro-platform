@@ -15,7 +15,7 @@ Recover a reproducible database history for MENTORO, verify its existing test sc
 
 ## Migration history in the database
 
-The test database currently reports these fifteen applied migration records:
+The test database currently reports these sixteen applied migration records:
 
 | Version | Name | SQL file in recovery branch? |
 | --- | --- | --- |
@@ -34,6 +34,7 @@ The test database currently reports these fifteen applied migration records:
 | 20261028100024 | fix_application_offering_slot_binding | Present |
 | 20261028101524 | revoke_submission_timestamp_client_write | Present |
 | 20261028103649 | prevent_nontrainee_self_provisioning | Present |
+| 20261028113918 | revoke_browser_maintain_privilege | Present |
 
 The first five migration records existed in the database history but were absent from the trainee-auth branch. The SQL files were recovered from the existing `feature/independent-training-enrollments` branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
 
@@ -70,7 +71,13 @@ The live default-ACL inventory also reports broad defaults for objects created b
 - Future sequences: grants to `anon`, `authenticated`, and `service_role`.
 - Future functions in `public`: EXECUTE grants to `anon`, `authenticated`, and `service_role`.
 
-The current migration connection is `postgres` and does not have membership in `supabase_admin`, so it cannot change that role's default privileges. This is a **follow-up for a Supabase project owner** to review and harden in a controlled way. No attempt was made to bypass role ownership. The existing objects in the current app schema were separately checked and do not inherit those permissions automatically; the concern is future objects created by that role.
+The current migration connection is `postgres` and catalog inspection confirms it is not a member of `supabase_admin`, so it cannot change that role's default privileges. This is a **follow-up for a Supabase project owner** to review and harden in a controlled way. No attempt was made to bypass role ownership. Existing public-table grants were inspected separately; the current-table `MAINTAIN` grant described below has now been revoked for browser roles. The concern that remains in this section is the broad defaults for future objects created by `supabase_admin`.
+
+## PostgreSQL 17 MAINTAIN privilege on existing tables
+
+PostgreSQL 17 added a table-level `MAINTAIN` privilege. A direct `has_table_privilege` inventory on `mentoro-platform-test` found that both `anon` and `authenticated` had `MAINTAIN` on all 17 public tables, even though their `TRUNCATE` privilege count was already zero. The earlier migration revoked `TRUNCATE`, `REFERENCES`, and `TRIGGER`, but did not account for `MAINTAIN`.
+
+Migration `20261028113918_revoke_browser_maintain_privilege.sql` conditionally revokes `MAINTAIN` from `anon` and `authenticated` on all existing public tables when the server version is PostgreSQL 17 or later; dynamic SQL keeps it parse-compatible with older PostgreSQL versions. It was applied to the **test project only**. The post-migration check returned zero `MAINTAIN` grants for both browser roles across all 17 public tables; both roles also retained zero `TRUNCATE` grants. The security advisor returned no findings after the change. This does not resolve the separate `supabase_admin` default-privilege ownership issue for future tables.
 
 ## Scoped logbook submission RPC
 
@@ -102,7 +109,7 @@ A read-only catalog comparison between the 17 tables declared by `20261028061628
 - All 35 explicit index names declared across the repository migration set exist in the test database.
 - All 22 public-schema RLS policies declared by the migrations match the live policy names and commands; the two Storage policies are also present.
 - All seven application-table triggers declared by the migrations are enabled in the live database.
-- The current ledger contains the 15 migration versions in this recovery sequence, with repository filenames matching the recorded version/name pairs.
+- The current ledger contains the 16 migration versions in this recovery sequence, with repository filenames matching the recorded version/name pairs.
 
 This establishes catalog-level consistency for these inventories, not a clean-room migration replay. It does not prove the recovered five SQL bodies were the exact scripts originally applied in the historical environment.
 
@@ -175,4 +182,4 @@ The GitHub Actions workflow now runs `npm run check:contracts` before the produc
 
 ## Current state
 
-The five missing historical migration files, nine subsequent hardening/repair migrations, and this audit note are present on the recovery branch. The helper-function ACL, verification-bucket limits, server-side submission timestamp trigger, application-to-slot RLS fix, and direct submitted_at write revocation were applied only to `mentoro-platform-test` and then checked through catalog queries and rollback-only functional tests. Production was not accessed or modified. No PR was merged and no production deployment was made.
+The five recovered historical migration files, ten subsequent hardening/repair migrations, the PostgreSQL 17 browser-privilege fix, and this audit note are present on the recovery branch. The helper-function ACL, verification-bucket limits, server-side submission timestamp trigger, application-to-slot RLS fix, and direct submitted_at write revocation were applied only to `mentoro-platform-test` and then checked through catalog queries and rollback-only functional tests. PR #1 was merged into `main` on 2026-10-28 at 11:21:59 UTC. PR #2 remains an open draft targeting `main`; this work session did not merge it. The `mentoro-platform-test` database alone was modified by the documented test migrations. Production was not accessed or modified during this work session, and no production deployment was initiated by this session.
