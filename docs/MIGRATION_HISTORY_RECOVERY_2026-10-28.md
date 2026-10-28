@@ -15,7 +15,7 @@ Recover a reproducible database history for MENTORO, verify its existing test sc
 
 ## Migration history in the database
 
-The test database currently reports these thirteen applied migration records:
+The test database currently reports these fourteen applied migration records:
 
 | Version | Name | SQL file in recovery branch? |
 | --- | --- | --- |
@@ -32,6 +32,7 @@ The test database currently reports these thirteen applied migration records:
 | 20261028093532 | enforce_server_submission_timestamp | Present |
 | 20261028094412 | fix_scoped_logbook_submission_rpc | Present |
 | 20261028100024 | fix_application_offering_slot_binding | Present |
+| 20261028102000 | revoke_submission_timestamp_client_write | Present |
 
 The first five migration records existed in the database history but were absent from the trainee-auth branch. The SQL files were recovered from the existing `feature/independent-training-enrollments` branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
 
@@ -74,13 +75,35 @@ The current migration connection is `postgres` and does not have membership in `
 
 The original `set_logbook_entry_submitted` function updated `updated_at` explicitly, but the least-privilege grants intentionally restrict browser UPDATE columns and a table trigger already maintains `updated_at`. That made the RPC inconsistent with the column grants.
 
-Migration `20261028094412_fix_scoped_logbook_submission_rpc.sql` changes the RPC to update only `status`; database triggers populate `submitted_at` and `updated_at`. The trainee UI now calls this scoped RPC instead of directly updating submission timestamps. The contract check also verifies that the UI uses the RPC and, when the corrective migration is present, that it does not directly write timestamp columns.
+Migration `20261028094412_fix_scoped_logbook_submission_rpc.sql` changes the RPC to update only `status`; database triggers populate `submitted_at` and `updated_at`. The trainee UI now calls this scoped RPC instead of directly updating submission timestamps. The contract check verifies that the UI uses the RPC and that the RPC does not directly update timestamp columns.
+
+## Least-privilege correction for submitted_at
+
+The original column-grant migration allowed `authenticated` to UPDATE `submitted_at`, even after the scoped submission RPC was changed to update only `status`. The row-level policy and BEFORE trigger protected the supported submission transition, so this was an unnecessary privilege rather than a demonstrated timestamp forgery path.
+
+Migration `20261028102000_revoke_submission_timestamp_client_write.sql` revokes direct browser UPDATE on `submitted_at`. Catalog validation then confirmed:
+- `authenticated` cannot UPDATE `submitted_at` or `updated_at`.
+- `authenticated` can still UPDATE `status`, as needed for the scoped submission RPC.
+- The server-side submission timestamp trigger remains enabled.
+
+A final rollback-only RPC test after this privilege change is required before calling the submission path fully verified against the updated grant set.
 
 ## Logbook submission timestamp integrity
 
 The trainee client previously sent `submitted_at` directly when transitioning an entry from `DRAFT` to `SUBMITTED`. A caller using the API directly could supply an arbitrary timestamp even though row ownership and state transitions were restricted.
 
 Migration `20261028093532_enforce_server_submission_timestamp.sql` adds a `BEFORE UPDATE` trigger that overwrites `submitted_at` with the database statement timestamp for the allowed `DRAFT` → `SUBMITTED` transition. The trigger function has no EXECUTE grants to browser roles and does not use `SECURITY DEFINER`; the trigger itself remains active. A read-only catalog check confirmed the trigger is enabled and direct EXECUTE is denied to both `anon` and `authenticated`.
+
+## Repository-to-test-database schema comparison
+
+A read-only catalog comparison between the 17 tables declared by `20261028061628_core_independent_enrollment_schema_v1.sql` and the live test database found:
+- All 17 tables exist with the same column names as the recovered core migration.
+- All 35 explicit index names declared across the repository migration set exist in the test database.
+- All 22 public-schema RLS policies declared by the migrations match the live policy names and commands; the two Storage policies are also present.
+- All seven application-table triggers declared by the migrations are enabled in the live database.
+- The current ledger contains the 14 migration versions in this recovery sequence, with repository filenames matching the recorded version/name pairs.
+
+This establishes catalog-level consistency for these inventories, not a clean-room migration replay. It does not prove the recovered five SQL bodies were the exact scripts originally applied in the historical environment.
 
 ## Application-to-slot RLS binding fix
 
@@ -133,4 +156,4 @@ The GitHub Actions workflow now runs `npm run check:contracts` before the produc
 
 ## Current state
 
-The five missing historical migration files, eight subsequent hardening/repair migrations, and this audit note are present on the recovery branch. The helper-function ACL, verification-bucket limits, server-side submission timestamp trigger, and application-to-slot RLS fix were applied only to `mentoro-platform-test` and then checked through catalog queries and rollback-only functional tests. Production was not accessed or modified. No PR was merged and no production deployment was made.
+The five missing historical migration files, nine subsequent hardening/repair migrations, and this audit note are present on the recovery branch. The helper-function ACL, verification-bucket limits, server-side submission timestamp trigger, application-to-slot RLS fix, and direct submitted_at write revocation were applied only to `mentoro-platform-test` and then checked through catalog queries and rollback-only functional tests. Production was not accessed or modified. No PR was merged and no production deployment was made.
