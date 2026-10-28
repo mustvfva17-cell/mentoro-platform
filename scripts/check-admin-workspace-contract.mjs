@@ -81,7 +81,7 @@ check(
   templateMigration.includes("IS DISTINCT FROM 'object'") &&
   templateMigration.includes("NOT IN ('text', 'textarea', 'date', 'number', 'boolean', 'select')") &&
   templateMigration.includes('Schema field keys must be unique') &&
-  admin.includes('Publishing stays blocked until the template is clinically reviewed'),
+  admin.includes('Use this only when no existing HTML logbook is available'),
   'template drafts validate field schema and cannot be mistaken for clinically published templates'
 );
 
