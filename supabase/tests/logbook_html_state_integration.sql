@@ -194,11 +194,19 @@ BEGIN
     RAISE EXCEPTION 'Mentor item review did not return the saved decision';
   END IF;
 
+  v_review := public.mentor_review_html_logbook_item(
+    v_instance_a, 'session-fixture', 'session', 'NEEDS_REVISION', 'Add a clearer clinical reasoning summary.'
+  );
+  IF v_review ->> 'decision' <> 'NEEDS_REVISION' THEN
+    RAISE EXCEPTION 'Second mentor decision was not saved';
+  END IF;
+
   v_reviews := public.get_my_logbook_html_item_reviews(v_instance_a);
   IF jsonb_array_length(v_reviews) <> 1
      OR v_reviews -> 0 ->> 'item_id' <> 'session-fixture'
-     OR v_reviews -> 0 ->> 'decision' <> 'FEEDBACK' THEN
-    RAISE EXCEPTION 'Mentor item review did not round-trip';
+     OR v_reviews -> 0 ->> 'decision' <> 'NEEDS_REVISION'
+     OR v_reviews -> 0 ->> 'feedback' <> 'Add a clearer clinical reasoning summary.' THEN
+    RAISE EXCEPTION 'Latest mentor item review did not win deterministic ordering';
   END IF;
 
   v_rejected := false;
