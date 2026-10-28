@@ -16,10 +16,10 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
   try {
     const [verificationResult, applicationResult, offeringResult, profileResult] = await Promise.all([
       supabase.from('verification_documents')
-        .select('id,trainee_profile_id,document_type,status,created_at,review_note,profiles:trainee_profile_id(id,email,full_name,account_status),trainee_profiles:trainee_profile_id(university_name,faculty_name,year_of_study)')
+        .select('id,trainee_profile_id,document_type,status,created_at,review_note,trainee_profiles(university_name,faculty_name,year_of_study,profiles(full_name,email,account_status))')
         .eq('status', 'PENDING').order('created_at', { ascending: true }).limit(100),
       supabase.from('training_applications')
-        .select('id,status,created_at,applicant_note,profiles:trainee_profile_id(full_name,email),training_offerings(title,delivery_mode,mentor_profiles(display_name,professional_title),specialties(name_en)),training_slots(starts_at,ends_at,capacity)')
+        .select('id,status,created_at,applicant_note,trainee_profiles(university_name,faculty_name,year_of_study,profiles(full_name,email)),training_offerings(title,delivery_mode,mentor_profiles(display_name,professional_title),specialties(name_en)),training_slots(starts_at,ends_at,capacity)')
         .eq('status', 'MENTOR_APPROVED').order('created_at', { ascending: true }).limit(100),
       supabase.from('training_offerings')
         .select('id,title,status,delivery_mode,mentor_profile_id,mentor_profiles(display_name,professional_title),specialties(name_en),training_slots(id,starts_at,ends_at,status,capacity)')
@@ -47,8 +47,8 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">IDENTITY & ACCESS</p><h2>Trainee verification</h2></div><span class="count-badge">' + verificationDocs.length + '</span></div>' +
           '<p class="workspace-note">Approving verification unlocks trainee applications. Review the private document in the authorized verification workflow before deciding.</p>' +
           (verificationDocs.length ? '<div class="mentor-queue-grid">' + verificationDocs.map((doc) => {
-            const profile = doc.profiles || {};
             const trainee = doc.trainee_profiles || {};
+            const profile = trainee.profiles || {};
             return '<article class="activity-card admin-verification-card" data-verification-card>' +
               '<div class="activity-main"><span class="specialty-label">University ID · ' + escape(doc.document_type || 'DOCUMENT') + '</span><h3>' + escape(profile.full_name || profile.email || 'Trainee') + '</h3>' +
               '<p>' + escape([trainee.university_name, trainee.faculty_name, trainee.year_of_study ? 'Year ' + trainee.year_of_study : null].filter(Boolean).join(' · ') || 'Trainee academic details not provided') + '</p>' +
@@ -60,7 +60,8 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">BOOKING CONTROL</p><h2>Mentor-approved applications</h2></div><span class="count-badge">' + applications.length + '</span></div>' +
           '<p class="workspace-note">Confirming an application creates its enrollment and its own independent logbook instance. Confirmation is performed by a server-checked administrator RPC.</p>' +
           (applications.length ? '<div class="mentor-queue-grid">' + applications.map((item) => {
-            const profile = item.profiles || {};
+            const trainee = item.trainee_profiles || {};
+            const profile = trainee.profiles || {};
             const offering = item.training_offerings || {};
             const mentor = offering.mentor_profiles || {};
             const specialty = offering.specialties || {};
