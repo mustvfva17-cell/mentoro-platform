@@ -80,20 +80,30 @@ window.addEventListener('message', async (event) => {
       });
       return;
     }
-    const { data: review, error } = await supabase.rpc('mentor_review_html_logbook_item', {
-      p_instance_id: instanceId,
-      p_item_id: event.data.itemId,
-      p_item_type: event.data.itemType,
-      p_decision: event.data.decision,
-      p_feedback: event.data.feedback || null
-    });
-    postHTMLLogbookMessage(instanceId, {
-      type: 'MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT',
-      ok: !error,
-      review: error ? null : review,
-      itemId: event.data.itemId,
-      error: error?.message || null
-    });
+    try {
+      const { data: review, error } = await supabase.rpc('mentor_review_html_logbook_item', {
+        p_instance_id: instanceId,
+        p_item_id: event.data.itemId,
+        p_item_type: event.data.itemType,
+        p_decision: event.data.decision,
+        p_feedback: event.data.feedback || null
+      });
+      postHTMLLogbookMessage(instanceId, {
+        type: 'MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT',
+        ok: !error,
+        review: error ? null : review,
+        itemId: event.data.itemId,
+        error: error?.message || null
+      });
+    } catch (error) {
+      postHTMLLogbookMessage(instanceId, {
+        type: 'MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT',
+        ok: false,
+        review: null,
+        itemId: event.data.itemId,
+        error: error?.message || 'Could not save the mentor review. Check your connection and try again.'
+      });
+    }
     return;
   }
 
