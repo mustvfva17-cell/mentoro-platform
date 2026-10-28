@@ -20,10 +20,11 @@ The initial privilege audit found `TRUNCATE`, `REFERENCES`, and `TRIGGER` grants
 
 Applied to the **test database only**:
 
-1. Migration `20261028090042_restrict_current_browser_table_privileges`: revoked those three privileges from `anon` and `authenticated` on current public tables; granted only the `INSERT`/`UPDATE` permissions required by the existing narrow RLS policies for logbook entries, training applications, and entry reviews.
+1. Migration `20261028090042_restrict_current_browser_table_privileges`: revoked those three privileges from `anon` and `authenticated` on current public tables.
 2. Migration `20261028090059_restrict_postgres_default_table_privileges`: revoked broad default table privileges for future public tables created by the `postgres` role.
+3. Migration `20261028090137_least_privilege_browser_write_columns`: granted only the required column-level writes for logbook entries, training applications, and mentor reviews. Clients cannot insert application decision fields or overwrite review/audit timestamps.
 
-Post-migration checks returned no remaining `TRUNCATE`, `REFERENCES`, or `TRIGGER` grants to either browser role on current public tables. Effective privilege checks confirmed that the intended trainee workflow writes are granted and that `authenticated` cannot truncate `public.profiles`.
+Post-migration checks returned no remaining `TRUNCATE`, `REFERENCES`, or `TRIGGER` grants to either browser role on current public tables. Effective privilege checks confirmed that the intended column-level trainee workflow writes are granted, that clients cannot insert admin decision fields, and that `authenticated` cannot truncate `public.profiles`.
 
 **Remaining database follow-up:** the connected database role cannot alter default privileges owned by `supabase_admin`. Those defaults must be reviewed by an owner with the required privileges, particularly before creating additional tables as that role. This audit did not change or claim to fix that owner-specific default ACL.
 
