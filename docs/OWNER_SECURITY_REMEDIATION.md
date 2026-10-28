@@ -6,12 +6,14 @@ Scope: the isolated `mentoro-platform-test` Supabase project only. These observa
 
 ## Verified current state
 
-- The test database migration ledger contains 15 entries, matching the migration filenames recorded on the recovery branch.
+- The test database migration ledger contains 16 entries, matching the migration filenames recorded on the recovery branch.
 - Supabase Security Advisor returned no security lints at the time of this check.
-- All 17 current application tables in `public` have no `TRUNCATE`, `REFERENCES`, or `TRIGGER` privilege for `anon` or `authenticated`.
+- All 17 current application tables in `public` have no `MAINTAIN`, `TRUNCATE`, `REFERENCES`, or `TRIGGER` privilege for `anon` or `authenticated`. Migration `20261028113918_revoke_browser_maintain_privilege.sql` was applied to the test project; the post-migration privilege query returned zero `MAINTAIN` and zero `TRUNCATE` grants for both browser roles.
 - The application database session's `postgres` role has tightened default table privileges in `public`; the current role is not a member of `supabase_admin` and cannot `SET ROLE supabase_admin`.
 - `pg_default_acl` still shows `supabase_admin` defaults in `public` granting browser roles privileges on future objects: broad table privileges, sequence privileges, and function `EXECUTE`. This remains an owner-level/platform-role review item, not a verified exploit of any current application table.
 - `app_private.is_platform_admin()` is executable by `anon` in the current ACL. This grant is presently used by RLS policies shared with anonymous readers, which evaluate the admin predicate while applying public-read rules. Do not revoke it in isolation; if changing it, first redesign the affected policies and rerun anonymous-read plus authenticated-role tests.
+
+The PostgreSQL 17 `MAINTAIN` gap on existing application tables is closed on the test project. The separate default-ACL concern below remains open because it affects future objects created by `supabase_admin`, not the current 17 application tables.
 
 ## Required owner-level decision: future defaults for objects owned by supabase_admin
 
