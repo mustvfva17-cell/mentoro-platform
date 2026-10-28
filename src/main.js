@@ -277,7 +277,11 @@ function logbookCard(enrollment) {
   const instanceRelation = enrollment.logbook_instances;
   // enrollment_id is unique in logbook_instances, so PostgREST may embed this as an object.
   const instance = Array.isArray(instanceRelation) ? instanceRelation[0] : instanceRelation;
-  const entries = instance?.logbook_entries || [];
+  // PostgREST does not guarantee the order of nested entries; show the most recent activity first.
+  const entries = [...(instance?.logbook_entries || [])].sort((a, b) =>
+    String(b.entry_date || '').localeCompare(String(a.entry_date || '')) ||
+    String(b.created_at || '').localeCompare(String(a.created_at || ''))
+  );
   const draftCount = entries.filter((entry) => entry.status === 'DRAFT').length;
   return `
     <article class="logbook-card">
