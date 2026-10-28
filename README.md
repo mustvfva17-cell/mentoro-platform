@@ -47,7 +47,7 @@ npm run check:contracts
 npm run build
 ```
 
-The lockfile is committed and CI installs dependencies with `npm ci`. The migration-history guard rejects malformed filenames, duplicate version prefixes, empty SQL, and identical migration contents under different versions. The source-contract suite checks admin-only RPC usage, short-lived private document links, template schema validation, and safe logbook workflow boundaries. A rollback-only database test confirmed that valid payloads are accepted while missing required fields, unlisted select options, and unknown keys are rejected; the transaction left no test rows behind.
+The lockfile is committed and CI installs dependencies with `npm ci`. The migration-history guard rejects malformed filenames, duplicate version prefixes, empty SQL, and identical migration contents under different versions. The source-contract suite checks admin-only RPC usage, short-lived private document links, template schema validation, and safe logbook workflow boundaries. A rollback-only database test confirmed that valid payloads are accepted while missing required fields, unlisted select options, and unknown keys are rejected; the transaction left no test rows behind. A full, repeatable database integration script lives at `supabase/tests/logbook_entry_payload_validation.sql`; run it only against the test/disposable database. It wraps synthetic fixtures in `BEGIN`/`ROLLBACK` and tests required fields, select options, unknown keys, typed values, date validity, numeric bounds, and the 64 KiB payload limit.
 
 ## Preview environment
 
