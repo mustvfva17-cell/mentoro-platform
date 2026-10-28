@@ -26,6 +26,26 @@ The connected Supabase tools available to this workflow can inspect the database
 
 The signup flow explicitly sets `emailRedirectTo: window.location.origin`, so the exact Preview origin must be allow-listed. Do not enable a broad wildcard covering every Vercel deployment and do not change the test project's Site URL unless a separate reviewed need requires it.
 
+
+## Testing the admin review workflow safely
+
+The test database currently has one active `TRAINEE` role and no `ADMIN` or `SUPER_ADMIN` role. The already-used trainee account must stay a trainee; do not elevate that account to admin.
+
+1. In the Preview URL above, create a **second dedicated test account** using an email address you control. Confirm the email, then sign in once so MENTORO provisions its profile. Do not upload a verification document or submit a training application from this second account.
+2. Open the **test** project SQL Editor only: [mentoro-platform-test SQL Editor](https://supabase.com/dashboard/project/dkqrpndqfwmyevylbbse/sql/new).
+3. Execute the statement below, replacing the example address locally with the confirmed email for the dedicated test account. Do not send that email or the returned UUID in chat.
+
+```sql
+SELECT app_private.bootstrap_initial_super_admin('admin-test@example.com') AS admin_profile_id;
+```
+
+The migration intentionally provides no `public` RPC wrapper and revokes execution from `PUBLIC`, `anon`, `authenticated`, and `service_role`; it is callable only by a database owner/operator through the SQL Editor. It serializes concurrent attempts, refuses to run when an active platform administrator exists, requires exactly one confirmed identity with exactly one active trainee role, rejects accounts with verification/training activity, revokes that unused trainee role, grants the single `SUPER_ADMIN` role, and records an audit event. It does not create an open browser bootstrap path.
+
+4. Return to the Preview and sign out of the trainee account. Sign in with the dedicated admin test account. It should route to **ADMIN WORKSPACE**.
+5. Confirm the trainee account appears in the verification queue, open its private document, then approve or request a new document. Sign back into the trainee account to verify the resulting status. Use only test identities and the test database.
+
+This step changes a role in the test database only when the operator explicitly runs the owner-only SQL statement. Do not run it in Production.
+
 ## Current functional boundaries
 
 - Opening the deployed app and connecting its browser client to the test Supabase project are confirmed by the owner observing that the configuration warning disappeared.
