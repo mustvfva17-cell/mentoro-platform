@@ -10,14 +10,17 @@ const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabase
 
 const htmlLogbookWindows = new Map();
 const htmlLogbookSync = new Map();
-function openHTMLLogbook(instanceId) {
+function openHTMLLogbook(instanceId, options = {}) {
+  const readOnly = options.readOnly === true;
   if (!supabase || !/^[0-9a-f-]{36}$/i.test(instanceId || '')) { message('This logbook is not available for this training.', 'error'); return; }
   const existing = htmlLogbookWindows.get(instanceId);
   if (existing && !existing.closed) { existing.focus(); return; }
-  const child = window.open('/logbooks/medical-oncology/index.html?instance=' + encodeURIComponent(instanceId), '_blank');
+  const query = new URLSearchParams({ instance: instanceId });
+  if (readOnly) query.set('readonly', '1');
+  const child = window.open('/logbooks/medical-oncology/index.html?' + query.toString(), '_blank');
   if (!child) { message('Your browser blocked the logbook window. Allow pop-ups for this site and try again.', 'error'); return; }
   htmlLogbookWindows.set(instanceId, child);
-  htmlLogbookSync.set(instanceId, { revision: null, timer: null, saving: false, state: null });
+  htmlLogbookSync.set(instanceId, { revision: null, timer: null, saving: false, state: null, readOnly });
 }
 function postHTMLLogbookMessage(instanceId, payload) {
   const child = htmlLogbookWindows.get(instanceId);
@@ -51,7 +54,7 @@ window.addEventListener('message', async (event) => {
       const sync = htmlLogbookSync.get(instanceId);
       if (!sync) return;
       sync.revision = Number(data?.revision ?? 0);
-      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_LOAD_STATE', state: data?.state && typeof data.state === 'object' ? data.state : null, revision: sync.revision, hasCloudState: sync.revision > 0 });
+      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_LOAD_STATE', state: data?.state && typeof data.state === 'object' ? data.state : null, revision: sync.revision, hasCloudState: sync.revision > 0, readOnly: sync.readOnly === true });
     } catch (error) {
       postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_LOAD_ERROR', error: error?.message || 'Could not load this training logbook.' });
     }
@@ -60,6 +63,10 @@ window.addEventListener('message', async (event) => {
   if (type === 'MENTORO_LOGBOOK_STATE_CHANGED' && event.data.state && typeof event.data.state === 'object') {
     const sync = htmlLogbookSync.get(instanceId);
     if (!sync) return;
+    if (sync.readOnly) {
+      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: false, error: 'This is a read-only mentor review. Changes are not saved.' });
+      return;
+    }
     sync.state = event.data.state;
     clearTimeout(sync.timer);
     sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), 700);
@@ -333,7 +340,7 @@ async function renderMentorDashboard(user) {
       supabase.from('mentor_profiles').select('profile_id,display_name,professional_title,institution').eq('profile_id', user.id).maybeSingle(),
       supabase.rpc('mentor_list_my_applications', { p_limit: 100 }),
       supabase.from('training_enrollments')
-        .select('id,status,starts_at,ends_at,training_offerings(title,specialties(name_en)),logbook_instances(id,logbook_entries(id,status,submitted_at,entry_reviews(decision,reviewed_at)))')
+        .select('id,status,starts_at,ends_at,training_offerings(title,specialties(name_en)),logbook_instances(id,template_version_id,logbook_template_versions(id,template_definition),logbook_entries(id,status,submitted_at,entry_reviews(decision,reviewed_at)))')
         .order('starts_at', { ascending: true }),
       supabase.rpc('mentor_list_my_logbook_entries', { p_limit: 100 })
     ]);
@@ -397,6 +404,9 @@ async function renderMentorDashboard(user) {
     );
     bindMentorApplicationActions(user);
     bindMentorEntryActions(user);
+    document.querySelectorAll('[data-open-html-logbook-readonly]').forEach((button) => {
+      button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbookReadonly, { readOnly: true }));
+    });
   } catch (error) {
     shell(
       '<main class="dashboard"><div class="empty-state empty-state--error"><strong>Could not load your mentor workspace</strong><p>' +
@@ -514,6 +524,10 @@ function mentorEnrollmentCard(enrollment) {
   const specialty = offering.specialties || {};
   const instanceRelation = enrollment.logbook_instances;
   const instance = Array.isArray(instanceRelation) ? instanceRelation[0] : instanceRelation;
+  const templateRelation = instance?.logbook_template_versions;
+  const templateVersion = Array.isArray(templateRelation) ? templateRelation[0] : templateRelation;
+  const isRegisteredHtml = templateVersion?.template_definition?.renderer === 'HTML' &&
+    templateVersion?.template_definition?.html_path === '/logbooks/medical-oncology/index.html';
   const entries = instance?.logbook_entries || [];
   const submittedCount = entries.filter((entry) => {
     if (entry.status !== 'SUBMITTED') return false;
@@ -526,7 +540,11 @@ function mentorEnrollmentCard(enrollment) {
     '<span class="status-chip status-chip--' + statusTone + '">' + esc((enrollment.status || 'CONFIRMED').replaceAll('_', ' ')) + '</span></div>' +
     '<h3>' + esc(offering.title || 'Assigned training') + '</h3>' +
     '<p class="mentor-line">' + esc(dateTime(enrollment.starts_at)) + ' — ' + esc(dateTime(enrollment.ends_at)) + '</p>' +
-    '<div class="mentor-entry-stats"><span>' + entries.length + ' logbook entries</span><span>' + submittedCount + ' awaiting review</span></div>' +
+    '<div class="mentor-entry-stats"><span>' + entries.length + ' native entries</span><span>' + submittedCount + ' awaiting review</span></div>' +
+    (isRegisteredHtml
+      ? '<p class="workspace-note">Existing HTML logbook state is available for read-only review. Native per-entry review actions do not apply to this legacy HTML state yet.</p>' +
+        '<button class="button button--secondary button--small" type="button" data-open-html-logbook-readonly="' + esc(instance.id) + '">Open HTML logbook · read only</button>'
+      : '') +
   '</article>';
 }
 
