@@ -45,7 +45,7 @@ check(
   adminSetup.includes('CREATE OR REPLACE FUNCTION public.admin_create_training_offering') &&
   adminSetup.includes('CREATE OR REPLACE FUNCTION public.admin_create_training_slot') &&
   schema.includes('CREATE TABLE public.logbook_instances') &&
-  schema.includes('UNIQUE REFERENCES public.training_enrollments(id)') === false,
+  schema.includes('enrollment_id uuid NOT NULL UNIQUE REFERENCES public.training_enrollments(id)'),
   'privileged RPC definitions and independent logbook table are present in the reviewed migration sources'
 );
 
