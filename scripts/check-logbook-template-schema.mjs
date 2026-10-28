@@ -153,7 +153,9 @@ assert.ok(mentorReviewMigration.includes('app_private.mentor_review_html_logbook
 assert.ok(mentorReviewMigration.includes('v_actor_id <> v_mentor_id OR NOT app_private.is_mentor()'));
 assert.ok(mentorReviewMigration.includes('The selected item is not present in this training logbook'));
 assert.ok(mentorReviewMigration.includes("'VERIFIED', 'FEEDBACK', 'NEEDS_REVISION'"));
-assert.ok(htmlStateTest.includes('Mentor item review did not round-trip') || (await read('supabase/tests/logbook_html_state_integration.sql')).includes('Mentor item review did not round-trip'));
+const mentorReviewIntegrationTest = await read('supabase/tests/logbook_html_state_integration.sql');
+assert.ok(mentorReviewIntegrationTest.includes('Mentor item review did not round-trip'));
+assert.ok(mentorReviewIntegrationTest.includes('Trainee must not be able to issue mentor review decisions'));
 console.log('Both legacy HTML logbooks expose item-level mentor decisions through the assigned-mentor-only review bridge.');
 
 console.log('Existing HTML logbook launch, origin-checked cloud state bridge, per-instance local cache, and revisioned RPC integration passed.');
