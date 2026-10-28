@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - main
+      - chore/recover-migration-history
 
 permissions:
   contents: read
