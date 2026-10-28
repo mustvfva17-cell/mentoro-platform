@@ -90,6 +90,17 @@ if (!frontend.includes("supabase.rpc('mentor_review_my_application'") ||
   throw new Error('Mentor decisions must use the scoped current-user review RPC.');
 }
 
+if (!frontend.includes("supabase.rpc('mentor_list_my_logbook_entries'") ||
+    !frontend.includes("supabase.rpc('mentor_review_my_entry'") ||
+    !frontend.includes('data-entry-decision="VERIFIED"') ||
+    !frontend.includes('data-entry-decision="FEEDBACK"') ||
+    !frontend.includes('data-entry-decision="NEEDS_REVISION"') ||
+    !frontend.includes("entry_reviews(decision,feedback,reviewed_at)") ||
+    !frontend.includes(".update({ title, entry_date: entryDate })") ||
+    !frontend.includes("message('Revision saved and resubmitted to your mentor.', 'success')")) {
+  throw new Error('Mentor logbook review and trainee revision flow must use scoped RPCs and preserve review feedback.');
+}
+
 const mentorDashboardSource = frontend.match(
   /async function renderMentorDashboard\(user\) \{[\s\S]*?\n\}/
 )?.[0] || '';
