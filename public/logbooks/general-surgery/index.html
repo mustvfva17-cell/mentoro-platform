@@ -299,6 +299,7 @@ const previewMode = pageParams.get('mode') === 'preview';
 let readonlyMode = pageParams.get('readonly') === '1';
 const requestedInstanceId = pageParams.get('instance') || '';
 const instanceId = /^[0-9a-f-]{36}$/i.test(requestedInstanceId) ? requestedInstanceId : '';
+let htmlCloudReady = !(instanceId && window.opener);
 const storageScope = instanceId ? `mentoro_training_${instanceId}_` : (previewMode ? 'mentoro_general_surgery_preview_' : '');
 const scopedStorageKey = (key) => key === 'mentoro_theme' ? key : storageScope + key;
 const store={get:(k,f='')=>{try{return localStorage.getItem(scopedStorageKey(k))||f}catch(e){return f}},set:(k,v)=>{if(readonlyMode)return;try{localStorage.setItem(scopedStorageKey(k),v)}catch(e){}}};
@@ -329,8 +330,15 @@ function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function currentCloudState(){
  return {sessions:data.sessions,cases:data.cases,procedures:data.procedures,roadmap:data.roadmap,emergency:data.emergency,reflection:data.reflection};
 }
+function setCloudLoading(loading){
+ if(!instanceId||!window.opener)return;
+ const content=document.querySelector('main.content');
+ if(!content)return;
+ content.inert=loading;
+ if(loading)content.setAttribute('aria-busy','true');else content.removeAttribute('aria-busy');
+}
 function notifyCloudStateChanged(options={}){
- if(readonlyMode||!instanceId||previewMode||!window.opener)return;
+ if(readonlyMode||!instanceId||previewMode||!window.opener||!htmlCloudReady)return;
  if(!options.force&&!options.flushNow&&!htmlCloudDirty)return;
  const snapshot=JSON.stringify(currentCloudState());
  lastQueuedCloudSnapshot=snapshot;
@@ -666,6 +674,7 @@ window.addEventListener('message',event=>{
    data.roadmap=incoming.roadmap&&typeof incoming.roadmap==='object'?incoming.roadmap:{};
    data.emergency=Array.isArray(incoming.emergency)?incoming.emergency:[];
    data.reflection=incoming.reflection&&typeof incoming.reflection==='object'?incoming.reflection:{};
+   htmlCloudReady=true;setCloudLoading(false);
    lastQueuedCloudSnapshot=JSON.stringify(currentCloudState());htmlCloudDirty=false;
    if(!readonlyMode){
     store.set('mentoro_v4_sessions',JSON.stringify(data.sessions));store.set('mentoro_v4_cases',JSON.stringify(data.cases));store.set('mentoro_v4_procedures',JSON.stringify(data.procedures));store.set('mentoro_v4_roadmap',JSON.stringify(data.roadmap));store.set('mentoro_v4_emergency',JSON.stringify(data.emergency));store.set('mentoro_v4_reflection',JSON.stringify(data.reflection));
@@ -673,6 +682,7 @@ window.addEventListener('message',event=>{
    render();
    setCloudNotice(readonlyMode?'Read-only mentor review loaded. Editing and saving are disabled. Do not enter patient-identifying information.':'Cloud logbook loaded for this confirmed training. Changes sync automatically. Do not enter patient-identifying information.');
   }else{
+   htmlCloudReady=true;setCloudLoading(false);
    if(readonlyMode){
     data.sessions=[];data.cases=[];data.procedures=[];data.roadmap={};data.emergency=[];data.reflection={};
     lastQueuedCloudSnapshot=JSON.stringify(currentCloudState());htmlCloudDirty=false;
@@ -682,7 +692,8 @@ window.addEventListener('message',event=>{
    if(!readonlyMode){htmlCloudDirty=true;notifyCloudStateChanged({force:true});}
   }
  }else if(msg.type==='MENTORO_LOGBOOK_LOAD_ERROR'){
-  setCloudNotice('Could not connect this logbook to MENTORO: '+String(msg.error||'Unknown error'), 'error');
+  setCloudLoading(false);
+  setCloudNotice('Could not connect this logbook to MENTORO: +String(msg.error||'Unknown error'), 'error');
  }else if(msg.type==='MENTORO_LOGBOOK_SAVE_RESULT'){
   if(msg.ok){
    if(JSON.stringify(currentCloudState())===lastQueuedCloudSnapshot)htmlCloudDirty=false;
@@ -698,6 +709,7 @@ if(previewMode||!instanceId){
  setCloudNotice(previewMode?'Standalone preview: data stays in this browser only. Do not enter patient-identifying information.':'Standalone logbook: this page is not linked to a confirmed MENTORO training. Data stays in this browser only.');
 }
 if(instanceId&&window.opener){
+ setCloudLoading(true);
  setCloudNotice(readonlyMode?'Opening read-only mentor review for this assigned training… Do not enter patient-identifying information.':'Connecting to the assigned MENTORO training logbook… Do not enter patient-identifying information.');
  window.opener.postMessage({type:'MENTORO_LOGBOOK_READY',instanceId},window.location.origin);
 }
