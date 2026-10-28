@@ -44,7 +44,7 @@ Do not mark a trainee verified until the submitted document has actually been re
 
 ## Database-boundary payload validation
 
-Every insert or payload/instance update on `public.logbook_entries` is validated by a private trigger against the immutable schema definition attached to that logbook instance. It rejects unknown field keys, missing required values, wrong types, invalid ISO dates/select options, numeric values outside configured bounds, and payloads larger than 64 KiB. A rollback-only test using a synthetic template, enrollment, and logbook instance accepted a valid payload and rejected the invalid cases, then confirmed all fixture rows were rolled back.
+Every insert or payload/instance update on `public.logbook_entries` is validated by a private trigger against the immutable schema definition attached to that logbook instance. It rejects unknown field keys, missing required values, wrong types, invalid ISO dates/select options, numeric values outside configured bounds, and payloads larger than 64 KiB. A rollback-only test using a synthetic template, enrollment, and logbook instance accepted a valid payload and rejected the invalid cases, then confirmed all fixture rows were rolled back. The repeatable test is checked into `supabase/tests/logbook_entry_payload_validation.sql`; run it only in the test/disposable database via SQL Editor. It starts a transaction and ends in `ROLLBACK`.
 
 ## Current functional boundaries
 
