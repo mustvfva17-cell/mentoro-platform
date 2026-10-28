@@ -534,23 +534,24 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
           if (roles.has('ADMIN') || roles.has('SUPER_ADMIN')) {
             throw new Error('Administrator accounts cannot be registered as mentors through this form. Use a dedicated mentor account.');
           }
-          if (roles.has('TRAINEE') && !roles.has('MENTOR')) {
-            const [applicationHistory, enrollmentHistory, verificationHistory] = await Promise.all([
-              supabase.from('training_applications').select('id').eq('trainee_profile_id', profile.id).limit(1),
-              supabase.from('training_enrollments').select('id').eq('trainee_profile_id', profile.id).limit(1),
-              supabase.from('verification_documents').select('id').eq('trainee_profile_id', profile.id).limit(1)
-            ]);
-            for (const result of [applicationHistory, enrollmentHistory, verificationHistory]) {
-              if (result.error) throw result.error;
-            }
-            if ((applicationHistory.data || []).length || (enrollmentHistory.data || []).length || (verificationHistory.data || []).length) {
-              throw new Error('This account has trainee history. Do not repurpose it; create a separate account for mentor access.');
-            }
+          if (roles.has('TRAINEE')) {
+            throw new Error('This account already has an active trainee role. Create a separate account dedicated to mentor access.');
+          }
+
+          const [applicationHistory, enrollmentHistory, verificationHistory] = await Promise.all([
+            supabase.from('training_applications').select('id').eq('trainee_profile_id', profile.id).limit(1),
+            supabase.from('training_enrollments').select('id').eq('trainee_profile_id', profile.id).limit(1),
+            supabase.from('verification_documents').select('id').eq('trainee_profile_id', profile.id).limit(1)
+          ]);
+          for (const result of [applicationHistory, enrollmentHistory, verificationHistory]) {
+            if (result.error) throw result.error;
+          }
+          if ((applicationHistory.data || []).length || (enrollmentHistory.data || []).length || (verificationHistory.data || []).length) {
+            throw new Error('This account has trainee history. Do not repurpose it; create a separate account for mentor access.');
           }
 
           const confirmed = window.confirm(
             'Grant Mentor workspace access to ' + (profile.full_name || displayName) + ' (' + email + ')?' +
-            (roles.has('TRAINEE') ? '\n\nThis account currently has a trainee role; the app routes multi-role accounts to the Mentor workspace first. The account must have no trainee history.' : '') +
             '\n\nPublic directory visibility: ' + (makePublic ? 'ON' : 'OFF') + '.'
           );
           if (!confirmed) { busy(button, false); return; }
