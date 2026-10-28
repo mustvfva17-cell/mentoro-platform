@@ -32,7 +32,7 @@ The test database currently reports these fourteen applied migration records:
 | 20261028093532 | enforce_server_submission_timestamp | Present |
 | 20261028094412 | fix_scoped_logbook_submission_rpc | Present |
 | 20261028100024 | fix_application_offering_slot_binding | Present |
-| 20261028102000 | revoke_submission_timestamp_client_write | Present |
+| 20261028101524 | revoke_submission_timestamp_client_write | Present |
 
 The first five migration records existed in the database history but were absent from the trainee-auth branch. The SQL files were recovered from the existing `feature/independent-training-enrollments` branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
 
