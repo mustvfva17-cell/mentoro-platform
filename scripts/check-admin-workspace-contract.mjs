@@ -122,6 +122,7 @@ check(
 
 const publicationMigration = await read('../supabase/migrations/20261028151327_admin_publish_logbook_template_version.sql');
 const publicationVersioningMigration = await read('../supabase/migrations/20261028153201_keep_only_latest_assignable_template_version.sql');
+const templateVersionDraftMigration = await read('../supabase/migrations/20261028153539_admin_create_logbook_template_version_draft.sql');
 check(
   admin.includes('CLINICAL GOVERNANCE') &&
   admin.includes('data-publish-template') &&
@@ -145,6 +146,24 @@ check(
   publicationVersioningMigration.includes('SET status = \'PUBLISHED\'') &&
   publicationVersioningMigration.toLowerCase().includes('because existing offerings, enrollments, and logbook instances still reference them'),
   'publishing a new version stops assigning older versions to new offerings while preserving historical references'
+);
+
+check(
+  admin.includes('id="admin-template-version-form"') &&
+  admin.includes("supabase.rpc('admin_create_logbook_template_version_draft'") &&
+  admin.includes('latestTemplateById') &&
+  admin.includes('Older versions and existing logbooks were left unchanged'),
+  'admin can create the next draft version under an existing template without overwriting history'
+);
+check(
+  templateVersionDraftMigration.includes('IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()') &&
+  templateVersionDraftMigration.includes('FOR UPDATE') &&
+  templateVersionDraftMigration.includes('coalesce(max(v.version_number), 0) + 1') &&
+  templateVersionDraftMigration.includes("'DRAFT', false") &&
+  templateVersionDraftMigration.includes('LOGBOOK_TEMPLATE_VERSION_DRAFT_CREATED') &&
+  templateVersionDraftMigration.includes('FROM PUBLIC, anon, authenticated, service_role') &&
+  templateVersionDraftMigration.includes('CREATE OR REPLACE FUNCTION public.admin_create_logbook_template_version_draft'),
+  'creating a template version is admin-only, serialized, audited, non-assignable, and exposed through a checked wrapper'
 );
 
 console.log('Administrator workspace safety contracts passed.');
