@@ -63,7 +63,7 @@ Use only the test Supabase project for local development and Preview deployments
 
 The publishable key is intended for browser use; database access must still be constrained by RLS and grants. Never expose a Supabase secret/service-role key through a `VITE_` variable or commit credentials to Git.
 
-The `feat/admin-workspace-mvp` Preview was manually opened by the owner with the test Supabase connection and Auth redirect allow-list. The two public browser variables are now explicitly configured for the `feat/logbook-template-drafts` branch and Preview target only. Its latest Vercel deployment is `READY`; open the stable branch alias documented in `docs/PREVIEW_TESTING.md` and verify the Supabase warning is gone. Keep all variables scoped to Preview and do not change Production variables.
+The `feat/admin-workspace-mvp` Preview was manually opened by the owner with the test Supabase connection and Auth redirect allow-list. The two public browser variables are explicitly configured for the `feat/logbook-template-drafts` branch and Preview target only. A branch deployment was `READY` at the last check; open the stable alias in `docs/PREVIEW_TESTING.md` and confirm the Supabase warning is gone after the latest commit. Keep all variables scoped to Preview and do not change Production variables.
 
 
 The `app_private` schema is an implementation boundary, not a browser API. The schema's template write implementations are executable by `authenticated` because the public wrappers are `SECURITY INVOKER`; the implementations independently check `auth.uid()` and the active platform-admin role. Keep `app_private` excluded from PostgREST's exposed schemas. The application must never rely on hidden UI controls or function grants as the sole authorization check.
@@ -89,8 +89,7 @@ Outstanding before considering a merge:
 
 - Clean-room migration replay on an isolated database.
 - Resolve/review broad default privileges owned by `supabase_admin` for future public objects.
-- Confirm the Vercel Preview branch variables and manually test the schema-driven template/logbook flow.
-- Confirm the branch-scoped Vercel Preview variables and manually test the full trainee-to-mentor/admin journey.
+- Confirm the branch-scoped Vercel Preview variables and manually test the full trainee-to-mentor/admin journey, including cloud save/reload and close-time save.
 - Add browser end-to-end tests for separate trainee, mentor, and admin identities; manually verify the template-version creation/publication workflow.
 - Review both stacked pull requests together; do not merge PR #1 alone.
 
