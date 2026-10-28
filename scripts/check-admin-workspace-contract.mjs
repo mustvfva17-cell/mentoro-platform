@@ -57,4 +57,29 @@ check(
   'privileged RPC definitions and independent logbook table are present in the reviewed migration sources'
 );
 
+
+const templateMigration = await read('../supabase/migrations/20261028143000_admin_create_logbook_template_draft.sql');
+check(
+  admin.includes('id="admin-template-form"') &&
+  admin.includes("supabase.rpc('admin_create_logbook_template_draft'") &&
+  admin.includes('schemaDefinition = JSON.parse') &&
+  admin.includes('templateDefinition = JSON.parse'),
+  'admin workspace validates JSON and creates logbook templates through a dedicated RPC'
+);
+check(
+  templateMigration.includes('IF v_actor_id IS NULL OR NOT app_private.is_platform_admin()') &&
+  templateMigration.includes("VALUES (v_template_id, 1, 'DRAFT', false") &&
+  templateMigration.includes('LOGBOOK_TEMPLATE_DRAFT_CREATED') &&
+  templateMigration.includes('REVOKE ALL ON FUNCTION app_private.admin_create_logbook_template_draft') &&
+  templateMigration.includes('CREATE OR REPLACE FUNCTION public.admin_create_logbook_template_draft'),
+  'template draft creation is admin-checked, audited, non-assignable, and exposed only through a checked wrapper'
+);
+check(
+  templateMigration.includes("IS DISTINCT FROM 'object'") &&
+  templateMigration.includes("NOT IN ('text', 'textarea', 'date', 'number', 'boolean', 'select')") &&
+  templateMigration.includes('Schema field keys must be unique') &&
+  admin.includes('Publishing stays blocked until the template is clinically reviewed'),
+  'template drafts validate field schema and cannot be mistaken for clinically published templates'
+);
+
 console.log('Administrator workspace safety contracts passed.');
