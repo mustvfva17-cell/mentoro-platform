@@ -1,3 +1,5 @@
+import { getTemplateFields } from './logbook-schema.js';
+
 export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTime, setBusy, message, errorText }) {
   const renderLoading = () => shell('<main class="dashboard"><section class="loading-panel"><span class="spinner"></span><p>Loading administration workspace…</p></section></main>', user);
   renderLoading();
@@ -34,7 +36,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         .eq('profile_status', 'APPROVED').order('display_name', { ascending: true }),
       supabase.from('specialties').select('id,name_en,name_ar').eq('is_active', true).order('name_en', { ascending: true }),
       supabase.from('logbook_template_versions')
-        .select('id,template_id,version_number,status,is_assignable,logbook_templates!inner(id,slug,title,specialty_id,is_active)')
+        .select('id,template_id,version_number,status,is_assignable,schema_definition,template_definition,source_notes,created_at,logbook_templates!inner(id,slug,title,description,specialty_id,is_active)')
         .order('version_number', { ascending: false })
     ]);
     for (const result of [
@@ -56,11 +58,13 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
     const activeMentorIds = new Set((mentorRolesResult.data || []).map((role) => role.user_id));
     const mentors = (mentorResult.data || []).filter((mentor) => activeMentorIds.has(mentor.profile_id));
     const specialties = specialtyResult.data || [];
-    const templateVersions = (templateVersionResult.data || []).map((version) => {
+    const allTemplateVersions = (templateVersionResult.data || []).map((version) => {
       const related = version.logbook_templates;
       const template = Array.isArray(related) ? related[0] : related;
-      return { ...version, template };
-    }).filter((version) => version.template?.is_active);
+      return { ...version, template, fields: getTemplateFields(version) };
+    });
+    // Only active templates may be selected for draft offerings. Inactive drafts remain visible in the review queue.
+    const templateVersions = allTemplateVersions.filter((version) => version.template?.is_active);
     const applications = applicationResult.data || [];
     const offerings = offeringResult.data || [];
     const pendingSlots = (offering) => (offering.training_slots || []).filter((slot) => slot.status === 'OPEN').length;
@@ -103,6 +107,27 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
             '<p class="workspace-note">The decision and logbook creation are recorded by the database workflow.</p>' +
             '<div class="mentor-review-buttons"><button class="button button--primary button--small" type="button" data-confirm-application="' + escape(item.id) + '">Confirm booking & create logbook</button></div></div></article>';
           }).join('') + '</div>' : '<div class="empty-state"><strong>No bookings need confirmation</strong><p>Applications approved by mentors will appear here.</p></div>') +
+        '</section>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">LOGBOOK REVIEW</p><h2>Template versions</h2></div><span class="count-badge">' + allTemplateVersions.length + '</span></div>' +
+          '<p class="workspace-note">Review the structure and source notes before any clinical template can be marked assignable. Draft templates are not bookable; this screen does not publish or activate them.</p>' +
+          (allTemplateVersions.length ? '<div class="mentor-queue-grid">' + allTemplateVersions.map((version) => {
+            const template = version.template || {};
+            const specialty = specialties.find((item) => item.id === template.specialty_id) || {};
+            const fields = version.fields || [];
+            const definitions = fields.length
+              ? '<ul class="template-field-list">' + fields.map((field) => '<li><strong>' + escape(field.label) + '</strong><span>' + escape(field.type) + (field.required ? ' · required' : ' · optional') + '</span></li>').join('') + '</ul>'
+              : '<p class="empty-inline">No supported structured fields were found in this version. Review its JSON schema before use.</p>';
+            const sourceNotes = version.source_notes || template.description || version.template_definition?.source || 'No clinical source/reviewer notes recorded.';
+            return '<article class="activity-card admin-template-review-card">' +
+              '<div class="activity-main"><div class="training-card-heading"><span class="specialty-label">' + escape(specialty.name_en || specialty.name_ar || 'Specialty not found') + '</span>' +
+              '<span class="status-chip status-chip--' + (version.status === 'PUBLISHED' && version.is_assignable ? 'good' : 'neutral') + '">' + escape(version.status || 'DRAFT') + (version.is_assignable ? ' · assignable' : ' · not assignable') + '</span></div>' +
+              '<h3>' + escape(template.title || template.slug || 'Untitled logbook template') + ' · v' + escape(version.version_number) + '</h3>' +
+              '<p>' + escape(template.description || 'No template description.') + '</p>' +
+              '<p class="workspace-note"><strong>Clinical source/reviewer notes:</strong> ' + escape(sourceNotes) + '</p>' +
+              '<div class="template-review-fields"><strong>Structured fields (' + fields.length + ')</strong>' + definitions + '</div>' +
+              (version.status === 'DRAFT' ? '<p class="empty-inline">Pending clinical review. Publishing remains disabled until the field schema and source are reviewed.</p>' : '') +
+              '</div></article>';
+          }).join('') + '</div>' : '<div class="empty-state"><strong>No logbook templates yet</strong><p>Create the first specialty-specific draft below.</p></div>') +
         '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">LOGBOOK DESIGN</p><h2>Create logbook template draft</h2></div><span class="status-chip status-chip--neutral">Draft only</span></div>' +
           '<p class="workspace-note">Create a specialty-specific draft with a structured field schema and source/reviewer notes. Saving a draft does not make it bookable. Publishing stays blocked until the template is clinically reviewed and the trainee logbook UI fully supports its schema.</p>' +
