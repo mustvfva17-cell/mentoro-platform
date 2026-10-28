@@ -250,3 +250,31 @@ console.log('General Surgery HTML asset registration, per-enrollment cloud bridg
 
 console.log('Database-boundary payload validation checks against the attached immutable template version passed.');
 
+const cloudBootstrapMain = await read('src/main.js');
+assert.ok(cloudBootstrapMain.includes('cloudStateLoaded: false'), 'Parent bridge must begin with cloud state marked uninitialized');
+assert.ok(cloudBootstrapMain.includes('!sync.cloudStateLoaded'), 'Parent bridge must reject writes until initial cloud state has loaded');
+assert.ok(cloudBootstrapMain.includes('sync.cloudStateLoaded = true;'), 'Parent bridge must only mark cloud state loaded after its initial RPC succeeds');
+assert.ok(
+  cloudBootstrapMain.indexOf('sync.cloudStateLoaded = true;') <
+    cloudBootstrapMain.indexOf("postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_LOAD_STATE'"),
+  'Parent must complete state bootstrap before accepting state-change messages'
+);
+for (const [name, runtime] of [
+  ['Medical Oncology', mentorReadOnlyRuntime],
+  ['General Surgery', generalSurgeryHtml]
+]) {
+  assert.match(runtime, /let htmlCloudReady\s*=\s*!\(instanceId && window\.opener\);/, `${name} must gate cloud writes during instance bootstrap`);
+  const notifyAt = runtime.indexOf('function notifyCloudStateChanged');
+  assert.ok(notifyAt >= 0, `${name} must expose a cloud-state notification function`);
+  assert.match(runtime.slice(notifyAt, notifyAt + 260), /!htmlCloudReady/, `${name} must suppress cloud notifications before hydration`);
+  assert.ok(runtime.includes('function setCloudLoading(loading)'), `${name} must prevent edits while initial cloud state is loading`);
+  assert.ok(runtime.includes('setCloudLoading(true);'), `${name} must lock the UI before requesting cloud state`);
+  assert.ok(runtime.includes('setCloudLoading(false);'), `${name} must release the UI after load or report a load failure`);
+  assert.match(runtime, /htmlCloudReady\s*=\s*true/, `${name} must mark cloud state ready after the load response`);
+  const loadStateAt = runtime.indexOf("if(msg.type==='MENTORO_LOGBOOK_LOAD_STATE')");
+  const readyAt = runtime.indexOf('window.opener.postMessage({type:\'MENTORO_LOGBOOK_READY\'');
+  assert.ok(loadStateAt >= 0 && readyAt > loadStateAt, `${name} must load state after the bridge is ready`);
+}
+console.log('HTML logbook cloud bootstrap guard prevents stale local state from overwriting saved cloud state.');
+
+
