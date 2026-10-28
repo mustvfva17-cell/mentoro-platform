@@ -54,8 +54,17 @@ if (!usesScopedSubmissionRpc) {
   throw new Error('Logbook submission must use the scoped set_logbook_entry_submitted RPC.');
 }
 
-if (migration !== null) {
-  const submitFunction = migration.match(/CREATE OR REPLACE FUNCTION public\.set_logbook_entry_submitted\([\s\S]*?\$\$;?/i);
+const submissionMigrationPath = new URL('../supabase/migrations/20261028094110_fix_scoped_logbook_submission_rpc.sql', import.meta.url);
+let submissionMigration = null;
+try {
+  submissionMigration = await readFile(submissionMigrationPath, 'utf8');
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error;
+}
+
+const submissionSource = submissionMigration ?? migration;
+if (submissionSource !== null) {
+  const submitFunction = submissionSource.match(/CREATE OR REPLACE FUNCTION public\.set_logbook_entry_submitted\([\s\S]*?\$\$;?/i);
   if (submitFunction && /updated_at\s*=|submitted_at\s*=/i.test(submitFunction[0])) {
     throw new Error('Submission RPC must rely on database triggers for timestamps, not write timestamp columns directly.');
   }
