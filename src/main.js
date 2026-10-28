@@ -567,7 +567,7 @@ function logbookCard(enrollment) {
         ${entries.length ? `<div class="entry-list">${[...entries].sort((a,b)=>Number(b.status === 'RETURNED')-Number(a.status === 'RETURNED')).slice(0,6).map((entry) => {
           const review = latestEntryReview(entry);
           const displayStatus = entry.status === 'RETURNED' ? 'NEEDS REVISION' : (entry.status === 'SUBMITTED' && review ? review.decision : entry.status);
-          return `<div class="entry-row entry-row--detail"><span class="entry-dot entry-dot--${['VERIFIED','APPROVED'].includes(displayStatus) ? 'good' : 'neutral'}"></span><div class="entry-row-copy"><strong>${esc(entry.title)}</strong><small>${esc(entry.entry_type.replaceAll('_', ' '))} · ${esc(entry.entry_date)} · ${esc(displayStatus.replaceAll('_',' '))}</small>${renderPayloadSummary(entry.payload, templateFields)}${review?.feedback ? `<small class="entry-feedback">Mentor feedback: ${esc(review.feedback)}</small>` : ''}</div>${entry.status === 'DRAFT' ? `<button class="text-button" data-submit-entry="${esc(entry.id)}">Submit</button>` : ''}</div>${entry.status === 'RETURNED' ? `<form class="entry-edit-form" data-edit-entry="${esc(entry.id)}"><label for="entry-edit-title-${esc(entry.id)}">Revise returned entry</label><input id="entry-edit-title-${esc(entry.id)}" name="title" value="${esc(entry.title)}" maxlength="160" required><div class="entry-form-row"><label class="template-field"><span>Entry type</span><select name="entryType" required>${LOGBOOK_ENTRY_TYPES.map((type) => '<option value="' + esc(type.value) + '"' + (type.value === entry.entry_type ? ' selected' : '') + '>' + esc(type.label) + '</option>').join('')}</select></label><label class="template-field"><span>Activity date</span><input name="date" type="date" aria-label="Revised activity date" value="${esc(entry.entry_date)}" required></label></div>${renderTemplateFields(templateFields, instance.id + '-' + entry.id, entry.payload || {})}<button class="button button--secondary button--small" type="submit">Save &amp; resubmit</button></form>` : ''}`;
+          return `<div class="entry-row entry-row--detail"><span class="entry-dot entry-dot--${['VERIFIED','APPROVED'].includes(displayStatus) ? 'good' : 'neutral'}"></span><div class="entry-row-copy"><strong>${esc(entry.title)}</strong><small>${esc(entry.entry_type.replaceAll('_', ' '))} · ${esc(entry.entry_date)} · ${esc(displayStatus.replaceAll('_',' '))}</small>${renderPayloadSummary(entry.payload, templateFields)}${review?.feedback ? `<small class="entry-feedback">Mentor feedback: ${esc(review.feedback)}</small>` : ''}</div>${entry.status === 'DRAFT' ? `<button class="text-button" data-submit-entry="${esc(entry.id)}">Submit</button>` : ''}</div>${entry.status === 'RETURNED' ? `<form class="entry-edit-form" data-edit-entry="${esc(entry.id)}"><label for="entry-edit-title-${esc(entry.id)}">Revise returned entry</label><input id="entry-edit-title-${esc(entry.id)}" name="title" value="${esc(entry.title)}" maxlength="160" required><p class="workspace-note">Entry type: ${esc(entry.entry_type.replaceAll('_', ' '))}. The type stays fixed while you revise the entry.</p><div class="entry-form-row"><label class="template-field"><span>Activity date</span><input name="date" type="date" aria-label="Revised activity date" value="${esc(entry.entry_date)}" required></label></div>${renderTemplateFields(templateFields, instance.id + '-' + entry.id, entry.payload || {})}<button class="button button--secondary button--small" type="submit">Save &amp; resubmit</button></form>` : ''}`;
         }).join('')}</div>` : '<p class="empty-inline">Your first entry will appear here.</p>'}
       ` : '<p class="empty-inline">The logbook template is not yet attached to this training.</p>'}
     </article>`;
@@ -702,9 +702,8 @@ function bindEntryForms(user) {
     const button = form.querySelector('button[type="submit"]');
     const title = String(data.get('title') || '').trim();
     const entryDate = String(data.get('date') || '');
-    const entryType = String(data.get('entryType') || '');
     const templatePayload = collectTemplatePayload(form);
-    if (!entryId || !title || !entryDate || !LOGBOOK_ENTRY_TYPES.some((type) => type.value === entryType)) return;
+    if (!entryId || !title || !entryDate) return;
     if (templatePayload.errors.length) {
       message(templatePayload.errors[0], 'error');
       setBusy(button, false);
@@ -713,7 +712,7 @@ function bindEntryForms(user) {
     setBusy(button, true, 'Saving & resubmitting…');
 
     const { error: editError } = await supabase.from('logbook_entries')
-      .update({ title, entry_date: entryDate, entry_type: entryType, payload: templatePayload.payload })
+      .update({ title, entry_date: entryDate, payload: templatePayload.payload })
       .eq('id', entryId)
       .eq('status', 'RETURNED');
     if (editError) {
