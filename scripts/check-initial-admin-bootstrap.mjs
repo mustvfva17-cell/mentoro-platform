@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 
 const migration = await readFile(
-  new URL('../supabase/migrations/20261028151500_owner_only_initial_super_admin_bootstrap.sql', import.meta.url),
+  new URL('../supabase/migrations/20261028141703_owner_only_initial_super_admin_bootstrap.sql', import.meta.url),
   'utf8'
 );
 
