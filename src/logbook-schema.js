@@ -14,7 +14,7 @@ const KEY_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
 export function getTemplateFields(templateVersion) {
   const fields = templateVersion?.schema_definition?.fields;
   if (!Array.isArray(fields)) return [];
-  return fields.filter((field) =>
+  const normalized = fields.filter((field) =>
     field && typeof field === 'object' && !Array.isArray(field) &&
     KEY_PATTERN.test(String(field.key || '')) &&
     typeof field.label === 'string' && field.label.trim().length > 0 &&
@@ -29,6 +29,13 @@ export function getTemplateFields(templateVersion) {
       ? [...new Set(field.options.filter((option) => typeof option === 'string').map((option) => option.trim()).filter(Boolean))]
       : []
   })).filter((field) => field.type !== 'select' || (field.options.length >= 2 && field.options.length <= 50));
+
+  const seenKeys = new Set();
+  return normalized.filter((field) => {
+    if (seenKeys.has(field.key)) return false;
+    seenKeys.add(field.key);
+    return true;
+  });
 }
 
 function escapeHtml(value = '') {
@@ -57,9 +64,13 @@ export function renderTemplateFields(fields, scopeId, values = {}) {
       '" data-template-required="' + String(field.required) + '"';
 
     if (field.type === 'boolean') {
-      return '<div class="template-field template-field--boolean"><label for="' + escapeHtml(id) + '">' +
-        '<input type="checkbox"' + common + (value === true ? ' checked' : '') + '> ' +
-        escapeHtml(field.label) + '</label></div>';
+      const booleanValue = value === true || value === 'true' ? 'true'
+        : value === false || value === 'false' ? 'false' : '';
+      return '<div class="template-field"><label for="' + escapeHtml(id) + '">' +
+        escapeHtml(field.label) + (field.required ? ' <span aria-hidden="true">*</span>' : '') +
+        '</label><select' + common + required + '><option value="">Choose yes or no</option>' +
+        '<option value="true"' + (booleanValue === 'true' ? ' selected' : '') + '>Yes</option>' +
+        '<option value="false"' + (booleanValue === 'false' ? ' selected' : '') + '>No</option></select></div>';
     }
     if (field.type === 'select') {
       const options = field.options.map((option) => '<option value="' + escapeHtml(option) + '"' +
@@ -103,8 +114,13 @@ export function collectTemplatePayload(form) {
     }
 
     if (type === 'boolean') {
-      if (required && !input.checked) errors.push('Please confirm: ' + (input.labels?.[0]?.textContent?.trim() || key));
-      payload[key] = input.checked;
+      // A required boolean needs an explicit Yes or No; false is a valid answer.
+      const rawBoolean = String(input.value ?? '');
+      if (!['true', 'false'].includes(rawBoolean)) {
+        if (required) errors.push('Choose yes or no for: ' + (input.labels?.[0]?.textContent?.trim() || key));
+        return;
+      }
+      payload[key] = rawBoolean === 'true';
       return;
     }
 
