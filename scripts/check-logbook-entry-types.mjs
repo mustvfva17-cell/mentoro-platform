@@ -90,6 +90,20 @@ if (!frontend.includes("supabase.rpc('mentor_review_my_application'") ||
   throw new Error('Mentor decisions must use the scoped current-user review RPC.');
 }
 
+const mentorDashboardSource = frontend.match(
+  /async function renderMentorDashboard\(user\) \{[\s\S]*?\n\}/
+)?.[0] || '';
+const mentorApplicationCardSource = frontend.match(
+  /function mentorApplicationCard\(item\) \{[\s\S]*?\n\}/
+)?.[0] || '';
+if (!/supabase\.rpc\(['"]mentor_list_my_applications['"]/.test(mentorDashboardSource) ||
+    mentorDashboardSource.includes("from('training_applications')") ||
+    !mentorApplicationCardSource.includes("esc(item.trainee_name || 'Trainee')") ||
+    !mentorApplicationCardSource.includes('esc(education)') ||
+    !mentorApplicationCardSource.includes('item.mentor_decision_reason')) {
+  throw new Error('Mentor application data must come from the scoped inbox RPC and render escaped applicant details.');
+}
+
 if (!frontend.includes('const instanceRelation = enrollment.logbook_instances;') ||
     !frontend.includes('Array.isArray(instanceRelation) ? instanceRelation[0] : instanceRelation')) {
   throw new Error('Logbook instance rendering must support one-to-one PostgREST embedding.');
