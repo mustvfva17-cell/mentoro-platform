@@ -42,6 +42,10 @@ Next manual test, using only the test project:
 
 Do not mark a trainee verified until the submitted document has actually been reviewed. Production roles and data must remain unchanged.
 
+## Database-boundary payload validation
+
+Every insert or payload/instance update on `public.logbook_entries` is validated by a private trigger against the immutable schema definition attached to that logbook instance. It rejects unknown field keys, missing required values, wrong types, invalid ISO dates/select options, numeric values outside configured bounds, and payloads larger than 64 KiB. A rollback-only test using a synthetic template, enrollment, and logbook instance accepted a valid payload and rejected the invalid cases, then confirmed all fixture rows were rolled back.
+
 ## Current functional boundaries
 
 - Opening the deployed app and connecting its browser client to the test Supabase project are confirmed by the owner observing that the configuration warning disappeared.
