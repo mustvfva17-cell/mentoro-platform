@@ -10,7 +10,7 @@ if (migrationFiles.length === 0) {
   throw new Error('No SQL migration files were found in supabase/migrations/.');
 }
 
-const filenamePattern = /^(\\d{14})_([a-z0-9]+(?:_[a-z0-9]+)*)\\.sql$/;
+const filenamePattern = /^(\d{14})_([a-z0-9]+(?:_[a-z0-9]+)*)\.sql$/;
 const versions = new Map();
 const contents = new Map();
 
@@ -30,7 +30,7 @@ for (const filename of migrationFiles) {
   versions.set(version, filename);
 
   const source = (await readFile(new URL(filename, migrationDirectory), 'utf8'))
-    .replace(/\\r\\n/g, '\\n')
+    .replace(/\r\n/g, '\n')
     .trim();
   if (!source) {
     throw new Error(`Migration file is empty: ${filename}`);
