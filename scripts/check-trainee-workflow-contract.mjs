@@ -11,6 +11,7 @@ function check(name, condition) {
   checks.push(name);
 }
 
+// Keep the submission-trigger migration aligned with the test ledger; duplicate unrecorded copies are prohibited.
 const [
   frontend,
   coreSchema,
