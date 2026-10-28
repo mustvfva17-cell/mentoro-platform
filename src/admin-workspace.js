@@ -136,10 +136,21 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
             const template = version.template || {};
             const specialty = specialties.find((item) => item.id === template.specialty_id) || {};
             const fields = version.fields || [];
-            const definitions = fields.length
-              ? '<ul class="template-field-list">' + fields.map((field) => '<li><strong>' + escape(field.label) + '</strong><span>' + escape(field.type) + (field.required ? ' · required' : ' · optional') + '</span></li>').join('') + '</ul>'
-              : '<p class="empty-inline">No supported structured fields were found in this version. Review its JSON schema before use.</p>';
-            const sourceNotes = version.source_notes || template.description || version.template_definition?.source || 'No clinical source/reviewer notes recorded.';
+            const templateDefinition = version.template_definition || {};
+            const isRegisteredHtml = templateDefinition.renderer === 'HTML' &&
+              templateDefinition.html_path === '/logbooks/medical-oncology/index.html';
+            const htmlSections = Array.isArray(templateDefinition.sections) ? templateDefinition.sections : [];
+            const definitions = isRegisteredHtml
+              ? '<p class="empty-inline">This version uses the existing Medical Oncology HTML logbook. It does not use JSON structured fields.</p>' +
+                (htmlSections.length
+                  ? '<p><strong>Existing views:</strong> ' + escape(htmlSections.join(' · ')) + '</p>'
+                  : '') +
+                '<p><a class="button button--secondary button--small" href="' + escape(templateDefinition.html_path + '?mode=preview') + '" target="_blank" rel="noopener noreferrer">Preview original HTML logbook</a></p>' +
+                '<p class="workspace-note">This standalone preview saves only in this browser. Do not enter patient-identifying information.</p>'
+              : fields.length
+                ? '<ul class="template-field-list">' + fields.map((field) => '<li><strong>' + escape(field.label) + '</strong><span>' + escape(field.type) + (field.required ? ' · required' : ' · optional') + '</span></li>').join('') + '</ul>'
+                : '<p class="empty-inline">No supported structured fields were found in this version. Review its JSON schema before use.</p>';
+            const sourceNotes = version.source_notes || template.description || templateDefinition.source || 'No clinical source/reviewer notes recorded.';
             return '<article class="activity-card admin-template-review-card">' +
               '<div class="activity-main"><div class="training-card-heading"><span class="specialty-label">' + escape(specialty.name_en || specialty.name_ar || 'Specialty not found') + '</span>' +
               '<span class="status-chip status-chip--' + (version.status === 'PUBLISHED' && version.is_assignable ? 'good' : 'neutral') + '">' + escape(version.status || 'DRAFT') + (version.is_assignable ? ' · assignable' : ' · not assignable') + '</span></div>' +
@@ -147,7 +158,9 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
               '<p>' + escape(template.description || 'No template description.') + '</p>' +
               '<p class="workspace-note"><strong>Clinical source/reviewer notes:</strong> ' + escape(sourceNotes) + '</p>' +
               '<div class="template-review-fields"><strong>Structured fields (' + fields.length + ')</strong>' + definitions + '</div>' +
-              (version.status === 'DRAFT' ? '<p class="empty-inline">Pending clinical review. Publishing remains disabled until the field schema and source are reviewed.</p>' : '') +
+              (version.status === 'DRAFT' ? '<p class="empty-inline">' + (isRegisteredHtml
+                ? 'Pending clinical review. Publishing remains disabled until the HTML asset and source are reviewed.'
+                : 'Pending clinical review. Publishing remains disabled until the field schema and source are reviewed.') + '</p>' : '') +
               '</div></article>';
           }).join('') + '</div>' : '<div class="empty-state"><strong>No logbook templates yet</strong><p>Create the first specialty-specific draft below.</p></div>') +
         '</section>' +
@@ -185,17 +198,29 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">CLINICAL GOVERNANCE</p><h2>Logbook template review</h2></div><span class="count-badge">' + allTemplateVersions.filter((version) => version.status === 'DRAFT').length + '</span></div>' +
           '<p class="workspace-note">Review the schema and clinical source notes before publishing. Publication makes this version assignable to new training offerings; it does not change existing logbook instances.</p>' +
           (allTemplateVersions.filter((version) => version.status === 'DRAFT').length
-            ? '<div class="mentor-queue-grid">' + allTemplateVersions.filter((version) => version.status === 'DRAFT').map((version) =>
-              '<article class="activity-card admin-template-review-card" data-template-review-card="' + escape(version.id) + '">' +
+            ? '<div class="mentor-queue-grid">' + allTemplateVersions.filter((version) => version.status === 'DRAFT').map((version) => {
+              const templateDefinition = version.template_definition || {};
+              const isRegisteredHtml = templateDefinition.renderer === 'HTML' &&
+                templateDefinition.html_path === '/logbooks/medical-oncology/index.html';
+              const htmlSections = Array.isArray(templateDefinition.sections) ? templateDefinition.sections : [];
+              const canPublishReviewedRuntime = isRegisteredHtml || version.fields.length > 0;
+              const runtimeDescription = isRegisteredHtml
+                ? '<p><strong>Runtime:</strong> Existing Medical Oncology HTML logbook</p>' +
+                  '<p><strong>Views:</strong> ' + escape(htmlSections.join(' · ') || 'HTML asset') + '</p>' +
+                  '<p><a class="button button--secondary button--small" href="' + escape(templateDefinition.html_path + '?mode=preview') + '" target="_blank" rel="noopener noreferrer">Preview original HTML logbook</a></p>' +
+                  '<p class="workspace-note">Preview data stays in this browser. Do not enter patient-identifying information.</p>'
+                : '<p><strong>Fields (' + version.fields.length + ')</strong><br>' + escape(version.fields.map((field) => field.label + ' · ' + field.type + (field.required ? ' · required' : '')).join(', ') || 'No valid structured fields') + '</p>';
+              return '<article class="activity-card admin-template-review-card" data-template-review-card="' + escape(version.id) + '">' +
                 '<div class="activity-main"><span class="specialty-label">' + escape(version.template?.slug || 'Logbook template') + ' · v' + escape(version.version_number) + '</span>' +
-                '<h3>' + escape(version.template?.title || 'Untitled template') + '</h3>' +
-                '<p>' + escape(version.template?.description || 'No description provided.') + '</p>' +
-                '<p><strong>Clinical source / notes</strong><br>' + escape(version.source_notes || 'Missing clinical source notes.') + '</p>' +
-                '<p><strong>Fields (' + version.fields.length + ')</strong><br>' + escape(version.fields.map((field) => field.label + ' · ' + field.type + (field.required ? ' · required' : '')).join(', ') || 'No valid structured fields') + '</p>' +
-                '<label class="field-label" for="template-review-' + escape(version.id) + '">Clinical review decision / notes</label>' +
-                '<textarea id="template-review-' + escape(version.id) + '" data-template-review-notes rows="3" minlength="20" maxlength="4000" required placeholder="Record what was reviewed, the clinical source/curriculum, and any limitations."></textarea>' +
-                '<button class="button button--primary" type="button" data-publish-template="' + escape(version.id) + '"' + (version.fields.length ? '' : ' disabled') + '>Approve review & publish version</button>' +
-              '</div></article>').join('') + '</div>'
+                  '<h3>' + escape(version.template?.title || 'Untitled template') + '</h3>' +
+                  '<p>' + escape(version.template?.description || 'No description provided.') + '</p>' +
+                  '<p><strong>Clinical source / notes</strong><br>' + escape(version.source_notes || 'Missing clinical source notes.') + '</p>' +
+                  runtimeDescription +
+                  '<label class="field-label" for="template-review-' + escape(version.id) + '">Clinical review decision / notes</label>' +
+                  '<textarea id="template-review-' + escape(version.id) + '" data-template-review-notes rows="3" minlength="20" maxlength="4000" required placeholder="Record what was reviewed, the clinical source/curriculum, and any limitations."></textarea>' +
+                  '<button class="button button--primary" type="button" data-publish-template="' + escape(version.id) + '"' + (canPublishReviewedRuntime ? '' : ' disabled') + '>Approve review & publish version</button>' +
+                '</div></article>';
+            }).join('') + '</div>'
             : '<div class="empty-state"><strong>No template drafts awaiting review</strong><p>New drafts will appear here for clinical review before they can be assigned to training.</p></div>') +
         '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">TRAINING SETUP</p><h2>Create training offering</h2></div><span class="status-chip status-chip--neutral">Admin only</span></div>' +
