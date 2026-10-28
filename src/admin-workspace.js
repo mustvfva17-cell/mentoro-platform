@@ -168,7 +168,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
               '<p class="workspace-note"><strong>Clinical source/reviewer notes:</strong> ' + escape(sourceNotes) + '</p>' +
               '<div class="template-review-fields"><strong>Structured fields (' + fields.length + ')</strong>' + definitions + '</div>' +
               (version.status === 'DRAFT' ? '<p class="empty-inline">' + (isRegisteredHtml
-                ? 'Pending clinical review. Publishing remains disabled until the HTML asset and source are reviewed.'
+                ? 'Pending clinical review. Preview the existing HTML asset, confirm the clinical source/reviewer notes, and record the decision before publishing.'
                 : 'Pending clinical review. Publishing remains disabled until the field schema and source are reviewed.') + '</p>' : '') +
               '</div></article>';
           }).join('') + '</div>' : '<div class="empty-state"><strong>No logbook templates yet</strong><p>Create the first specialty-specific draft below.</p></div>') +
@@ -214,7 +214,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
               const htmlSections = Array.isArray(templateDefinition.sections) ? templateDefinition.sections : [];
               const canPublishReviewedRuntime = isRegisteredHtml || version.fields.length > 0;
               const runtimeDescription = isRegisteredHtml
-                ? '<p><strong>Runtime:</strong> Existing Medical Oncology HTML logbook</p>' +
+                ? '<p><strong>Runtime:</strong> Existing HTML logbook · ' + escape(version.template?.title || 'Registered asset') + '</p>' +
                   '<p><strong>Views:</strong> ' + escape(htmlSections.join(' · ') || 'HTML asset') + '</p>' +
                   '<p><a class="button button--secondary button--small" href="' + escape(templateDefinition.html_path + '?mode=preview') + '" target="_blank" rel="noopener noreferrer">Preview original HTML logbook</a></p>' +
                   '<p class="workspace-note">Preview data stays in this browser. Do not enter patient-identifying information.</p>'
