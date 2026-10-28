@@ -36,6 +36,14 @@ const [
 ]);
 
 // Authentication and identity provisioning.
+check('existing platform accounts are role-checked before trainee provisioning',
+  contains(frontend, "from('profile_roles')") &&
+  contains(frontend, ".is('revoked_at', null)") &&
+  contains(frontend, "item.role === 'TRAINEE'") &&
+  contains(frontend, "This account is not assigned to the trainee workspace."));
+check('trainee provisioning has a single guarded callsite shared by sign-up, sign-in and session restore',
+  (frontend.match(/supabase\.rpc\(['"]provision_current_trainee['"]/g) || []).length === 1 &&
+  (frontend.match(/requireTraineeWorkspace\(/g) || []).length === 4);
 check('email/password sign-up is implemented', /supabase\.auth\.signUp\s*\(/.test(frontend));
 check('email/password sign-in is implemented', /supabase\.auth\.signInWithPassword\s*\(/.test(frontend));
 check('frontend uses current-user provisioning RPC', /supabase\.rpc\(['"]provision_current_trainee['"]/.test(frontend));
