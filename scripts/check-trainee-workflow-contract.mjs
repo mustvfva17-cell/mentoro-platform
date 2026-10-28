@@ -32,7 +32,7 @@ const [
   read('supabase/migrations/20261028093412_harden_trainee_verification_bucket.sql'),
   read('supabase/migrations/20261028093532_enforce_server_submission_timestamp.sql'),
   read('supabase/migrations/20261028094412_fix_scoped_logbook_submission_rpc.sql'),
-  read('supabase/migrations/20261028102000_revoke_submission_timestamp_client_write.sql')
+  read('supabase/migrations/20261028101524_revoke_submission_timestamp_client_write.sql')
 ]);
 
 // Authentication and identity provisioning.
