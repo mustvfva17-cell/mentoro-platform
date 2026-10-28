@@ -39,9 +39,7 @@ const [
 
 // Authentication and identity provisioning.
 // Frontend-only role/workspace behavior is validated by PR #1; this stacked PR validates the database-side guard below.
-check('trainee provisioning has a single guarded callsite shared by sign-up, sign-in and session restore',
-  (frontend.match(/supabase\.rpc\(['"]provision_current_trainee['"]/g) || []).length === 1 &&
-  (frontend.match(/requireTraineeWorkspace\(/g) || []).length === 4);
+// Frontend callsite/role-gate contracts are enforced on PR #1; this branch checks the server-side migration guard.
 check('email/password sign-up is implemented', /supabase\.auth\.signUp\s*\(/.test(frontend));
 check('email/password sign-in is implemented', /supabase\.auth\.signInWithPassword\s*\(/.test(frontend));
 check('frontend uses current-user provisioning RPC', /supabase\.rpc\(['"]provision_current_trainee['"]/.test(frontend));
