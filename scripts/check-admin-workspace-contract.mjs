@@ -59,6 +59,7 @@ check(
 
 
 const templateMigration = await read('../supabase/migrations/20261028143000_admin_create_logbook_template_draft.sql');
+const schemaGuardMigration = await read('../supabase/migrations/20261028143800_guard_logbook_template_schema.sql');
 check(
   admin.includes('id="admin-template-form"') &&
   admin.includes("supabase.rpc('admin_create_logbook_template_draft'") &&
@@ -81,6 +82,23 @@ check(
   templateMigration.includes('Schema field keys must be unique') &&
   admin.includes('Publishing stays blocked until the template is clinically reviewed'),
   'template drafts validate field schema and cannot be mistaken for clinically published templates'
+);
+
+
+check(
+  admin.includes("const allTemplateVersions = (templateVersionResult.data || []).map") &&
+  admin.includes("LOGBOOK REVIEW") &&
+  admin.includes("const templateVersions = allTemplateVersions.filter((version) => version.template?.is_active)") &&
+  admin.includes("Pending clinical review. Publishing remains disabled"),
+  'template drafts are visible in an admin review queue but inactive drafts cannot be offered for booking'
+);
+check(
+  schemaGuardMigration.includes("CREATE TRIGGER guard_logbook_template_version_schema") &&
+  schemaGuardMigration.includes("Select options must be non-empty strings") &&
+  schemaGuardMigration.includes("Logbook schema field keys must be unique") &&
+  schemaGuardMigration.includes("A published/assignable template requires structured fields") &&
+  schemaGuardMigration.includes("A published/assignable template requires source and clinical review notes"),
+  'database trigger validates schema fields and blocks publishing without structure and source notes'
 );
 
 console.log('Administrator workspace safety contracts passed.');
