@@ -359,9 +359,10 @@ function bindEntryForms(user) {
   }));
   document.querySelectorAll('[data-submit-entry]').forEach((button) => button.addEventListener('click', async () => {
     button.disabled = true;
-    const { error } = await supabase.from('logbook_entries')
-      .update({ status: 'SUBMITTED', submitted_at: new Date().toISOString() })
-      .eq('id', button.dataset.submitEntry).eq('status', 'DRAFT');
+    const { error } = await supabase.rpc('set_logbook_entry_submitted', {
+      p_actor_id: user.id,
+      p_entry_id: button.dataset.submitEntry
+    });
     if (error) {
       message(errorText(error), 'error');
       button.disabled = false;
