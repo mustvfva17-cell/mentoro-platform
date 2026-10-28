@@ -1,10 +1,16 @@
 # MENTORO Target Data Model v2 — Independent Training Enrollments
 
-**Status:** Canonical target model for implementation; reviewed design, not executable SQL.  
+**Status:** Canonical target model; initial core schema applied to isolated Supabase test only. Not production-ready.  
 **Date:** 2026-10-28  
 **Decision source:** `docs/decisions/ADR-03-INDEPENDENT-TRAINING-ENROLLMENTS.md`
 
 > This document supersedes the old one-active-`trainee_assignments` model. Do not implement the old global unique-active-assignment rule, trainee-wide mentor scope, one-pending-enrollment-per-email rule, or invitation-code activation path as the main training workflow.
+
+## Current database snapshot (2026-10-28)
+
+The core version of this model is applied only to the isolated Supabase test project and is tracked by numbered SQL files under `supabase/migrations/`. The current schema includes the entities below, with RLS enabled on every application table. Four migration records are present in test. No production Supabase migration has been applied, and the application UI/API is not yet wired end to end.
+
+The seeded General Surgery template is intentionally `DRAFT` and `is_assignable=false`; it must not be offered for actual training until its structured fields and clinical requirements are reviewed and approved. See `docs/IMPLEMENTATION_STATUS.md` for verification results.
 
 ## 1. Core invariants
 
@@ -134,4 +140,4 @@ Security, audit, privacy, role integrity, correction-history, immutable template
 - Sensitive write and audit records are atomic; RLS and grants are tested using the actual selected connection/role.
 - Private identity documents cannot be read by another trainee/mentor; no patient-identifying data is accepted into log entries or audit metadata.
 
-**Current implementation status:** This model is a design artifact only. No schema, migrations, grants, RLS policies, or database writes have been applied. The Supabase test project must become accessible before the SQL design and test gates can be completed.
+**Current implementation status:** The initial schema/RLS implementation is applied in the isolated Supabase test project and tracked by four migration files. Security Advisor currently reports no findings. UI/API integration, role-specific RLS tests with real authenticated users, concurrency tests, and the full end-to-end acceptance tests remain pending. Do not deploy the schema to production or publish the General Surgery template yet.
