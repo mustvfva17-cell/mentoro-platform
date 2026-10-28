@@ -8,6 +8,65 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
+const htmlLogbookWindows = new Map();
+const htmlLogbookSync = new Map();
+function openHTMLLogbook(instanceId) {
+  if (!supabase || !/^[0-9a-f-]{36}$/i.test(instanceId || '')) { message('This logbook is not available for this training.', 'error'); return; }
+  const existing = htmlLogbookWindows.get(instanceId);
+  if (existing && !existing.closed) { existing.focus(); return; }
+  const child = window.open('/logbooks/medical-oncology/index.html?instance=' + encodeURIComponent(instanceId), '_blank');
+  if (!child) { message('Your browser blocked the logbook window. Allow pop-ups for this site and try again.', 'error'); return; }
+  htmlLogbookWindows.set(instanceId, child);
+  htmlLogbookSync.set(instanceId, { revision: null, timer: null, saving: false, state: null });
+}
+function postHTMLLogbookMessage(instanceId, payload) {
+  const child = htmlLogbookWindows.get(instanceId);
+  if (child && !child.closed) child.postMessage({ ...payload, instanceId }, window.location.origin);
+}
+async function flushHTMLLogbookState(instanceId) {
+  const sync = htmlLogbookSync.get(instanceId);
+  if (!sync || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;
+  sync.saving = true;
+  const stateToSave = sync.state;
+  try {
+    const { data, error } = await supabase.rpc('save_my_logbook_html_state', { p_instance_id: instanceId, p_state: stateToSave, p_expected_revision: sync.revision });
+    if (error) throw error;
+    sync.revision = Number(data);
+    postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: true, revision: sync.revision });
+    if (sync.state !== stateToSave) { clearTimeout(sync.timer); sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), 250); }
+  } catch (error) {
+    const detail = error?.message || 'Cloud save failed.';
+    postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: false, error: String(detail).includes('LOGBOOK_STATE_CONFLICT') ? 'This logbook changed in another tab. Close this tab and reopen it to load the latest saved version.' : detail });
+  } finally { sync.saving = false; }
+}
+window.addEventListener('message', async (event) => {
+  if (event.origin !== window.location.origin || !event.data || typeof event.data !== 'object') return;
+  const { type, instanceId } = event.data;
+  const child = htmlLogbookWindows.get(instanceId);
+  if (!child || child.closed || event.source !== child || !/^[0-9a-f-]{36}$/i.test(instanceId || '')) return;
+  if (type === 'MENTORO_LOGBOOK_READY') {
+    try {
+      const { data, error } = await supabase.rpc('get_my_logbook_html_state', { p_instance_id: instanceId });
+      if (error) throw error;
+      const sync = htmlLogbookSync.get(instanceId);
+      if (!sync) return;
+      sync.revision = Number(data?.revision ?? 0);
+      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_LOAD_STATE', state: data?.state && typeof data.state === 'object' ? data.state : null, revision: sync.revision, hasCloudState: sync.revision > 0 });
+    } catch (error) {
+      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_LOAD_ERROR', error: error?.message || 'Could not load this training logbook.' });
+    }
+    return;
+  }
+  if (type === 'MENTORO_LOGBOOK_STATE_CHANGED' && event.data.state && typeof event.data.state === 'object') {
+    const sync = htmlLogbookSync.get(instanceId);
+    if (!sync) return;
+    sync.state = event.data.state;
+    clearTimeout(sync.timer);
+    sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), 700);
+  }
+});
+
+
 const esc = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 }[char]));
@@ -552,6 +611,9 @@ function logbookCard(enrollment) {
       <span class="specialty-label">${esc(specialty.name_en || 'Clinical training')}</span><h3>${esc(offering.title || 'Training logbook')}</h3>
       <p class="mentor-line">${esc(mentor.display_name || 'Assigned mentor')}</p>
       <div class="logbook-meta"><span>${entries.length} entries</span><span>${draftCount} drafts / revisions</span></div>
+      ${instance && templateVersion?.template_definition?.renderer === 'HTML' && templateVersion?.template_definition?.html_path === '/logbooks/medical-oncology/index.html'
+        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '">Open interactive logbook</button>'
+        : ''}
       ${instance ? `
         <form class="entry-form" data-instance-id="${esc(instance.id)}">
           <label for="entry-title-${esc(instance.id)}">Entry title</label>
@@ -659,6 +721,7 @@ async function loadOfferings(user, isVerified) {
 }
 
 function bindEntryForms(user) {
+  document.querySelectorAll('[data-open-html-logbook]').forEach((button) => button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbook)));
   document.querySelectorAll('.entry-form').forEach((form) => form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const data = new FormData(form);
