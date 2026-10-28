@@ -82,6 +82,9 @@ The current migration connection is `postgres` and does not have membership in `
 4. Configure an independent Vercel preview and run the auth/application/logbook workflow end-to-end.
 5. Do not replay the recovered historical migrations on `mentoro-platform-test`; it already records those versions as applied. Do not run anything against production.
 
+
+The GitHub Actions workflow now runs `npm run check:contracts` before the production build. It checks literal `entry_type` values in `src/main.js` against the core migration when that file is present; on branches missing recovered migration history, it falls back to the reviewed allowed-value list and emits a warning.
+
 ## Acceptance criteria
 
 - An isolated database can be provisioned from the repository migrations without manual SQL-editor steps.
