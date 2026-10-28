@@ -44,7 +44,7 @@ const [
   read('supabase/migrations/20261028115852_mentor_scoped_application_inbox.sql'),
   read('supabase/migrations/20261028115928_secure_mentor_inbox_wrapper.sql'),
   read('supabase/migrations/20261028120703_logbook_review_return_workflow.sql'),
-  read('supabase/migrations/20261028121500_fix_returned_submission_trigger_conditions.sql')
+  read('supabase/migrations/20261028121405_fix_returned_submission_trigger_conditions.sql')
 ]);
 
 // Authentication and identity provisioning.
