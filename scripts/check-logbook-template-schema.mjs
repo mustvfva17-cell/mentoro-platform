@@ -165,7 +165,7 @@ for (const scenario of [
 ]) {
   assert.ok(htmlStateTest.includes(scenario), `HTML state integration test missing case: ${scenario}`);
 }
-const htmlLimitFix = await read('supabase/migrations/20261028170000_fix_html_state_object_limits.sql');
+const htmlLimitFix = await read('supabase/migrations/20261028171227_fix_html_state_object_limits.sql');
 assert.ok(htmlLimitFix.includes('CREATE OR REPLACE FUNCTION app_private.save_my_logbook_html_state'));
 assert.ok(htmlLimitFix.includes("SELECT count(*) FROM jsonb_object_keys(p_state -> 'roadmap')"));
 assert.ok(htmlLimitFix.includes("SELECT count(*) FROM jsonb_object_keys(p_state -> 'reflection')"));
