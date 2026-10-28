@@ -272,6 +272,7 @@ th{font-weight:650!important}
 <header class="topbar"><div class="top-brand"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgODAiPjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iODAiIGZpbGw9Im5vbmUiLz48ZyBmaWxsPSJub25lIiBzdHJva2U9IiNjOTFmMzMiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48Y2lyY2xlIGN4PSIzMiIgY3k9IjI1IiByPSIxMCIvPjxjaXJjbGUgY3g9IjU4IiBjeT0iMjUiIHI9IjEwIi8+PHBhdGggZD0iTTE2IDYxYzItMTcgMzAtMTcgMzIgME00MiA2MWMyLTE3IDMwLTE3IDMyIDAiLz48L2c+PHRleHQgeD0iODgiIHk9IjU1IiBmb250LWZhbWlseT0iQXJpYWwsSGVsdmV0aWNhLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNDQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMxNzIzM2QiPm1lbnRvcjwvdGV4dD48dGV4dCB4PSIyNDUiIHk9IjU1IiBmb250LWZhbWlseT0iQXJpYWwsSGVsdmV0aWNhLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNDQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNjOTFmMzMiPm88L3RleHQ+PC9zdmc+" alt="MENTORO"></div><div class="crumb"><strong>MENTORO</strong> <span>/ Medical Oncology / </span><span id="crumb">Overview</span></div><div class="top-actions"><button class="btn icon-btn theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button><div class="quick-add"><button class="btn primary" onclick="toggleQuickAdd()" aria-expanded="false">+ Log</button><div class="quick-menu" id="quickMenu"><button onclick="openExposureModal();closeQuickAdd()">Today's exposure</button><button onclick="quickOpen('session')">Detailed session</button><button onclick="quickOpen('case')">Detailed case</button><button onclick="quickOpen('procedure')">Procedure</button><button onclick="go('emergency');closeQuickAdd()">Emergency</button></div></div></div></header>
 
 <main class="content">
+<div id="legacy-preview-banner" class="privacy-note" style="display:none;margin:0 0 14px" role="status" hidden><strong>Existing HTML template preview.</strong> Entries in this preview are saved only in this browser under a separate preview key. They are not linked to a confirmed training, cloud sync, or mentor review yet. Do not enter real patient-identifying information.</div>
 
 <section id="dashboard" class="view active">
   <div class="eyebrow">Clinical logbook</div><h1 class="title">Medical Oncology</h1><p class="sub">A focused place to record clinical exposure, meaningful cases, procedures, and mentor teaching.</p>
@@ -547,7 +548,20 @@ function makeRoadmapItems(){
 }
 const roadmapItems=makeRoadmapItems();
 
-const store={get:(k,f='')=>{try{return localStorage.getItem(k)||f}catch(e){return f}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+const pageParams=new URLSearchParams(window.location.search);
+const previewMode=pageParams.get('mode')==='preview';
+const instanceParam=pageParams.get('instance')||'';
+const instanceId=/^[0-9a-f-]{36}$/i.test(instanceParam)?instanceParam:'';
+const storageScope=instanceId?'mentoro_training_'+instanceId+'_':(previewMode?'mentoro_medical_oncology_preview_':'');
+const scopedStorageKey=(key)=>storageScope+key;
+const store={
+ get:(k,f='')=>{try{return localStorage.getItem(scopedStorageKey(k))||f}catch(e){return f}},
+ set:(k,v)=>{try{localStorage.setItem(scopedStorageKey(k),v)}catch(e){}}
+};
+if(previewMode){
+ const note=document.getElementById('legacy-preview-banner');
+ if(note) note.hidden=false;
+}
 var data={
  sessions:JSON.parse(store.get('mentoro_v4_sessions')||store.get('mentoro_v3_sessions')||'[]'),
  cases:JSON.parse(store.get('mentoro_v4_cases')||store.get('mentoro_v3_cases')||'[]'),
