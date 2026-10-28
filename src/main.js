@@ -30,6 +30,39 @@ const setBusy = (button, busy, label = 'Please wait…') => {
     button.textContent = button.dataset.originalText || button.textContent;
   }
 };
+async function requireTraineeWorkspace(user) {
+  const { data: existingProfile, error: profileError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (profileError) throw profileError;
+
+  // Do not silently grant a trainee role to existing mentor/admin accounts.
+  if (existingProfile) {
+    const { data: activeRoles, error: rolesError } = await supabase
+      .from('profile_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .is('revoked_at', null);
+    if (rolesError) throw rolesError;
+
+    if (!(activeRoles || []).some((item) => item.role === 'TRAINEE')) {
+      await supabase.auth.signOut();
+      renderAuth();
+      message('This account is not assigned to the trainee workspace. Mentor and admin workspaces are not available in this preview yet.', 'error');
+      return false;
+    }
+  }
+
+  // New sign-ups have no profile yet; existing trainee accounts are provisioned idempotently.
+  const { error: provisionError } = await supabase.rpc('provision_current_trainee', {
+    p_full_name: user.user_metadata?.full_name || ''
+  });
+  if (provisionError) throw provisionError;
+  return true;
+}
+
 const errorText = (error) => {
   const known = {
     invalid_credentials: 'Email or password is incorrect.',
@@ -134,9 +167,9 @@ function renderAuth() {
         });
         if (error) throw error;
         if (result.session) {
-          const { error: provisionError } = await supabase.rpc('provision_current_trainee', { p_full_name: fullName });
-          if (provisionError) throw provisionError;
-          await renderDashboard(result.session.user);
+          if (await requireTraineeWorkspace(result.session.user)) {
+            await renderDashboard(result.session.user);
+          }
         } else {
           document.querySelector('[data-auth-tab="signin"]').click();
           message('Account created. Check your email and confirm your address, then return here to sign in.', 'success');
@@ -144,10 +177,9 @@ function renderAuth() {
       } else {
         const { data: result, error } = await supabase.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
-        const fullName = result.user.user_metadata?.full_name || '';
-        const { error: provisionError } = await supabase.rpc('provision_current_trainee', { p_full_name: fullName });
-        if (provisionError) throw provisionError;
-        await renderDashboard(result.user);
+        if (await requireTraineeWorkspace(result.user)) {
+          await renderDashboard(result.user);
+        }
       }
     } catch (error) {
       message(errorText(error), 'error');
@@ -382,11 +414,9 @@ async function start() {
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.user) {
     try {
-      const { error } = await supabase.rpc('provision_current_trainee', {
-        p_full_name: session.user.user_metadata?.full_name || ''
-      });
-      if (error) throw error;
-      await renderDashboard(session.user);
+      if (await requireTraineeWorkspace(session.user)) {
+        await renderDashboard(session.user);
+      }
     } catch (error) {
       renderAuth();
       message(errorText(error), 'error');
