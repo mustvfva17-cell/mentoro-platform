@@ -1,0 +1,30 @@
+name: Validate platform
+
+on:
+  pull_request:
+    branches:
+      - main
+      - feat/trainee-auth-foundation
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Validate frontend/schema contracts
+        run: npm run check:contracts
+      - name: Build production assets
+        run: npm run build
