@@ -68,7 +68,7 @@ WHERE n.nspname = 'public'
 ORDER BY object_type, object_name;
 ```
 
-## Verification query after an owner-authorized change
+## Verification after extension installs, restores, or upgrades
 
 After extension installs, restores, or upgrades, rerun both read-only inventories above and confirm any new `supabase_admin`-owned objects in `public` are intentional and have reviewed grants. Re-check privileges on the 17 existing application tables separately; default ACLs concern future objects and do not replace current-object ACL verification.
 
