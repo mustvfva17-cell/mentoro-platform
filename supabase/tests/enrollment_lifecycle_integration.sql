@@ -215,6 +215,12 @@ BEGIN
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'Completed enrollment accepted a terminal-state reversal'; END IF;
 
+  -- Assigned Mentor can cancel an active enrollment, but must provide a reason.
+  v_result := public.transition_my_training_enrollment(v_enrollment_a,'CANCEL','Synthetic mentor cancellation after disruption');
+  IF v_result->>'status'<>'CANCELLED' OR NOT EXISTS(
+    SELECT 1 FROM public.training_enrollments WHERE id=v_enrollment_a AND status='CANCELLED' AND cancelled_at IS NOT NULL
+  ) THEN RAISE EXCEPTION 'Assigned Mentor could not cancel active training with a reason'; END IF;
+
   -- Direct entry writes are blocked after cancellation/completion even when using a privileged SQL session.
   PERFORM set_config('request.jwt.claim.sub',v_trainee::text,true);
   PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',v_trainee::text)::text,true);
@@ -237,6 +243,16 @@ BEGIN
   EXCEPTION WHEN SQLSTATE '55000' THEN v_rejected:=true;
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'Cancelled enrollment still accepted draft writes'; END IF;
+
+  v_rejected:=false;
+  BEGIN
+    INSERT INTO public.logbook_entries(instance_id,entry_type,title,entry_date,payload,status,created_by)
+    VALUES(v_instance_a,'LEARNING_ACTIVITY','Must be blocked after mentor cancellation',current_date,
+      jsonb_build_object('clinical_context','Synthetic non-clinical test data'),'DRAFT',v_trainee);
+    RAISE EXCEPTION 'TEST_FAILED: draft inserted into mentor-cancelled enrollment' USING ERRCODE='XX000';
+  EXCEPTION WHEN SQLSTATE '55000' THEN v_rejected:=true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Mentor-cancelled enrollment still accepted draft writes'; END IF;
 
   IF (SELECT count(*) FROM public.audit_logs
       WHERE entity_type='TRAINING_ENROLLMENT'
