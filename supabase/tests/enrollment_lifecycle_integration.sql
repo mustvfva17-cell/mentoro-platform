@@ -87,15 +87,16 @@ BEGIN
 
   INSERT INTO public.training_applications(
     trainee_profile_id,offering_id,slot_id,status,mentor_decision_by,mentor_decided_at,admin_decision_by,admin_decided_at
-  ) VALUES
-    (v_trainee,v_offering,v_slot_a,'ADMIN_CONFIRMED',v_mentor,now(),v_admin,now()),
-    (v_trainee,v_offering,v_slot_b,'ADMIN_CONFIRMED',v_mentor,now(),v_admin,now()),
-    (v_trainee,v_offering,v_slot_c,'ADMIN_CONFIRMED',v_mentor,now(),v_admin,now())
+  ) VALUES(v_trainee,v_offering,v_slot_a,'ADMIN_CONFIRMED',v_mentor,now(),v_admin,now())
   RETURNING id INTO v_app_a;
-
-  -- Insert individually so each enrollment has its own distinct application source.
-  SELECT id INTO v_app_b FROM public.training_applications WHERE slot_id=v_slot_b AND offering_id=v_offering;
-  SELECT id INTO v_app_c FROM public.training_applications WHERE slot_id=v_slot_c AND offering_id=v_offering;
+  INSERT INTO public.training_applications(
+    trainee_profile_id,offering_id,slot_id,status,mentor_decision_by,mentor_decided_at,admin_decision_by,admin_decided_at
+  ) VALUES(v_trainee,v_offering,v_slot_b,'ADMIN_CONFIRMED',v_mentor,now(),v_admin,now())
+  RETURNING id INTO v_app_b;
+  INSERT INTO public.training_applications(
+    trainee_profile_id,offering_id,slot_id,status,mentor_decision_by,mentor_decided_at,admin_decision_by,admin_decided_at
+  ) VALUES(v_trainee,v_offering,v_slot_c,'ADMIN_CONFIRMED',v_mentor,now(),v_admin,now())
+  RETURNING id INTO v_app_c;
 
   INSERT INTO public.training_enrollments(
     source_application_id,trainee_profile_id,mentor_profile_id,specialty_id,offering_id,slot_id,template_version_id,
