@@ -340,4 +340,19 @@ check(
   'cancelled enrollments stay aligned with trainee application history while completed bookings preserve approval history'
 );
 
+const traineeLogbookCardStart = mainWorkspace.indexOf('function logbookCard(enrollment)');
+const traineeLogbookCardEnd = mainWorkspace.indexOf('\\nfunction ', traineeLogbookCardStart + 10);
+const traineeLogbookCard = traineeLogbookCardStart >= 0 && traineeLogbookCardEnd > traineeLogbookCardStart
+  ? mainWorkspace.slice(traineeLogbookCardStart, traineeLogbookCardEnd)
+  : '';
+check(
+  traineeLogbookCard.includes("const enrollmentClosed = !['CONFIRMED', 'ACTIVE'].includes(enrollment.status);") &&
+  traineeLogbookCard.includes("data-read-only=\"' + (enrollmentClosed ? 'true' : 'false') + '\"") &&
+  mainWorkspace.includes("readOnly: button.dataset.readOnly === 'true'") &&
+  traineeLogbookCard.includes("!enrollmentClosed && entry.status === 'DRAFT'") &&
+  traineeLogbookCard.includes("!enrollmentClosed && entry.status === 'RETURNED'") &&
+  traineeLogbookCard.includes('This training is closed. The logbook is read-only'),
+  'closed trainee logbooks open read-only and hide structured draft/revision mutations while preserving history'
+);
+
 console.log('Administrator workspace safety contracts passed.');
