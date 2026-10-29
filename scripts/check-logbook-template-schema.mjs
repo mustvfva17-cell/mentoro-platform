@@ -178,7 +178,7 @@ assert.ok(mentorReviewIntegrationTest.includes('Current session review was not r
 assert.ok(mentorReviewIntegrationTest.includes('Same-ID items with different types must retain separate latest review decisions'));
 assert.ok(mentorReviewIntegrationTest.includes('Changing or removing a reviewed item must mark its decision as stale'));
 assert.ok(mentorReviewIntegrationTest.includes('Trainee must not be able to issue mentor review decisions'));
-const htmlReviewIntegrityMigration = await read('supabase/migrations/20261029102000_bind_html_logbook_review_integrity.sql');
+const htmlReviewIntegrityMigration = await read('supabase/migrations/20261029102420_bind_html_logbook_review_integrity.sql');
 assert.ok(htmlReviewIntegrityMigration.includes('item_digest text'));
 assert.ok(htmlReviewIntegrityMigration.includes('reviewed_state_revision bigint'));
 assert.ok(htmlReviewIntegrityMigration.includes("extensions.digest(v_item::text, 'sha256')"));
