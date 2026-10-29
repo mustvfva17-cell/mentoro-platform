@@ -792,7 +792,7 @@ function logbookCard(enrollment) {
       <p class="mentor-line">${esc(mentor.display_name || 'Assigned mentor')}</p>
       <div class="logbook-meta"><span>${entries.length} entries</span><span>${draftCount} drafts / revisions</span></div>
       ${instance && isRegisteredHtml
-        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '" data-read-only="' + (enrollmentClosed ? 'true' : 'false') + '">Open ' + (enrollmentClosed ? 'read-only' : 'interactive') + ' logbook</button><p class="workspace-note">' + (enrollmentClosed ? 'This training is closed. The logbook is read-only.' : 'This uses the original HTML logbook for this training. Cloud changes save to this enrollment only; do not enter patient-identifying information.') + ' Do not enter patient-identifying information.</p>'
+        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '" data-read-only="' + (enrollmentClosed ? 'true' : 'false') + '">Open ' + (enrollmentClosed ? 'read-only' : 'interactive') + ' logbook</button><p class="workspace-note">' + (enrollmentClosed ? 'This training is closed. The logbook is read-only; do not enter patient-identifying information.' : 'This uses the original HTML logbook for this training. Cloud changes save to this enrollment only; do not enter patient-identifying information.') + '</p>'
         : ''}
       ${instance && !isRegisteredHtml ? `
         ${enrollmentClosed
