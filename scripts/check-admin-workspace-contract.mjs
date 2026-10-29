@@ -5,6 +5,7 @@ const admin = await read('../src/admin-workspace.js');
 const mainWorkspace = await read('../src/main.js');
 const enrollmentLifecycleMigration = await read('../supabase/migrations/20261029103946_add_enrollment_lifecycle_controls.sql');
 const enrollmentLifecycleTest = await read('../supabase/tests/enrollment_lifecycle_integration.sql');
+const enrollmentCancellationSyncMigration = await read('../supabase/migrations/20261029112500_sync_application_status_on_enrollment_cancellation.sql');
 const wrappers = await read('../supabase/migrations/20261028062421_current_user_workflow_wrappers.sql');
 const adminSetup = await read('../supabase/migrations/20261028062818_mentor_reviews_and_admin_training_setup.sql');
 const mentorRegistrationGuard = await read('../supabase/migrations/20261028201121_guard_admin_mentor_registration_target.sql');
@@ -327,6 +328,16 @@ check(
   mainWorkspace.includes('data-enrollment-action') &&
   mainWorkspace.includes('bindMentorEnrollmentActions(user)'),
   'enrollment lifecycle has checked RPC transitions, database-enforced read-only closure, UI actions for Mentor/Admin and rollback-only coverage'
+);
+
+check(
+  enrollmentCancellationSyncMigration.includes("UPDATE public.training_applications") &&
+  enrollmentCancellationSyncMigration.includes("SET status = 'CANCELLED'") &&
+  enrollmentCancellationSyncMigration.includes("'source_application_id', v_enrollment.source_application_id") &&
+  enrollmentLifecycleTest.includes('Admin cancellation did not update its trainee-facing application status') &&
+  enrollmentLifecycleTest.includes('Mentor cancellation did not update its trainee-facing application status') &&
+  enrollmentLifecycleTest.includes('Completion should preserve the original confirmed application history'),
+  'cancelled enrollments stay aligned with trainee application history while completed bookings preserve approval history'
 );
 
 console.log('Administrator workspace safety contracts passed.');
