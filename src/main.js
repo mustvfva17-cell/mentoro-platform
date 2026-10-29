@@ -621,7 +621,6 @@ function mentorEnrollmentCard(enrollment) {
   const htmlPath = templateVersion?.template_definition?.html_path;
   const isRegisteredHtml = templateVersion?.template_definition?.renderer === 'HTML' &&
     REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath);
-  const enrollmentClosed = !['CONFIRMED', 'ACTIVE'].includes(enrollment.status);
   const entries = instance?.logbook_entries || [];
   const submittedCount = entries.filter((entry) => {
     if (entry.status !== 'SUBMITTED') return false;
@@ -775,6 +774,7 @@ function logbookCard(enrollment) {
   const htmlPath = templateVersion?.template_definition?.html_path;
   const isRegisteredHtml = templateVersion?.template_definition?.renderer === 'HTML' &&
     REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath);
+  const enrollmentClosed = !['CONFIRMED', 'ACTIVE'].includes(enrollment.status);
   const templateFields = getTemplateFields(templateVersion);
   const entries = [...(instance?.logbook_entries || [])].sort((a, b) =>
     String(b.entry_date || '').localeCompare(String(a.entry_date || '')) ||
