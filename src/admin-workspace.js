@@ -109,7 +109,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
           }).join('') + '</div>' : '<div class="empty-state"><strong>No verification documents waiting</strong><p>New trainee submissions will appear here.</p></div>') +
         '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">IDENTITY & ACCESS</p><h2>Register a mentor account</h2></div><span class="count-badge">' + mentors.length + '</span></div>' +
-          '<p class="workspace-note">The person must first create an account from the sign-in page and confirm their email. Then enter that exact email here. This grants Mentor workspace access through the administrator-only RPC; it does not create an Auth account or publish training automatically.</p>' +
+          '<p class="workspace-note">The person must create a separate account, select “This is a dedicated Mentor account” during sign-up, and confirm their email. That selection only defers trainee-profile creation; it grants no role. Register the confirmed email here before they sign in. The database rejects admin identities, trainee access, and accounts with trainee history. This does not create an Auth account or publish training automatically.</p>' +
           '<form id="admin-mentor-register-form" class="admin-form-card">' +
             '<div class="admin-form-grid">' +
               '<div class="field"><label for="admin-mentor-email">Existing account email</label><input id="admin-mentor-email" name="email" type="email" required maxlength="320" autocomplete="off" placeholder="mentor@example.com"></div>' +
@@ -508,66 +508,26 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         const bio = String(data.get('bio') || '').trim();
         const makePublic = data.get('makePublic') === 'yes';
         if (!email || !displayName || !professionalTitle || data.get('dedicatedMentor') !== 'yes') {
-          showMessage('Enter the existing account email, display name, professional title, and confirm this is a dedicated mentor account.', 'error');
+          showMessage('Enter the confirmed account email, display name, professional title, and confirm this is a dedicated mentor account.', 'error');
           return;
         }
-
+        const confirmed = window.confirm(
+          'Grant Mentor workspace access to the dedicated account ' + displayName + ' (' + email + ')?' +
+          '\n\nThe account must have a confirmed email and must not have trainee/admin access or trainee history.' +
+          '\n\nPublic directory visibility: ' + (makePublic ? 'ON' : 'OFF') + '.' +
+          '\n\nThis will not publish any training offering or logbook template.'
+        );
+        if (!confirmed) return;
         const button = mentorForm.querySelector('button[type="submit"]');
-        busy(button, true, 'Checking account…');
+        busy(button, true, 'Registering mentor…');
         try {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('id,email,full_name')
-            .eq('email', email)
-            .maybeSingle();
-          if (profileError) throw profileError;
-          if (!profile) throw new Error('No MENTORO profile exists for that email. Ask the person to create an account and confirm their email first.');
-
-          if (profile.id === user.id) throw new Error('The signed-in administrator cannot register their own account as a mentor.');
-          const { data: roleRows, error: rolesError } = await supabase
-            .from('profile_roles')
-            .select('role')
-            .eq('user_id', profile.id)
-            .is('revoked_at', null);
-          if (rolesError) throw rolesError;
-          const roles = new Set((roleRows || []).map((row) => row.role));
-          if (roles.has('ADMIN') || roles.has('SUPER_ADMIN')) {
-            throw new Error('Administrator accounts cannot be registered as mentors through this form. Use a dedicated mentor account.');
-          }
-          if (roles.has('TRAINEE')) {
-            throw new Error('This account already has an active trainee role. Create a separate account dedicated to mentor access.');
-          }
-
-          const [applicationHistory, enrollmentHistory, verificationHistory] = await Promise.all([
-            supabase.from('training_applications').select('id').eq('trainee_profile_id', profile.id).limit(1),
-            supabase.from('training_enrollments').select('id').eq('trainee_profile_id', profile.id).limit(1),
-            supabase.from('verification_documents').select('id').eq('trainee_profile_id', profile.id).limit(1)
-          ]);
-          for (const result of [applicationHistory, enrollmentHistory, verificationHistory]) {
-            if (result.error) throw result.error;
-          }
-          if ((applicationHistory.data || []).length || (enrollmentHistory.data || []).length || (verificationHistory.data || []).length) {
-            throw new Error('This account has trainee history. Do not repurpose it; create a separate account for mentor access.');
-          }
-
-          const confirmed = window.confirm(
-            'Grant Mentor workspace access to ' + (profile.full_name || displayName) + ' (' + email + ')?' +
-            '\n\nPublic directory visibility: ' + (makePublic ? 'ON' : 'OFF') + '.'
-          );
-          if (!confirmed) { busy(button, false); return; }
-
-          busy(button, true, 'Registering mentor…');
-          const { error } = await supabase.rpc('admin_register_mentor', {
-            p_mentor_profile_id: profile.id,
-            p_display_name: displayName,
-            p_professional_title: professionalTitle,
-            p_institution: institution || null,
-            p_bio: bio || null,
-            p_make_public: makePublic
+          const { error } = await supabase.rpc('admin_register_mentor_by_email', {
+            p_mentor_email: email, p_display_name: displayName, p_professional_title: professionalTitle,
+            p_institution: institution || null, p_bio: bio || null, p_make_public: makePublic
           });
           if (error) throw error;
           await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
-          showMessage('Mentor access registered. The account can now sign in to the Mentor workspace. Training and logbook templates remain unchanged.', 'success');
+          showMessage('Mentor access registered. The confirmed account can now sign in to the Mentor workspace. Training and logbook templates remain unchanged.', 'success');
         } catch (error) {
           showMessage((errorText || ((err) => err?.message || 'Could not register mentor access.'))(error), 'error');
           busy(button, false);

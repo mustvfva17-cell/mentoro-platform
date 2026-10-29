@@ -169,8 +169,18 @@ async function resolveWorkspaceRole(user) {
     .maybeSingle();
   if (profileError) throw profileError;
 
-  // A confirmed identity without a MENTORO profile enters the trainee onboarding path.
+  // User metadata may defer trainee provisioning, but never grants a workspace role.
+  // Dedicated Mentor identities must be registered separately by an active administrator.
   if (!existingProfile) {
+    if (user.user_metadata?.mentoro_account_intent === 'MENTOR') {
+      await supabase.auth.signOut();
+      renderAuth();
+      message(
+        'This account is reserved for Mentor access. Ask a platform administrator to register it before signing in again. This selection does not grant Mentor permissions.',
+        'info'
+      );
+      return null;
+    }
     await provisionCurrentTrainee(user);
     return 'TRAINEE';
   }
@@ -250,13 +260,14 @@ function renderAuth() {
         </div>
       </section>
       <section class="auth-card">
-        <div class="card-heading"><p class="eyebrow">GET STARTED</p><h2>Welcome to MENTORO</h2><p>Create a trainee account, or sign in with your assigned mentor or administrator account.</p></div>
+        <div class="card-heading"><p class="eyebrow">GET STARTED</p><h2>Welcome to MENTORO</h2><p>Create a trainee account or prepare a separate account for administrator-assigned Mentor access.</p></div>
         <div class="tab-list" role="tablist" aria-label="Account access">
           <button class="tab is-active" type="button" data-auth-tab="signin" role="tab" aria-selected="true">Sign in</button>
           <button class="tab" type="button" data-auth-tab="signup" role="tab" aria-selected="false">Create account</button>
         </div>
         <form id="auth-form" class="form-stack">
           <div id="name-field" class="field" hidden><label for="full-name">Full name</label><input id="full-name" name="fullName" autocomplete="name" placeholder="Your full name" minlength="2"></div>
+          <div id="mentor-intent-field" class="field" hidden><label class="checkbox-field"><input id="mentor-account-intent" name="mentorAccountIntent" type="checkbox" value="yes"> This is a dedicated Mentor account</label><small>Select this only for a separate account that a platform administrator will register. This choice does not grant Mentor access.</small></div>
           <div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required></div>
           <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" minlength="8" placeholder="At least 8 characters" required></div>
           <p class="form-hint" id="auth-hint">Use your registered email to continue.</p>
@@ -269,6 +280,8 @@ function renderAuth() {
   let mode = 'signin';
   const form = document.querySelector('#auth-form');
   const nameField = document.querySelector('#name-field');
+  const mentorIntentField = document.querySelector('#mentor-intent-field');
+  const mentorIntentCheckbox = document.querySelector('#mentor-account-intent');
   const password = document.querySelector('#password');
   const submit = document.querySelector('#auth-submit');
   document.querySelectorAll('[data-auth-tab]').forEach((tab) => tab.addEventListener('click', () => {
@@ -279,14 +292,24 @@ function renderAuth() {
       item.setAttribute('aria-selected', String(active));
     });
     nameField.hidden = mode !== 'signup';
+    mentorIntentField.hidden = mode !== 'signup';
     document.querySelector('#full-name').required = mode === 'signup';
     password.autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
     document.querySelector('#auth-hint').textContent = mode === 'signup'
-      ? 'Confirm your email before your trainee profile is activated.'
+      ? (mentorIntentCheckbox.checked
+        ? 'Confirm your email, then wait for the administrator to register this dedicated Mentor account before signing in.'
+        : 'Confirm your email before signing in to create your trainee profile.')
       : 'Use your registered email to continue.';
-    submit.textContent = mode === 'signup' ? 'Create trainee account' : 'Sign in';
+    submit.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
     message('');
   }));
+
+  mentorIntentCheckbox.addEventListener('change', () => {
+    if (mode !== 'signup') return;
+    document.querySelector('#auth-hint').textContent = mentorIntentCheckbox.checked
+      ? 'Confirm your email, then wait for the administrator to register this dedicated Mentor account before signing in.'
+      : 'Confirm your email before signing in to create your trainee profile.';
+  });
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -301,9 +324,12 @@ function renderAuth() {
     try {
       if (mode === 'signup') {
         const fullName = String(data.get('fullName')).trim();
+        const isDedicatedMentor = data.get('mentorAccountIntent') === 'yes';
+        const userMetadata = { full_name: fullName };
+        if (isDedicatedMentor) userMetadata.mentoro_account_intent = 'MENTOR';
         const { data: result, error } = await supabase.auth.signUp({
           email, password: pass,
-          options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin }
+          options: { data: userMetadata, emailRedirectTo: window.location.origin }
         });
         if (error) throw error;
         if (result.session) {
@@ -311,7 +337,12 @@ function renderAuth() {
           if (workspace) await renderWorkspace(result.session.user, workspace);
         } else {
           document.querySelector('[data-auth-tab="signin"]').click();
-          message('Account created. Check your email and confirm your address, then return here to sign in.', 'success');
+          message(
+            isDedicatedMentor
+              ? 'Account created. Confirm the email, then ask the platform administrator to register this dedicated Mentor account before signing in.'
+              : 'Account created. Check your email and confirm your address, then return here to sign in.',
+            'success'
+          );
         }
       } else {
         const { data: result, error } = await supabase.auth.signInWithPassword({ email, password: pass });
