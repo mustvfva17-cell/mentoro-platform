@@ -2,6 +2,9 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 const admin = await read('../src/admin-workspace.js');
+const mainWorkspace = await read('../src/main.js');
+const enrollmentLifecycleMigration = await read('../supabase/migrations/20261029103946_add_enrollment_lifecycle_controls.sql');
+const enrollmentLifecycleTest = await read('../supabase/tests/enrollment_lifecycle_integration.sql');
 const wrappers = await read('../supabase/migrations/20261028062421_current_user_workflow_wrappers.sql');
 const adminSetup = await read('../supabase/migrations/20261028062818_mentor_reviews_and_admin_training_setup.sql');
 const mentorRegistrationGuard = await read('../supabase/migrations/20261028201121_guard_admin_mentor_registration_target.sql');
@@ -303,6 +306,26 @@ check(
   legacyHtml.includes('Not verified against current content.') &&
   generalSurgeryHtml.includes('Not verified against current content.'),
   'HTML mentor reviews are tied to exact item content and type and stale decisions are no longer shown as current'
+);
+
+check(
+  enrollmentLifecycleMigration.includes('CREATE OR REPLACE FUNCTION public.transition_my_training_enrollment') &&
+  enrollmentLifecycleMigration.includes('SECURITY INVOKER') &&
+  enrollmentLifecycleMigration.includes('FOR UPDATE') &&
+  enrollmentLifecycleMigration.includes('TRAINING_ENROLLMENT_STARTED') &&
+  enrollmentLifecycleMigration.includes('TRAINING_ENROLLMENT_COMPLETED') &&
+  enrollmentLifecycleMigration.includes('TRAINING_ENROLLMENT_CANCELLED') &&
+  enrollmentLifecycleMigration.includes('guard_enrollment_logbook_writes') &&
+  enrollmentLifecycleMigration.includes("e.status IN ('CONFIRMED', 'ACTIVE')") &&
+  enrollmentLifecycleTest.startsWith('-- Rollback-only integration test') &&
+  enrollmentLifecycleTest.trimEnd().endsWith('ROLLBACK;') &&
+  enrollmentLifecycleTest.includes('Trainee lifecycle change was not denied') &&
+  enrollmentLifecycleTest.includes('Cancelled enrollment still accepted draft writes') &&
+  admin.includes("data-admin-enrollment-action") &&
+  admin.includes("supabase.rpc('transition_my_training_enrollment'") &&
+  mainWorkspace.includes('data-enrollment-action') &&
+  mainWorkspace.includes('bindMentorEnrollmentActions(user)'),
+  'enrollment lifecycle has checked RPC transitions, database-enforced read-only closure, UI actions for Mentor/Admin and rollback-only coverage'
 );
 
 console.log('Administrator workspace safety contracts passed.');
