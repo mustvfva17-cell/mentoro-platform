@@ -73,7 +73,7 @@ async function reloadExistingHTMLLogbookReadOnly(instanceId) {
 }
 async function flushHTMLLogbookState(instanceId) {
   const sync = htmlLogbookSync.get(instanceId);
-  if (!sync || !sync.cloudStateLoaded || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;
+  if (!sync || sync.readOnly || !sync.cloudStateLoaded || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;
   sync.saving = true;
   const stateToSave = sync.state;
   try {
@@ -81,7 +81,7 @@ async function flushHTMLLogbookState(instanceId) {
     if (error) throw error;
     sync.revision = Number(data);
     postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: true, revision: sync.revision });
-    if (sync.state !== stateToSave) { clearTimeout(sync.timer); sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), 250); }
+    if (!sync.readOnly && sync.state !== stateToSave) { clearTimeout(sync.timer); sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), 250); }
   } catch (error) {
     const detail = error?.message || 'Cloud save failed.';
     postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: false, error: String(detail).includes('LOGBOOK_STATE_CONFLICT') ? 'This logbook changed in another tab. Close this tab and reopen it to load the latest saved version.' : detail });
@@ -158,7 +158,7 @@ window.addEventListener('message', async (event) => {
     if (!sync) return;
     if (!sync.cloudStateLoaded) return;
     if (sync.readOnly) {
-      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: false, error: 'This is a read-only mentor review. Changes are not saved.' });
+      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: false, error: 'This logbook is read-only. Changes are not saved.' });
       return;
     }
     sync.state = event.data.state;
