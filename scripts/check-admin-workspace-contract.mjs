@@ -357,15 +357,22 @@ check(
 
 check(
   mainWorkspace.includes('async function reloadExistingHTMLLogbookReadOnly(instanceId)') &&
+  mainWorkspace.includes('async function refreshHTMLLogbookLifecycle(instanceId)') &&
+  mainWorkspace.includes("setInterval(() => { void refreshHTMLLogbookLifecycle(instanceId); }, 5000)") &&
+  mainWorkspace.includes(".from('training_enrollments')") &&
+  mainWorkspace.includes(".select('id,status')") &&
+  mainWorkspace.includes('enrollmentId: button.dataset.enrollmentId') &&
+  traineeLogbookCard.includes('data-enrollment-id=') &&
   mainWorkspace.includes("postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SET_READ_ONLY' })") &&
   mainWorkspace.includes('sync.readOnly = true') &&
+  mainWorkspace.includes('stopHTMLLogbookLifecyclePolling(sync)') &&
   mainWorkspace.includes('if (sync.timer) clearTimeout(sync.timer)') &&
   mainWorkspace.includes('if (!sync || sync.readOnly || !sync.cloudStateLoaded || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;') &&
   mainWorkspace.includes('if (!sync.readOnly && sync.state !== stateToSave)') &&
   mainWorkspace.includes("error: 'This logbook is read-only. Changes are not saved.'") &&
   legacyHtml.includes("msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'") &&
   generalSurgeryHtml.includes("msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'"),
-  'already-open HTML logbook windows switch to read-only, reload saved cloud state, and suppress pending cloud saves after closure'
+  'open trainee HTML logbooks poll enrollment status, switch to read-only after remote closure, reload saved state, and suppress pending cloud saves'
 );
 
 console.log('Administrator workspace safety contracts passed.');
