@@ -10,6 +10,9 @@ const mentorRegistrationTest = await read('../supabase/tests/admin_register_ment
 const mentorRegistrationByEmailTest = await read('../supabase/tests/admin_register_mentor_by_email.sql');
 const schema = await read('../supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql');
 const legacyHtml = await read('../public/logbooks/medical-oncology/index.html');
+const generalSurgeryHtml = await read('../public/logbooks/general-surgery/index.html');
+const reviewIntegrityMigration = await read('../supabase/migrations/20261029102000_bind_html_logbook_review_integrity.sql');
+const reviewIntegrityTest = await read('../supabase/tests/logbook_html_state_integration.sql');
 
 function check(condition, message) {
   if (!condition) throw new Error(`Admin workspace contract failed: ${message}`);
@@ -289,6 +292,17 @@ check(
   htmlSeedMigration.includes("'DRAFT'") &&
   htmlSeedMigration.includes('ON CONFLICT (id) DO NOTHING'),
   'HTML publication wrapper, registered-asset access boundary, and non-assignable existing HTML seed migration are source-controlled'
+);
+
+check(
+  reviewIntegrityMigration.includes('reviewed_state_revision') &&
+  reviewIntegrityMigration.includes("extensions.digest(item_state.item::text, 'sha256')") &&
+  reviewIntegrityMigration.includes('DISTINCT ON (r.item_type, r.item_id)') &&
+  reviewIntegrityMigration.includes("'is_current'") &&
+  reviewIntegrityTest.includes('Changing or removing a reviewed item must mark its decision as stale') &&
+  legacyHtml.includes('Not verified against current content.') &&
+  generalSurgeryHtml.includes('Not verified against current content.'),
+  'HTML mentor reviews are tied to exact item content and type and stale decisions are no longer shown as current'
 );
 
 console.log('Administrator workspace safety contracts passed.');
