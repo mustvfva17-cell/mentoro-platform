@@ -3,32 +3,67 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MENTORO logbook read-only browser test harness</title>
+  <title>MENTORO logbook lifecycle browser test harness</title>
 </head>
 <body>
-  <h1>Logbook read-only browser test harness</h1>
+  <h1>MENTORO logbook lifecycle browser test harness</h1>
   <button id="open-logbook" type="button">Open logbook</button>
-  <script>
-    (() => {
-      const instanceId = '123e4567-e89b-12d3-a456-426614174000';
-      const params = new URLSearchParams(window.location.search);
-      const surgery = params.get('template') === 'general-surgery';
-      const path = surgery
-        ? '/logbooks/general-surgery/index.html'
-        : '/logbooks/medical-oncology/index.html';
-      window.mentoroTestInstanceId = instanceId;
-      window.mentoroTestPopup = null;
-      document.getElementById('open-logbook').addEventListener('click', () => {
-        window.mentoroTestPopup = window.open(path + '?instance=' + instanceId, '_blank');
-      });
-      window.mentoroSendClosedMessage = () => {
-        if (!window.mentoroTestPopup) throw new Error('Logbook popup was not opened');
-        window.mentoroTestPopup.postMessage({
+  <script type="module">
+    import { startEnrollmentLifecycleMonitor } from './enrollment-lifecycle-monitor.js';
+
+    const instanceId = '123e4567-e89b-12d3-a456-426614174000';
+    const enrollmentId = '223e4567-e89b-12d3-a456-426614174000';
+    const params = new URLSearchParams(window.location.search);
+    const surgery = params.get('template') === 'general-surgery';
+    const path = surgery
+      ? '/logbooks/general-surgery/index.html'
+      : '/logbooks/medical-oncology/index.html';
+    let enrollmentStatus = 'ACTIVE';
+
+    const mockSupabase = {
+      from(table) {
+        if (table !== 'training_enrollments') throw new Error('Unexpected table: ' + table);
+        return {
+          select() { return this; },
+          eq(column, value) {
+            if (column !== 'id' || value !== enrollmentId) throw new Error('Unexpected enrollment filter');
+            return this;
+          },
+          async maybeSingle() {
+            return { data: { id: enrollmentId, status: enrollmentStatus }, error: null };
+          }
+        };
+      }
+    };
+
+    window.mentoroTestPopup = null;
+    window.mentoroLifecycleMonitor = null;
+
+    const notifyPopupClosed = () => {
+      const popup = window.mentoroTestPopup;
+      if (popup && !popup.closed) {
+        popup.postMessage({
           type: 'MENTORO_LOGBOOK_SET_READ_ONLY',
           instanceId
         }, window.location.origin);
-      };
-    })();
+      }
+    };
+
+    document.getElementById('open-logbook').addEventListener('click', () => {
+      window.mentoroTestPopup = window.open(path + '?instance=' + instanceId, '_blank');
+      if (!window.mentoroTestPopup) throw new Error('The logbook popup was blocked');
+      window.mentoroLifecycleMonitor = startEnrollmentLifecycleMonitor({
+        supabase: mockSupabase,
+        enrollmentId,
+        intervalMs: 5000,
+        onClosed: notifyPopupClosed
+      });
+    });
+
+    window.mentoroTransitionEnrollment = async (status) => {
+      enrollmentStatus = status;
+      return await window.mentoroLifecycleMonitor.refresh();
+    };
   </script>
 </body>
 </html>
