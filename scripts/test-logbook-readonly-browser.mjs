@@ -11,11 +11,15 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const distRoot = resolve(projectRoot, 'dist');
 const harnessSource = resolve(projectRoot, 'tests/browser/logbook-readonly-harness.html');
 const harnessTarget = resolve(distRoot, 'tests/browser/logbook-readonly-harness.html');
+const monitorSource = resolve(projectRoot, 'src/enrollment-lifecycle-monitor.js');
+const monitorTarget = resolve(distRoot, 'tests/browser/enrollment-lifecycle-monitor.js');
 
-// Vite's build does not copy repository test fixtures into dist. Stage only the
-// harness into the generated output so the popup test exercises production assets.
+// Vite's build does not copy test fixtures or the isolated lifecycle monitor
+// into dist. Stage both so the popup test drives the production monitor helper
+// against a deterministic mock status API and exercises the real logbook page.
 await mkdir(dirname(harnessTarget), { recursive: true });
 await copyFile(harnessSource, harnessTarget);
+await copyFile(monitorSource, monitorTarget);
 
 const server = spawn(process.execPath, [
   './node_modules/vite/bin/vite.js',
@@ -75,7 +79,19 @@ try {
       });
       await logbook.waitForLoadState('load');
 
-      await parent.evaluate(() => window.mentoroSendClosedMessage());
+      const closureStatus = testCase.template === 'general-surgery' ? 'CANCELLED' : 'COMPLETED';
+      const lifecycleResult = await parent.evaluate(async (status) => {
+        const monitor = window.mentoroLifecycleMonitor;
+        if (!monitor) throw new Error('Lifecycle monitor was not started');
+        const initial = await monitor.initialCheck;
+        const transition = await window.mentoroTransitionEnrollment(status);
+        return { initial, transition, stopped: monitor.stopped };
+      }, closureStatus);
+      if (lifecycleResult.initial.status !== 'open' ||
+          lifecycleResult.transition.status !== 'closed' ||
+          !lifecycleResult.stopped) {
+        throw new Error(`Lifecycle monitor did not close enrollment on ${closureStatus}: ${JSON.stringify(lifecycleResult)}`);
+      }
       await sleep(500);
       const result = await logbook.evaluate(() => {
         const controls = Array.from(document.querySelectorAll('input, textarea, select'))
@@ -102,12 +118,12 @@ try {
         }));
         throw new Error(`${testCase.template} did not fully switch to read-only mode: ${JSON.stringify({ result, diagnostics, pageErrors })}`);
       }
-      console.log(`PASS ${testCase.template}: message-triggered closure disables mutable controls and action buttons`);
+      console.log(`PASS ${testCase.template}: ${closureStatus} status detected by lifecycle monitor switches popup to read-only`);
     } finally {
       await context.close();
     }
   }
-  console.log('HTML logbook read-only browser smoke tests passed.');
+  console.log('HTML logbook lifecycle-to-read-only browser tests passed.');
 } catch (error) {
   console.error(error);
   if (serverOutput) console.error(serverOutput);
@@ -116,6 +132,7 @@ try {
   if (browser) await browser.close();
   server.kill('SIGTERM');
   await rm(harnessTarget, { force: true });
+  await rm(monitorTarget, { force: true });
   await rmdir(dirname(harnessTarget)).catch(() => {});
   await rmdir(resolve(distRoot, 'tests')).catch(() => {});
 }
