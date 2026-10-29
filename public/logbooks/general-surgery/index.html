@@ -482,6 +482,7 @@ function renderMentorReviewPanel() {
       if (!button || !panel.contains(button)) return;
       const itemId = button.dataset.reviewItemId || '';
       const itemType = button.dataset.reviewItemType || '';
+      const reviewKey = itemType + '::' + itemId;
       const card = button.closest('[data-review-card]');
       const decisionInput = card && card.querySelector('[data-review-decision]');
       const feedbackInput = card && card.querySelector('[data-review-feedback]');
@@ -500,9 +501,9 @@ function renderMentorReviewPanel() {
       }
       if (feedback.length > 2000) { showError('Feedback must be 2,000 characters or fewer.'); return; }
       if (!window.opener) { showError('The MENTORO workspace connection is no longer available. Reopen this logbook from the assigned training.'); return; }
-      if (mentorHtmlReviewPending.has(itemId)) return;
-      delete mentorHtmlReviewMessages[itemId];
-      mentorHtmlReviewPending.add(itemId);
+      if (mentorHtmlReviewPending.has(reviewKey)) return;
+      delete mentorHtmlReviewMessages[reviewKey];
+      mentorHtmlReviewPending.add(reviewKey);
       button.disabled = true;
       button.textContent = 'Saving review…';
       if (status) { status.textContent = 'Saving this review securely…'; status.removeAttribute('role'); }
@@ -576,20 +577,26 @@ function renderMentorReviewPanel() {
   }), 'procedure');
   addItems(data.emergency, 'emergency');
 
+  const getReviewKey = function(type, id) { return String(type || '') + '::' + String(id || ''); };
   const latestByItem = new Map();
   mentorHtmlReviews.forEach(function(review) {
-    if (review && review.item_id != null) latestByItem.set(String(review.item_id), review);
+    if (review && review.item_id != null && review.item_type != null) {
+      latestByItem.set(getReviewKey(review.item_type, review.item_id), review);
+    }
   });
   const decisionLabels = { VERIFIED: 'Verified', FEEDBACK: 'Feedback given', NEEDS_REVISION: 'Revision requested' };
   const globalMessage = mentorHtmlReviewMessages._global
     ? '<p class="mentor-review-global" role="status">' + esc(mentorHtmlReviewMessages._global) + '</p>'
     : '';
   const itemMarkup = items.map(function(item) {
-    const previous = latestByItem.get(item.id);
-    const pending = mentorHtmlReviewPending.has(item.id);
-    const statusMessage = mentorHtmlReviewMessages[item.id] || (pending ? 'Saving this review securely…' : '');
+    const itemKey = getReviewKey(item.type, item.id);
+    const previous = latestByItem.get(itemKey);
+    const pending = mentorHtmlReviewPending.has(itemKey);
+    const statusMessage = mentorHtmlReviewMessages[itemKey] || (pending ? 'Saving this review securely…' : '');
+    const reviewIsCurrent = previous && previous.is_current === true;
     const priorMarkup = previous
-      ? '<div class="mentor-review-existing"><strong>Latest decision: ' + esc(decisionLabels[previous.decision] || previous.decision || 'Reviewed') + '</strong>' +
+      ? '<div class="mentor-review-existing"><strong>' + (reviewIsCurrent ? 'Latest decision: ' : 'Previous decision — not current: ') + esc(decisionLabels[previous.decision] || previous.decision || 'Reviewed') + '</strong>' +
+        (!reviewIsCurrent ? '<p role="alert" style="margin:5px 0 0"><strong>Not verified against current content.</strong> The item may have changed since this review, or the older review has no integrity snapshot. Review the current item before relying on the decision.</p>' : '') +
         (previous.feedback ? '<p style="margin:5px 0 0">' + esc(previous.feedback) + '</p>' : '') +
         (previous.created_at ? '<p style="margin:5px 0 0;opacity:.75">Recorded ' + esc(new Date(previous.created_at).toLocaleString()) + '</p>' : '') +
         '</div>'
@@ -653,13 +660,15 @@ window.addEventListener('message',event=>{
  }
  if(msg.type==='MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT'){
   const itemId=String(msg.itemId||'');
-  mentorHtmlReviewPending.delete(itemId);
+  const itemType=String(msg.itemType||'');
+  const responseKey=itemType+'::'+itemId;
+  mentorHtmlReviewPending.delete(responseKey);
   if(msg.ok&&msg.review){
-   mentorHtmlReviews=mentorHtmlReviews.filter(function(review){return String(review.item_id)!==itemId;});
+   mentorHtmlReviews=mentorHtmlReviews.filter(function(review){return String(review.item_type)+'::'+String(review.item_id)!==responseKey;});
    mentorHtmlReviews.push(msg.review);
-   mentorHtmlReviewMessages[itemId]='Mentor review saved successfully.';
+   mentorHtmlReviewMessages[responseKey]='Mentor review saved successfully.';
   }else{
-   mentorHtmlReviewMessages[itemId]=String(msg.error||'Could not save this mentor review.');
+   mentorHtmlReviewMessages[responseKey]=String(msg.error||'Could not save this mentor review.');
   }
   renderMentorReviewPanel();
   return;
