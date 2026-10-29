@@ -1,3 +1,7 @@
+import { getTemplateFields } from './logbook-schema.js';
+
+const REGISTERED_HTML_LOGBOOK_PATHS = new Set(['/logbooks/medical-oncology/index.html', '/logbooks/general-surgery/index.html']);
+
 export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTime, setBusy, message, errorText }) {
   const renderLoading = () => shell('<main class="dashboard"><section class="loading-panel"><span class="spinner"></span><p>Loading administration workspace…</p></section></main>', user);
   renderLoading();
@@ -34,7 +38,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         .eq('profile_status', 'APPROVED').order('display_name', { ascending: true }),
       supabase.from('specialties').select('id,name_en,name_ar').eq('is_active', true).order('name_en', { ascending: true }),
       supabase.from('logbook_template_versions')
-        .select('id,template_id,version_number,status,is_assignable,logbook_templates!inner(id,slug,title,specialty_id,is_active)')
+        .select('id,template_id,version_number,status,is_assignable,schema_definition,template_definition,source_notes,created_at,logbook_templates!inner(id,slug,title,description,specialty_id,is_active)')
         .order('version_number', { ascending: false })
     ]);
     for (const result of [
@@ -56,11 +60,26 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
     const activeMentorIds = new Set((mentorRolesResult.data || []).map((role) => role.user_id));
     const mentors = (mentorResult.data || []).filter((mentor) => activeMentorIds.has(mentor.profile_id));
     const specialties = specialtyResult.data || [];
-    const templateVersions = (templateVersionResult.data || []).map((version) => {
+    const allTemplateVersions = (templateVersionResult.data || []).map((version) => {
       const related = version.logbook_templates;
       const template = Array.isArray(related) ? related[0] : related;
-      return { ...version, template };
-    }).filter((version) => version.template?.is_active);
+      return { ...version, template, fields: getTemplateFields(version) };
+    });
+    // Only active templates may be selected for draft offerings. Inactive drafts remain visible in the review queue.
+    const templateVersions = allTemplateVersions.filter((version) => version.template?.is_active);
+    const latestTemplateById = new Map();
+    for (const version of allTemplateVersions) {
+      if (!version.template?.id) continue;
+      const previous = latestTemplateById.get(version.template.id);
+      if (!previous || Number(version.version_number) > Number(previous.latestVersion.version_number)) {
+        latestTemplateById.set(version.template.id, { template: version.template, latestVersion: version });
+      }
+    }
+    const existingTemplates = [...latestTemplateById.values()]
+      .sort((a, b) => String(a.template.title || a.template.slug).localeCompare(String(b.template.title || b.template.slug)));
+    const initialTemplateVersion = existingTemplates[0]?.latestVersion || null;
+    const initialVersionSchema = JSON.stringify(initialTemplateVersion?.schema_definition || { fields: [] }, null, 2);
+    const initialVersionLayout = JSON.stringify(initialTemplateVersion?.template_definition || { sections: [] }, null, 2);
     const applications = applicationResult.data || [];
     const offerings = offeringResult.data || [];
     const pendingSlots = (offering) => (offering.training_slots || []).filter((slot) => slot.status === 'OPEN').length;
@@ -89,6 +108,19 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
               '<div class="mentor-review-buttons"><button class="button button--primary button--small" type="button" data-verification-decision="APPROVE" data-trainee-id="' + escape(doc.trainee_profile_id) + '" data-document-id="' + escape(doc.id) + '">Approve trainee</button><button class="button button--secondary button--small" type="button" data-verification-decision="REJECT" data-trainee-id="' + escape(doc.trainee_profile_id) + '" data-document-id="' + escape(doc.id) + '">Request new document</button></div></div></article>';
           }).join('') + '</div>' : '<div class="empty-state"><strong>No verification documents waiting</strong><p>New trainee submissions will appear here.</p></div>') +
         '</section>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">IDENTITY & ACCESS</p><h2>Register a mentor account</h2></div><span class="count-badge">' + mentors.length + '</span></div>' +
+          '<p class="workspace-note">The person must create a separate account, select “This is a dedicated Mentor account” during sign-up, and confirm their email. That selection only defers trainee-profile creation; it grants no role. Register the confirmed email here before they sign in. The database rejects admin identities, trainee access, and accounts with trainee history. This does not create an Auth account or publish training automatically.</p>' +
+          '<form id="admin-mentor-register-form" class="admin-form-card">' +
+            '<div class="admin-form-grid">' +
+              '<div class="field"><label for="admin-mentor-email">Existing account email</label><input id="admin-mentor-email" name="email" type="email" required maxlength="320" autocomplete="off" placeholder="mentor@example.com"></div>' +
+              '<div class="field"><label for="admin-mentor-name">Display name</label><input id="admin-mentor-name" name="displayName" required maxlength="160" placeholder="Dr. Full Name"></div>' +
+              '<div class="field"><label for="admin-mentor-title">Professional title</label><input id="admin-mentor-title" name="professionalTitle" required maxlength="160" placeholder="Consultant / Lecturer / Professor"></div>' +
+              '<div class="field"><label for="admin-mentor-institution">Institution</label><input id="admin-mentor-institution" name="institution" maxlength="200" placeholder="Hospital / University"></div>' +
+              '<div class="field admin-form-wide"><label for="admin-mentor-bio">Professional bio (optional)</label><textarea id="admin-mentor-bio" name="bio" rows="2" maxlength="2000" placeholder="Specialty and clinical teaching interests"></textarea></div>' +
+              '<div class="field admin-form-wide"><label class="checkbox-field"><input name="makePublic" type="checkbox" value="yes"> Make this mentor profile public in the directory</label><small>Leave unchecked during test setup unless you intentionally want the profile visible in public mentor listings.</small></div>' +
+              '<div class="field admin-form-wide"><label class="checkbox-field"><input name="dedicatedMentor" type="checkbox" value="yes" required> I confirm this is a dedicated mentor account and I have checked that it has no existing trainee applications, enrollments, or verification records.</label><small>If an account already has trainee history, use a different account. Mentor access takes priority when a profile has multiple active roles.</small></div>' +
+            '</div><button class="button button--primary" type="submit">Register mentor access</button></form>' +
+        '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">BOOKING CONTROL</p><h2>Mentor-approved applications</h2></div><span class="count-badge">' + applications.length + '</span></div>' +
           '<p class="workspace-note">Confirming an application creates its enrollment and its own independent logbook instance. Confirmation is performed by a server-checked administrator RPC.</p>' +
           (applications.length ? '<div class="mentor-queue-grid">' + applications.map((item) => {
@@ -103,6 +135,115 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
             '<p class="workspace-note">The decision and logbook creation are recorded by the database workflow.</p>' +
             '<div class="mentor-review-buttons"><button class="button button--primary button--small" type="button" data-confirm-application="' + escape(item.id) + '">Confirm booking & create logbook</button></div></div></article>';
           }).join('') + '</div>' : '<div class="empty-state"><strong>No bookings need confirmation</strong><p>Applications approved by mentors will appear here.</p></div>') +
+        '</section>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">EXISTING HTML LOGBOOKS</p><h2>Use a logbook you already have</h2></div><span class="status-chip status-chip--neutral">Existing asset</span></div>' +
+          '<p class="workspace-note">These are existing interactive HTML logbooks, not forms we need to rebuild in JSON. Preview the original UI and complete end-to-end trainee and assigned-mentor checks before any clinical template is approved for real enrollment.</p>' +
+          '<div class="mentor-queue-grid">' +
+            '<article class="training-card admin-existing-logbook-card"><div class="training-card-heading"><span class="specialty-label">Medical Oncology</span><span class="status-chip status-chip--neutral">HTML · Draft</span></div>' +
+              '<h3>Medical Oncology Logbook</h3><p class="mentor-line">Original interactive logbook with Roadmap, Sessions, Clinical Cases, Procedures, Emergency, Reflection, and progress views.</p>' +
+              '<div class="mentor-entry-stats"><span>Original UI preserved</span><span>Preview data stays in this browser</span></div>' +
+              '<a class="button button--primary button--small" href="/logbooks/medical-oncology/index.html?mode=preview" target="_blank" rel="noopener noreferrer">Preview existing logbook</a>' +
+            '</article>' +
+            '<article class="training-card admin-existing-logbook-card"><div class="training-card-heading"><span class="specialty-label">General Surgery</span><span class="status-chip status-chip--neutral">HTML · Draft</span></div>' +
+              '<h3>General Surgery Logbook</h3><p class="mentor-line">Original interactive logbook with Roadmap, Sessions, Clinical Cases, Procedures, Emergency, Reflection, and progress views.</p>' +
+              '<div class="mentor-entry-stats"><span>Original UI preserved</span><span>Preview data stays in this browser</span></div>' +
+              '<a class="button button--primary button--small" href="/logbooks/general-surgery/index.html?mode=preview" target="_blank" rel="noopener noreferrer">Preview existing logbook</a>' +
+            '</article>' +
+          '</div>' +
+          '<p class="workspace-note">Both existing HTML interfaces are preserved. Each confirmed enrollment uses the immutable HTML asset path attached to its template version. Clinical publication remains blocked until an authorized reviewer completes the required review.</p>' +
+        '</section>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">LOGBOOK REVIEW</p><h2>Template versions</h2></div><span class="count-badge">' + allTemplateVersions.length + '</span></div>' +
+          '<p class="workspace-note">Review the structure and source notes before any clinical template can be marked assignable. Draft templates are not bookable; this screen does not publish or activate them.</p>' +
+          (allTemplateVersions.length ? '<div class="mentor-queue-grid">' + allTemplateVersions.map((version) => {
+            const template = version.template || {};
+            const specialty = specialties.find((item) => item.id === template.specialty_id) || {};
+            const fields = version.fields || [];
+            const templateDefinition = version.template_definition || {};
+            const isRegisteredHtml = templateDefinition.renderer === 'HTML' &&
+              REGISTERED_HTML_LOGBOOK_PATHS.has(templateDefinition.html_path);
+            const htmlSections = Array.isArray(templateDefinition.sections) ? templateDefinition.sections : [];
+            const definitions = isRegisteredHtml
+              ? '<p class="empty-inline">This version uses the existing Medical Oncology HTML logbook. It does not use JSON structured fields.</p>' +
+                (htmlSections.length
+                  ? '<p><strong>Existing views:</strong> ' + escape(htmlSections.join(' · ')) + '</p>'
+                  : '') +
+                '<p><a class="button button--secondary button--small" href="' + escape(templateDefinition.html_path + '?mode=preview') + '" target="_blank" rel="noopener noreferrer">Preview original HTML logbook</a></p>' +
+                '<p class="workspace-note">This standalone preview saves only in this browser. Do not enter patient-identifying information.</p>'
+              : fields.length
+                ? '<ul class="template-field-list">' + fields.map((field) => '<li><strong>' + escape(field.label) + '</strong><span>' + escape(field.type) + (field.required ? ' · required' : ' · optional') + '</span></li>').join('') + '</ul>'
+                : '<p class="empty-inline">No supported structured fields were found in this version. Review its JSON schema before use.</p>';
+            const sourceNotes = version.source_notes || template.description || templateDefinition.source || 'No clinical source/reviewer notes recorded.';
+            return '<article class="activity-card admin-template-review-card">' +
+              '<div class="activity-main"><div class="training-card-heading"><span class="specialty-label">' + escape(specialty.name_en || specialty.name_ar || 'Specialty not found') + '</span>' +
+              '<span class="status-chip status-chip--' + (version.status === 'PUBLISHED' && version.is_assignable ? 'good' : 'neutral') + '">' + escape(version.status || 'DRAFT') + (version.is_assignable ? ' · assignable' : ' · not assignable') + '</span></div>' +
+              '<h3>' + escape(template.title || template.slug || 'Untitled logbook template') + ' · v' + escape(version.version_number) + '</h3>' +
+              '<p>' + escape(template.description || 'No template description.') + '</p>' +
+              '<p class="workspace-note"><strong>Clinical source/reviewer notes:</strong> ' + escape(sourceNotes) + '</p>' +
+              '<div class="template-review-fields"><strong>Structured fields (' + fields.length + ')</strong>' + definitions + '</div>' +
+              (version.status === 'DRAFT' ? '<p class="empty-inline">' + (isRegisteredHtml
+                ? 'Pending clinical review. Preview the existing HTML asset, confirm the clinical source/reviewer notes, and record the decision before publishing.'
+                : 'Pending clinical review. Publishing remains disabled until the field schema and source are reviewed.') + '</p>' : '') +
+              '</div></article>';
+          }).join('') + '</div>' : '<div class="empty-state"><strong>No logbook templates yet</strong><p>Create the first specialty-specific draft below.</p></div>') +
+        '</section>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">OPTIONAL ADVANCED TOOL</p><h2>Manual template creation</h2></div><span class="status-chip status-chip--neutral">Draft only</span></div>' +
+          '<details class="admin-advanced-template-details"><summary>Build a new template from scratch (JSON)</summary>' +
+          '<p class="workspace-note">Use this only when no existing HTML logbook is available. It creates a draft definition, not a copy of an existing HTML UI. Saving does not make it bookable; clinical review and a compatible runtime are still required.</p>' +
+          (specialties.length ? '<form id="admin-template-form" class="admin-form-card">' +
+            '<div class="admin-form-grid">' +
+              '<div class="field"><label for="admin-template-title">Template title</label><input id="admin-template-title" name="title" maxlength="160" required placeholder="e.g. General Surgery Clinical Logbook"></div>' +
+              '<div class="field"><label for="admin-template-slug">Unique slug</label><input id="admin-template-slug" name="slug" maxlength="100" pattern="[a-z0-9]+(-[a-z0-9]+)*" required placeholder="e.g. general-surgery-v2"></div>' +
+              '<div class="field"><label for="admin-template-specialty">Specialty</label><select id="admin-template-specialty" name="specialtyId" required>' + specialties.map((specialty) => '<option value="' + escape(specialty.id) + '">' + escape(specialty.name_en || specialty.name_ar || 'Specialty') + '</option>').join('') + '</select></div>' +
+              '<div class="field admin-form-wide"><label for="admin-template-description">Description</label><textarea id="admin-template-description" name="description" rows="2" maxlength="2000" placeholder="Purpose and intended training scope"></textarea></div>' +
+              '<div class="field admin-form-wide"><label for="admin-template-schema">Field schema (JSON)</label><textarea id="admin-template-schema" name="schemaDefinition" rows="8" required spellcheck="false">{\n  "fields": [\n    { "key": "clinical_context", "label": "Clinical context", "type": "textarea", "required": true },\n    { "key": "learning_points", "label": "Learning points", "type": "textarea", "required": true }\n  ]\n}</textarea><small>Supported types: text, textarea, date, number, boolean, select. Select fields need 2–50 options.</small></div>' +
+              '<div class="field admin-form-wide"><label for="admin-template-layout">Template sections (JSON)</label><textarea id="admin-template-layout" name="templateDefinition" rows="4" required spellcheck="false">{\n  "sections": [\n    { "id": "clinical-activity", "title": "Clinical activity" }\n  ]\n}</textarea></div>' +
+              '<div class="field admin-form-wide"><label for="admin-template-source">Clinical source / reviewer notes</label><textarea id="admin-template-source" name="sourceNotes" rows="3" minlength="20" maxlength="4000" required placeholder="Record the curriculum/source and who must review this draft before publication."></textarea></div>' +
+            '</div><button class="button button--primary" type="submit">Save template draft</button></form>' :
+            '<div class="empty-state"><strong>No active specialties</strong><p>Add an active specialty before drafting a logbook template.</p></div>') +
+          '</details>' +
+        '</section>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">OPTIONAL ADVANCED TOOL</p><h2>Manual template versioning</h2></div><span class="status-chip status-chip--neutral">Immutable versions</span></div>' +
+          '<details class="admin-advanced-template-details"><summary>Create a version using JSON</summary>' +
+          '<p class="workspace-note">Use this advanced fallback when a template already exists and its schema needs a new version. The current HTML asset does not need to be re-created here.</p>' +
+          (existingTemplates.length ? '<form id="admin-template-version-form" class="admin-form-card">' +
+            '<div class="admin-form-grid">' +
+              '<div class="field admin-form-wide"><label for="admin-template-version-base">Existing template</label><select id="admin-template-version-base" name="templateId" required>' +
+                existingTemplates.map(({ template, latestVersion }) => '<option value="' + escape(template.id) + '">' + escape(template.title || template.slug) + ' · ' + escape(template.slug) + ' · latest v' + escape(latestVersion.version_number) + ' (' + escape(latestVersion.status) + ')</option>').join('') +
+              '</select></div>' +
+              '<div class="field admin-form-wide"><label for="admin-version-schema">New version field schema (JSON)</label><textarea id="admin-version-schema" name="schemaDefinition" rows="8" required spellcheck="false">' + escape(initialVersionSchema) + '</textarea></div>' +
+              '<div class="field admin-form-wide"><label for="admin-version-layout">New version sections (JSON)</label><textarea id="admin-version-layout" name="templateDefinition" rows="4" required spellcheck="false">' + escape(initialVersionLayout) + '</textarea></div>' +
+              '<div class="field admin-form-wide"><label for="admin-version-source">New version source / change / reviewer notes</label><textarea id="admin-version-source" name="sourceNotes" rows="3" minlength="20" maxlength="4000" required placeholder="Describe this version’s source, changes, and required clinical reviewer."></textarea></div>' +
+            '</div><button class="button button--primary" type="submit">Save next version as draft</button></form>' :
+            '<div class="empty-state"><strong>No existing templates to version</strong><p>Create a new specialty template first.</p></div>') +
+          '</details>' +
+        '</section>' +
+        '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">CLINICAL GOVERNANCE</p><h2>Logbook template review</h2></div><span class="count-badge">' + allTemplateVersions.filter((version) => version.status === 'DRAFT').length + '</span></div>' +
+          '<p class="workspace-note">Review the schema and clinical source notes before publishing. Publication makes this version assignable to new training offerings; it does not change existing logbook instances.</p>' +
+          (allTemplateVersions.filter((version) => version.status === 'DRAFT').length
+            ? '<div class="mentor-queue-grid">' + allTemplateVersions.filter((version) => version.status === 'DRAFT').map((version) => {
+              const templateDefinition = version.template_definition || {};
+              const isRegisteredHtml = templateDefinition.renderer === 'HTML' &&
+                REGISTERED_HTML_LOGBOOK_PATHS.has(templateDefinition.html_path);
+              const htmlSections = Array.isArray(templateDefinition.sections) ? templateDefinition.sections : [];
+              const canPublishReviewedRuntime = isRegisteredHtml || version.fields.length > 0;
+              const runtimeDescription = isRegisteredHtml
+                ? '<p><strong>Runtime:</strong> Existing HTML logbook · ' + escape(version.template?.title || 'Registered asset') + '</p>' +
+                  '<p><strong>Views:</strong> ' + escape(htmlSections.join(' · ') || 'HTML asset') + '</p>' +
+                  '<p><a class="button button--secondary button--small" href="' + escape(templateDefinition.html_path + '?mode=preview') + '" target="_blank" rel="noopener noreferrer">Preview original HTML logbook</a></p>' +
+                  '<p class="workspace-note">Preview data stays in this browser. Do not enter patient-identifying information.</p>'
+                : '<p><strong>Fields (' + version.fields.length + ')</strong><br>' + escape(version.fields.map((field) => field.label + ' · ' + field.type + (field.required ? ' · required' : '')).join(', ') || 'No valid structured fields') + '</p>';
+              return '<article class="activity-card admin-template-review-card" data-template-review-card="' + escape(version.id) + '">' +
+                '<div class="activity-main"><span class="specialty-label">' + escape(version.template?.slug || 'Logbook template') + ' · v' + escape(version.version_number) + '</span>' +
+                  '<h3>' + escape(version.template?.title || 'Untitled template') + '</h3>' +
+                  '<p>' + escape(version.template?.description || 'No description provided.') + '</p>' +
+                  '<p><strong>Clinical source / notes</strong><br>' + escape(version.source_notes || 'Missing clinical source notes.') + '</p>' +
+                  runtimeDescription +
+                  '<label class="field-label" for="template-review-' + escape(version.id) + '">Clinical review decision / notes</label>' +
+                  '<textarea id="template-review-' + escape(version.id) + '" data-template-review-notes rows="3" minlength="20" maxlength="4000" required placeholder="Record what was reviewed, the clinical source/curriculum, and any limitations."></textarea>' +
+                  '<button class="button button--primary" type="button" data-publish-template="' + escape(version.id) + '"' + (canPublishReviewedRuntime ? '' : ' disabled') + '>Approve review & publish version</button>' +
+                '</div></article>';
+            }).join('') + '</div>'
+            : '<div class="empty-state"><strong>No template drafts awaiting review</strong><p>New drafts will appear here for clinical review before they can be assigned to training.</p></div>') +
         '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">TRAINING SETUP</p><h2>Create training offering</h2></div><span class="status-chip status-chip--neutral">Admin only</span></div>' +
           '<p class="workspace-note">Create a draft offering while its logbook template is being prepared, or publish immediately when the mentor is approved/public and the matching template version is published and assignable. The database validates all constraints.</p>' +
@@ -139,6 +280,128 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       '</main>',
       user
     );
+
+    const templateVersionForm = document.querySelector('#admin-template-version-form');
+    if (templateVersionForm) {
+      const baseSelect = templateVersionForm.querySelector('[name="templateId"]');
+      const schemaInput = templateVersionForm.querySelector('[name="schemaDefinition"]');
+      const layoutInput = templateVersionForm.querySelector('[name="templateDefinition"]');
+      const latestByTemplateId = new Map(existingTemplates.map((item) => [item.template.id, item.latestVersion]));
+      const refreshVersionDefaults = () => {
+        const latest = latestByTemplateId.get(baseSelect?.value);
+        if (!latest) return;
+        schemaInput.value = JSON.stringify(latest.schema_definition || { fields: [] }, null, 2);
+        layoutInput.value = JSON.stringify(latest.template_definition || { sections: [] }, null, 2);
+      };
+      baseSelect?.addEventListener('change', refreshVersionDefaults);
+      templateVersionForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(templateVersionForm);
+        let schemaDefinition;
+        let templateDefinition;
+        try {
+          schemaDefinition = JSON.parse(String(data.get('schemaDefinition') || ''));
+          templateDefinition = JSON.parse(String(data.get('templateDefinition') || ''));
+        } catch {
+          showMessage('New version schema and sections must be valid JSON.', 'error');
+          return;
+        }
+        const templateId = String(data.get('templateId') || '');
+        const sourceNotes = String(data.get('sourceNotes') || '').trim();
+        if (!templateId || sourceNotes.length < 20 ||
+            !schemaDefinition || typeof schemaDefinition !== 'object' || Array.isArray(schemaDefinition) ||
+            !Array.isArray(schemaDefinition.fields) || !schemaDefinition.fields.length ||
+            !templateDefinition || typeof templateDefinition !== 'object' || Array.isArray(templateDefinition)) {
+          showMessage('Select a template, define at least one field, provide valid sections, and add source/reviewer notes.', 'error');
+          return;
+        }
+        const button = templateVersionForm.querySelector('button[type="submit"]');
+        busy(button, true, 'Saving version draft…');
+        const { error } = await supabase.rpc('admin_create_logbook_template_version_draft', {
+          p_template_id: templateId,
+          p_schema_definition: schemaDefinition,
+          p_template_definition: templateDefinition,
+          p_source_notes: sourceNotes
+        });
+        if (error) {
+          showMessage((errorText || ((err) => err?.message || 'Could not create this template version.'))(error), 'error');
+          busy(button, false);
+          return;
+        }
+        await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
+        showMessage('The next template version was saved as a draft. Older versions and existing logbooks were left unchanged.', 'success');
+      });
+    }
+
+    const templateForm = document.querySelector('#admin-template-form');
+    if (templateForm) {
+      templateForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(templateForm);
+        let schemaDefinition;
+        let templateDefinition;
+        try {
+          schemaDefinition = JSON.parse(String(data.get('schemaDefinition') || ''));
+          templateDefinition = JSON.parse(String(data.get('templateDefinition') || ''));
+        } catch {
+          showMessage('Field schema and template sections must be valid JSON.', 'error');
+          return;
+        }
+        const title = String(data.get('title') || '').trim();
+        const slug = String(data.get('slug') || '').trim();
+        const specialtyId = String(data.get('specialtyId') || '');
+        const sourceNotes = String(data.get('sourceNotes') || '').trim();
+        if (!title || !slug || !specialtyId || sourceNotes.length < 20 ||
+            !schemaDefinition || typeof schemaDefinition !== 'object' || Array.isArray(schemaDefinition) ||
+            !Array.isArray(schemaDefinition.fields) || !schemaDefinition.fields.length ||
+            !templateDefinition || typeof templateDefinition !== 'object' || Array.isArray(templateDefinition)) {
+          showMessage('Complete the template details, provide at least one schema field, and add source/reviewer notes.', 'error');
+          return;
+        }
+        const button = templateForm.querySelector('button[type="submit"]');
+        busy(button, true, 'Saving draft…');
+        const { error } = await supabase.rpc('admin_create_logbook_template_draft', {
+          p_specialty_id: specialtyId,
+          p_slug: slug,
+          p_title: title,
+          p_description: String(data.get('description') || '').trim() || null,
+          p_schema_definition: schemaDefinition,
+          p_template_definition: templateDefinition,
+          p_source_notes: sourceNotes
+        });
+        if (error) {
+          showMessage((errorText || ((err) => err?.message || 'Could not save the template draft.'))(error), 'error');
+          busy(button, false);
+          return;
+        }
+        await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
+        showMessage('Logbook template draft saved. It is not published or assignable yet.', 'success');
+      });
+    }
+
+    document.querySelectorAll('[data-publish-template]').forEach((button) => button.addEventListener('click', async () => {
+      const card = button.closest('[data-template-review-card]');
+      const versionId = button.dataset.publishTemplate;
+      const reviewNotes = card?.querySelector('[data-template-review-notes]')?.value?.trim() || '';
+      if (!versionId || reviewNotes.length < 20) {
+        showMessage('Add substantive clinical review notes (at least 20 characters) before publication.', 'error');
+        return;
+      }
+      const confirmed = window.confirm('Publish this reviewed logbook template version? It will become assignable to new training offerings.');
+      if (!confirmed) return;
+      busy(button, true, 'Publishing reviewed version…');
+      const { error } = await supabase.rpc('admin_publish_logbook_template_version', {
+        p_version_id: versionId,
+        p_review_notes: reviewNotes
+      });
+      if (error) {
+        showMessage((errorText || ((err) => err?.message || 'Could not publish this template version.'))(error), 'error');
+        busy(button, false);
+        return;
+      }
+      await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
+      showMessage('Template version published and made assignable. Existing logbook instances remain attached to their original version.', 'success');
+    }));
 
     const offeringForm = document.querySelector('#admin-offering-form');
     if (offeringForm) {
@@ -230,6 +493,45 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         }
         await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
         showMessage(publishNow ? 'Training offering published.' : 'Draft training offering created.', 'success');
+      });
+    }
+
+    const mentorForm = document.querySelector('#admin-mentor-register-form');
+    if (mentorForm) {
+      mentorForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(mentorForm);
+        const email = String(data.get('email') || '').trim().toLowerCase();
+        const displayName = String(data.get('displayName') || '').trim();
+        const professionalTitle = String(data.get('professionalTitle') || '').trim();
+        const institution = String(data.get('institution') || '').trim();
+        const bio = String(data.get('bio') || '').trim();
+        const makePublic = data.get('makePublic') === 'yes';
+        if (!email || !displayName || !professionalTitle || data.get('dedicatedMentor') !== 'yes') {
+          showMessage('Enter the confirmed account email, display name, professional title, and confirm this is a dedicated mentor account.', 'error');
+          return;
+        }
+        const confirmed = window.confirm(
+          'Grant Mentor workspace access to the dedicated account ' + displayName + ' (' + email + ')?' +
+          '\n\nThe account must have a confirmed email and must not have trainee/admin access or trainee history.' +
+          '\n\nPublic directory visibility: ' + (makePublic ? 'ON' : 'OFF') + '.' +
+          '\n\nThis will not publish any training offering or logbook template.'
+        );
+        if (!confirmed) return;
+        const button = mentorForm.querySelector('button[type="submit"]');
+        busy(button, true, 'Registering mentor…');
+        try {
+          const { error } = await supabase.rpc('admin_register_mentor_by_email', {
+            p_mentor_email: email, p_display_name: displayName, p_professional_title: professionalTitle,
+            p_institution: institution || null, p_bio: bio || null, p_make_public: makePublic
+          });
+          if (error) throw error;
+          await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
+          showMessage('Mentor access registered. The confirmed account can now sign in to the Mentor workspace. Training and logbook templates remain unchanged.', 'success');
+        } catch (error) {
+          showMessage((errorText || ((err) => err?.message || 'Could not register mentor access.'))(error), 'error');
+          busy(button, false);
+        }
       });
     }
 

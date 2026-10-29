@@ -193,9 +193,11 @@ check('trainee dashboard queries only the current trainee’s enrollments',
   contains(frontend, ".eq('trainee_profile_id', user.id)"));
 
 // Logbook draft creation and submission.
-check('draft form writes a learning activity owned by the signed-in trainee',
+check('draft form writes a validated entry type and template payload owned by the signed-in trainee',
   contains(frontend, ".from('logbook_entries').insert({") &&
-  contains(frontend, "entry_type: 'LEARNING_ACTIVITY'") &&
+  contains(frontend, 'entry_type: entryType') &&
+  contains(frontend, 'LOGBOOK_ENTRY_TYPES.some((type) => type.value === entryType)') &&
+  contains(frontend, 'payload: templatePayload.payload') &&
   contains(frontend, "status: 'DRAFT'") &&
   contains(frontend, 'created_by: user.id'));
 check('RLS only permits a trainee to insert their own draft into an owned instance',

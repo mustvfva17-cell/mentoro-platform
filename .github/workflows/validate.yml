@@ -6,10 +6,12 @@ on:
       - main
       - chore/recover-migration-history
       - feat/mentor-workspace-mvp
+      - feat/admin-workspace-mvp
   push:
     branches:
       - main
       - feat/admin-workspace-mvp
+      - feat/logbook-template-drafts
 
 permissions:
   contents: read
@@ -24,8 +26,10 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies from lockfile
+        run: npm ci
+      - name: Validate migration filename/content history
+        run: npm run check:migrations
       - name: Validate frontend/schema contracts
         run: npm run check:contracts
       - name: Build production assets
