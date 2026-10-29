@@ -83,6 +83,25 @@ const enrollmentId = 'a13a1e5e-f1d3-4a23-8ea8-f9709e8a56bb';
   console.log('PASS active enrollment transitions to read-only on completion and stops polling');
 }
 
+
+{
+  const supabase = makeSupabase(() => ({ data: { id: enrollmentId, status: 'CANCELLED' }, error: null }));
+  const scheduler = makeScheduler();
+  let closedCalls = 0;
+  const monitor = startEnrollmentLifecycleMonitor({
+    supabase: supabase.client,
+    enrollmentId,
+    schedule: scheduler.schedule,
+    unschedule: scheduler.unschedule,
+    onClosed: () => { closedCalls += 1; }
+  });
+  assert.deepEqual(await monitor.initialCheck, { status: 'closed' });
+  assert.equal(closedCalls, 1);
+  assert.equal(monitor.stopped, true);
+  assert.deepEqual(scheduler.cleared, [scheduler.intervals[0].id]);
+  console.log('PASS cancelled enrollment becomes read-only and stops polling');
+}
+
 {
   const supabase = makeSupabase(() => ({ data: null, error: null }));
   const scheduler = makeScheduler();
