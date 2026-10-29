@@ -238,7 +238,7 @@ BEGIN
   v_reviews := public.get_my_logbook_html_item_reviews(v_instance_a);
   IF jsonb_array_length(v_reviews) <> 2 OR EXISTS (
     SELECT 1 FROM jsonb_array_elements(v_reviews) AS item(value)
-    WHERE item.value ->> 'is_current' <> 'false'
+    WHERE item.value ->> 'is_current' IS DISTINCT FROM 'false'
   ) THEN RAISE EXCEPTION 'Changing or removing a reviewed item must mark its decision as stale'; END IF;
   PERFORM set_config('request.jwt.claim.sub', v_mentor::text, true);
 
