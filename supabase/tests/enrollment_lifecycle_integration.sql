@@ -8,6 +8,8 @@ DECLARE
   v_trainee uuid;
   v_mentor uuid := gen_random_uuid();
   v_mentor_email text := 'lifecycle-mentor-' || replace(gen_random_uuid()::text, '-', '') || '@example.invalid';
+  v_other_mentor uuid := gen_random_uuid();
+  v_other_mentor_email text := 'lifecycle-unassigned-mentor-' || replace(gen_random_uuid()::text, '-', '') || '@example.invalid';
   v_specialty uuid;
   v_template uuid;
   v_version uuid;
@@ -55,6 +57,16 @@ BEGIN
   VALUES(v_mentor,'MENTOR',v_admin);
   INSERT INTO public.mentor_profiles(profile_id,display_name,professional_title,profile_status,is_public)
   VALUES(v_mentor,'Lifecycle Test Mentor','Test fixture','APPROVED',false);
+
+  -- A second approved Mentor must not transition another Mentor's enrollment.
+  INSERT INTO auth.users(id,email,email_confirmed_at,raw_user_meta_data,created_at,updated_at,is_sso_user,is_anonymous)
+  VALUES(v_other_mentor,v_other_mentor_email,now(),jsonb_build_object('full_name','Unassigned Lifecycle Mentor'),now(),now(),false,false);
+  INSERT INTO public.profiles(id,email,full_name)
+  VALUES(v_other_mentor,v_other_mentor_email,'Unassigned Lifecycle Mentor');
+  INSERT INTO public.profile_roles(user_id,role,granted_by)
+  VALUES(v_other_mentor,'MENTOR',v_admin);
+  INSERT INTO public.mentor_profiles(profile_id,display_name,professional_title,profile_status,is_public)
+  VALUES(v_other_mentor,'Unassigned Lifecycle Mentor','Test fixture','APPROVED',false);
 
   INSERT INTO public.logbook_templates(specialty_id,slug,title,description,is_active)
   VALUES(v_specialty,'lifecycle-test-'||replace(gen_random_uuid()::text,'-',''),
@@ -161,6 +173,19 @@ BEGIN
   IF NOT v_rejected OR NOT EXISTS(SELECT 1 FROM public.training_enrollments WHERE id=v_enrollment_c AND status='CONFIRMED') THEN
     RAISE EXCEPTION 'Future training start was not safely rejected';
   END IF;
+
+  -- A different approved Mentor must not cancel or otherwise transition this enrollment.
+  PERFORM set_config('request.jwt.claim.sub',v_other_mentor::text,true);
+  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',v_other_mentor::text)::text,true);
+  v_rejected:=false;
+  BEGIN
+    PERFORM public.transition_my_training_enrollment(v_enrollment_a,'CANCEL','Unassigned mentor must not cancel this training');
+    RAISE EXCEPTION 'TEST_FAILED: an unrelated approved Mentor changed another Mentor enrollment' USING ERRCODE='XX000';
+  EXCEPTION WHEN SQLSTATE '42501' THEN v_rejected:=true;
+  END;
+  IF NOT v_rejected OR NOT EXISTS(
+    SELECT 1 FROM public.training_enrollments WHERE id=v_enrollment_a AND status='ACTIVE'
+  ) THEN RAISE EXCEPTION 'Unassigned Mentor was able to change another Mentor enrollment'; END IF;
 
   -- Trainee identity cannot transition training, including an enrollment they attend.
   PERFORM set_config('request.jwt.claim.sub',v_trainee::text,true);
