@@ -360,9 +360,12 @@ check(
   mainWorkspace.includes("postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SET_READ_ONLY' })") &&
   mainWorkspace.includes('sync.readOnly = true') &&
   mainWorkspace.includes('if (sync.timer) clearTimeout(sync.timer)') &&
+  mainWorkspace.includes('if (!sync || sync.readOnly || !sync.cloudStateLoaded || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;') &&
+  mainWorkspace.includes('if (!sync.readOnly && sync.state !== stateToSave)') &&
+  mainWorkspace.includes("error: 'This logbook is read-only. Changes are not saved.'") &&
   legacyHtml.includes("msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'") &&
   generalSurgeryHtml.includes("msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'"),
-  'already-open HTML logbook windows switch to read-only and reload saved cloud state after enrollment closure'
+  'already-open HTML logbook windows switch to read-only, reload saved cloud state, and suppress pending cloud saves after closure'
 );
 
 console.log('Administrator workspace safety contracts passed.');
