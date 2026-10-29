@@ -621,6 +621,7 @@ function mentorEnrollmentCard(enrollment) {
   const htmlPath = templateVersion?.template_definition?.html_path;
   const isRegisteredHtml = templateVersion?.template_definition?.renderer === 'HTML' &&
     REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath);
+  const enrollmentClosed = !['CONFIRMED', 'ACTIVE'].includes(enrollment.status);
   const entries = instance?.logbook_entries || [];
   const submittedCount = entries.filter((entry) => {
     if (entry.status !== 'SUBMITTED') return false;
@@ -791,9 +792,12 @@ function logbookCard(enrollment) {
       <p class="mentor-line">${esc(mentor.display_name || 'Assigned mentor')}</p>
       <div class="logbook-meta"><span>${entries.length} entries</span><span>${draftCount} drafts / revisions</span></div>
       ${instance && isRegisteredHtml
-        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open interactive logbook</button><p class="workspace-note">This uses the original HTML logbook for this training. Cloud changes save to this enrollment only; do not enter patient-identifying information.</p>'
+        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '" data-read-only="' + (enrollmentClosed ? 'true' : 'false') + '">Open ' + (enrollmentClosed ? 'read-only' : 'interactive') + ' logbook</button><p class="workspace-note">' + (enrollmentClosed ? 'This training is closed. The logbook is read-only.' : 'This uses the original HTML logbook for this training. Cloud changes save to this enrollment only; do not enter patient-identifying information.') + ' Do not enter patient-identifying information.</p>'
         : ''}
       ${instance && !isRegisteredHtml ? `
+        ${enrollmentClosed
+          ? '<p class="workspace-note">This training is closed. The logbook is read-only; existing entries and mentor feedback remain available.</p>'
+          : `
         <form class="entry-form" data-instance-id="${esc(instance.id)}">
           <label for="entry-title-${esc(instance.id)}">Entry title</label>
           <input id="entry-title-${esc(instance.id)}" name="title" placeholder="Short title for this activity" maxlength="160" required>
@@ -805,11 +809,12 @@ function logbookCard(enrollment) {
           ${renderTemplateFields(templateFields, instance.id)}
           <button class="button button--secondary button--small" type="submit">Save draft</button>
         </form>
+        `}
         ${!isRegisteredHtml && entries.length ? `<div class="entry-list">${[...entries].sort((a,b)=>Number(b.status === 'RETURNED')-Number(a.status === 'RETURNED')).slice(0,6).map((entry) => {
           const review = latestEntryReview(entry);
           const displayStatus = entry.status === 'RETURNED' ? 'NEEDS REVISION' : (entry.status === 'SUBMITTED' && review ? review.decision : entry.status);
-          return `<div class="entry-row entry-row--detail"><span class="entry-dot entry-dot--${['VERIFIED','APPROVED'].includes(displayStatus) ? 'good' : 'neutral'}"></span><div class="entry-row-copy"><strong>${esc(entry.title)}</strong><small>${esc(entry.entry_type.replaceAll('_', ' '))} · ${esc(entry.entry_date)} · ${esc(displayStatus.replaceAll('_',' '))}</small>${renderPayloadSummary(entry.payload, templateFields)}${review?.feedback ? `<small class="entry-feedback">Mentor feedback: ${esc(review.feedback)}</small>` : ''}</div>${entry.status === 'DRAFT' ? `<button class="text-button" data-submit-entry="${esc(entry.id)}">Submit</button>` : ''}</div>${entry.status === 'RETURNED' ? `<form class="entry-edit-form" data-edit-entry="${esc(entry.id)}"><label for="entry-edit-title-${esc(entry.id)}">Revise returned entry</label><input id="entry-edit-title-${esc(entry.id)}" name="title" value="${esc(entry.title)}" maxlength="160" required><p class="workspace-note">Entry type: ${esc(entry.entry_type.replaceAll('_', ' '))}. The type stays fixed while you revise the entry.</p><div class="entry-form-row"><label class="template-field"><span>Activity date</span><input name="date" type="date" aria-label="Revised activity date" value="${esc(entry.entry_date)}" required></label></div>${renderTemplateFields(templateFields, instance.id + '-' + entry.id, entry.payload || {})}<button class="button button--secondary button--small" type="submit">Save &amp; resubmit</button></form>` : ''}`;
-        }).join('')}</div>` : '<p class="empty-inline">Your first entry will appear here.</p>'}
+          return `<div class="entry-row entry-row--detail"><span class="entry-dot entry-dot--${['VERIFIED','APPROVED'].includes(displayStatus) ? 'good' : 'neutral'}"></span><div class="entry-row-copy"><strong>${esc(entry.title)}</strong><small>${esc(entry.entry_type.replaceAll('_', ' '))} · ${esc(entry.entry_date)} · ${esc(displayStatus.replaceAll('_',' '))}</small>${renderPayloadSummary(entry.payload, templateFields)}${review?.feedback ? `<small class="entry-feedback">Mentor feedback: ${esc(review.feedback)}</small>` : ''}</div>${!enrollmentClosed && entry.status === 'DRAFT' ? `<button class="text-button" data-submit-entry="${esc(entry.id)}">Submit</button>` : ''}</div>${!enrollmentClosed && entry.status === 'RETURNED' ? `<form class="entry-edit-form" data-edit-entry="${esc(entry.id)}"><label for="entry-edit-title-${esc(entry.id)}">Revise returned entry</label><input id="entry-edit-title-${esc(entry.id)}" name="title" value="${esc(entry.title)}" maxlength="160" required><p class="workspace-note">Entry type: ${esc(entry.entry_type.replaceAll('_', ' '))}. The type stays fixed while you revise the entry.</p><div class="entry-form-row"><label class="template-field"><span>Activity date</span><input name="date" type="date" aria-label="Revised activity date" value="${esc(entry.entry_date)}" required></label></div>${renderTemplateFields(templateFields, instance.id + '-' + entry.id, entry.payload || {})}<button class="button button--secondary button--small" type="submit">Save &amp; resubmit</button></form>` : ''}`;
+        }).join('')}</div>` : (enrollmentClosed ? '<p class="empty-inline">No logbook entries were recorded before this training closed.</p>' : '<p class="empty-inline">Your first entry will appear here.</p>')}
       ` : '<p class="empty-inline">The logbook template is not yet attached to this training.</p>'}
     </article>`;
 }
@@ -900,7 +905,7 @@ async function loadOfferings(user, isVerified) {
 }
 
 function bindEntryForms(user) {
-  document.querySelectorAll('[data-open-html-logbook]').forEach((button) => button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbook, { htmlPath: button.dataset.htmlPath })));
+  document.querySelectorAll('[data-open-html-logbook]').forEach((button) => button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbook, { readOnly: button.dataset.readOnly === 'true', htmlPath: button.dataset.htmlPath })));
   document.querySelectorAll('.entry-form').forEach((form) => form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const data = new FormData(form);
