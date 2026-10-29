@@ -18,7 +18,19 @@ function openHTMLLogbook(instanceId, options = {}) {
     message('This logbook is not available for this training.', 'error'); return;
   }
   const existing = htmlLogbookWindows.get(instanceId);
-  if (existing && !existing.closed) { existing.focus(); return; }
+  if (existing && !existing.closed) {
+    const sync = htmlLogbookSync.get(instanceId);
+    if (readOnly && sync && !sync.readOnly) {
+      sync.readOnly = true;
+      if (sync.timer) clearTimeout(sync.timer);
+      sync.timer = null;
+      sync.state = null;
+      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SET_READ_ONLY' });
+      void reloadExistingHTMLLogbookReadOnly(instanceId);
+    }
+    existing.focus();
+    return;
+  }
   const query = new URLSearchParams({ instance: instanceId });
   if (readOnly) query.set('readonly', '1');
   const child = window.open(htmlPath + '?' + query.toString(), '_blank');
@@ -29,6 +41,35 @@ function openHTMLLogbook(instanceId, options = {}) {
 function postHTMLLogbookMessage(instanceId, payload) {
   const child = htmlLogbookWindows.get(instanceId);
   if (child && !child.closed) child.postMessage({ ...payload, instanceId }, window.location.origin);
+}
+async function reloadExistingHTMLLogbookReadOnly(instanceId) {
+  const sync = htmlLogbookSync.get(instanceId);
+  if (!sync) return;
+  try {
+    const { data, error } = await supabase.rpc('get_my_logbook_html_state', { p_instance_id: instanceId });
+    if (error) throw error;
+    sync.revision = Number(data?.revision ?? 0);
+    sync.state = data?.state && typeof data.state === 'object' ? data.state : null;
+    sync.cloudStateLoaded = true;
+    postHTMLLogbookMessage(instanceId, {
+      type: 'MENTORO_LOGBOOK_LOAD_STATE',
+      state: sync.state,
+      revision: sync.revision,
+      hasCloudState: sync.revision > 0,
+      readOnly: true
+    });
+    const { data: reviews, error: reviewsError } = await supabase.rpc('get_my_logbook_html_item_reviews', { p_instance_id: instanceId });
+    postHTMLLogbookMessage(instanceId, {
+      type: 'MENTORO_LOGBOOK_LOAD_REVIEWS',
+      reviews: Array.isArray(reviews) ? reviews : [],
+      error: reviewsError?.message || null
+    });
+  } catch (error) {
+    postHTMLLogbookMessage(instanceId, {
+      type: 'MENTORO_LOGBOOK_LOAD_ERROR',
+      error: error?.message || 'Could not reload this closed training logbook.'
+    });
+  }
 }
 async function flushHTMLLogbookState(instanceId) {
   const sync = htmlLogbookSync.get(instanceId);
