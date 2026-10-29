@@ -320,6 +320,7 @@ check(
   enrollmentLifecycleTest.startsWith('-- Rollback-only integration test') &&
   enrollmentLifecycleTest.trimEnd().endsWith('ROLLBACK;') &&
   enrollmentLifecycleTest.includes('Trainee lifecycle change was not denied') &&
+  enrollmentLifecycleTest.includes('Unassigned Mentor was able to change another Mentor enrollment') &&
   enrollmentLifecycleTest.includes('Cancelled enrollment still accepted draft writes') &&
   admin.includes("data-admin-enrollment-action") &&
   admin.includes("supabase.rpc('transition_my_training_enrollment'") &&
