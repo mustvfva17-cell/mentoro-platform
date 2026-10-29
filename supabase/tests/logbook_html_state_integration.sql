@@ -35,7 +35,7 @@ DECLARE
   );
   v_state_b jsonb := jsonb_build_object(
     'sessions', jsonb_build_array(jsonb_build_object('id','session-fixture','date','2026-10-28','focus','Second training only')),
-    'cases', jsonb_build_array(),
+    'cases', jsonb_build_array(jsonb_build_object('id','session-fixture','diagnosis','Synthetic test case')),
     'procedures', jsonb_build_array(),
     'roadmap', jsonb_build_object(),
     'emergency', jsonb_build_array(),
@@ -201,13 +201,46 @@ BEGIN
     RAISE EXCEPTION 'Second mentor decision was not saved';
   END IF;
 
-  v_reviews := public.get_my_logbook_html_item_reviews(v_instance_a);
-  IF jsonb_array_length(v_reviews) <> 1
-     OR v_reviews -> 0 ->> 'item_id' <> 'session-fixture'
-     OR v_reviews -> 0 ->> 'decision' <> 'NEEDS_REVISION'
-     OR v_reviews -> 0 ->> 'feedback' <> 'Add a clearer clinical reasoning summary.' THEN
-    RAISE EXCEPTION 'Latest mentor item review did not win deterministic ordering';
+  -- Same ID across two different item types must remain two separate review targets.
+  v_review := public.mentor_review_html_logbook_item(
+    v_instance_a, 'session-fixture', 'case', 'VERIFIED', NULL
+  );
+  IF v_review ->> 'item_type' <> 'case' OR v_review ->> 'is_current' <> 'true'
+     OR (v_review ->> 'reviewed_state_revision')::bigint <> 2 THEN
+    RAISE EXCEPTION 'Case review did not capture the current content revision';
   END IF;
+
+  v_reviews := public.get_my_logbook_html_item_reviews(v_instance_a);
+  IF jsonb_array_length(v_reviews) <> 2 THEN
+    RAISE EXCEPTION 'Same-ID items with different types must retain separate latest review decisions';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM jsonb_array_elements(v_reviews) AS item(value)
+    WHERE item.value ->> 'item_type' = 'session'
+      AND item.value ->> 'item_id' = 'session-fixture'
+      AND item.value ->> 'decision' = 'NEEDS_REVISION'
+      AND item.value ->> 'feedback' = 'Add a clearer clinical reasoning summary.'
+      AND item.value ->> 'is_current' = 'true'
+      AND (item.value ->> 'reviewed_state_revision')::bigint = 2
+  ) THEN RAISE EXCEPTION 'Current session review was not returned with its content fingerprint'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM jsonb_array_elements(v_reviews) AS item(value)
+    WHERE item.value ->> 'item_type' = 'case'
+      AND item.value ->> 'item_id' = 'session-fixture'
+      AND item.value ->> 'decision' = 'VERIFIED'
+      AND item.value ->> 'is_current' = 'true'
+  ) THEN RAISE EXCEPTION 'Current case review was merged with another item type'; END IF;
+
+  -- Updating item content or removing an item invalidates old decisions without deleting history.
+  PERFORM set_config('request.jwt.claim.sub', v_trainee::text, true);
+  v_revision := public.save_my_logbook_html_state(v_instance_a, v_state_a, 2);
+  IF v_revision <> 3 THEN RAISE EXCEPTION 'State update after review should create revision 3'; END IF;
+  v_reviews := public.get_my_logbook_html_item_reviews(v_instance_a);
+  IF jsonb_array_length(v_reviews) <> 2 OR EXISTS (
+    SELECT 1 FROM jsonb_array_elements(v_reviews) AS item(value)
+    WHERE item.value ->> 'is_current' <> 'false'
+  ) THEN RAISE EXCEPTION 'Changing or removing a reviewed item must mark its decision as stale'; END IF;
+  PERFORM set_config('request.jwt.claim.sub', v_mentor::text, true);
 
   v_rejected := false;
   BEGIN
@@ -221,8 +254,8 @@ BEGIN
 
   -- The assigned mentor may read the logbook but cannot modify trainee-owned state.
   v_read := public.get_my_logbook_html_state(v_instance_a);
-  IF (v_read ->> 'revision')::bigint <> 2 OR v_read -> 'state' <> v_state_b THEN
-    RAISE EXCEPTION 'Assigned mentor could not read the current logbook state';
+  IF (v_read ->> 'revision')::bigint <> 3 OR v_read -> 'state' <> v_state_a THEN
+    RAISE EXCEPTION 'Assigned mentor could not read the current logbook state after item edits';
   END IF;
   v_rejected := false;
   BEGIN
