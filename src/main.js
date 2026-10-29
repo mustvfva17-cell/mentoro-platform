@@ -442,6 +442,7 @@ async function renderMentorDashboard(user) {
     const pendingApplications = applications.filter((item) => item.status === 'SUBMITTED');
     const reviewedApplications = applications.filter((item) => item.status !== 'SUBMITTED');
     const activeEnrollments = enrollments.filter((item) => ['CONFIRMED', 'ACTIVE'].includes(item.status));
+    const pastEnrollments = enrollments.filter((item) => ['COMPLETED', 'CANCELLED'].includes(item.status));
     const displayName = mentor.display_name || profile.full_name || user.email?.split('@')[0] || 'mentor';
 
     shell(
@@ -478,6 +479,12 @@ async function renderMentorDashboard(user) {
             : '<div class="empty-state"><strong>No confirmed trainings yet</strong><p>Confirmed bookings linked to your mentor account will appear here.</p></div>') +
         '</section>' +
         '<section class="section-block">' +
+          '<div class="section-heading"><div><p class="eyebrow">TRAINING HISTORY</p><h2>Completed and cancelled trainings</h2></div><span class="count-badge">' + pastEnrollments.length + '</span></div>' +
+          (pastEnrollments.length
+            ? '<div class="mentor-queue-grid">' + pastEnrollments.map(mentorEnrollmentCard).join('') + '</div>'
+            : '<div class="empty-state"><strong>No closed trainings yet</strong><p>Completed or cancelled training records will appear here.</p></div>') +
+        '</section>' +
+        '<section class="section-block">' +
           '<div class="section-heading"><div><p class="eyebrow">DECISION HISTORY</p><h2>Recently reviewed applications</h2></div><span class="count-badge">' + reviewedApplications.length + '</span></div>' +
           (reviewedApplications.length
             ? '<div class="list-stack">' + reviewedApplications.slice(0, 8).map(mentorApplicationCard).join('') + '</div>'
@@ -488,6 +495,7 @@ async function renderMentorDashboard(user) {
     );
     bindMentorApplicationActions(user);
     bindMentorEntryActions(user);
+    bindMentorEnrollmentActions(user);
     document.querySelectorAll('[data-open-html-logbook-readonly]').forEach((button) => {
       button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbookReadonly, { readOnly: true, htmlPath: button.dataset.htmlPath }));
     });
@@ -620,17 +628,82 @@ function mentorEnrollmentCard(enrollment) {
     return !latestReview || !entry.submitted_at || new Date(entry.submitted_at) > new Date(latestReview.reviewed_at);
   }).length;
   const statusTone = ['CONFIRMED', 'ACTIVE'].includes(enrollment.status) ? 'good' : 'neutral';
-  return '<article class="training-card mentor-training-card">' +
+  const startsAt = new Date(enrollment.starts_at).getTime();
+  const endsAt = new Date(enrollment.ends_at).getTime();
+  const now = Date.now();
+  let lifecycleActions = '';
+  if (enrollment.status === 'CONFIRMED') {
+    lifecycleActions = startsAt > now
+      ? '<p class="workspace-note">Start action unlocks at the scheduled start time.</p>'
+      : endsAt > now
+        ? '<button class="button button--primary button--small" type="button" data-enrollment-action="START" data-enrollment-id="' + esc(enrollment.id) + '">Start training</button>'
+        : '<p class="workspace-note">The scheduled window has passed. Ask an administrator to review this enrollment.</p>';
+  } else if (enrollment.status === 'ACTIVE') {
+    lifecycleActions = endsAt <= now
+      ? '<button class="button button--primary button--small" type="button" data-enrollment-action="COMPLETE" data-enrollment-id="' + esc(enrollment.id) + '">Complete training</button>'
+      : '<p class="workspace-note">Completion is available after the scheduled end time.</p>';
+  }
+  if (['CONFIRMED', 'ACTIVE'].includes(enrollment.status)) {
+    lifecycleActions += '<button class="button button--secondary button--small" type="button" data-enrollment-action="CANCEL" data-enrollment-id="' + esc(enrollment.id) + '">Cancel training</button>';
+  }
+  const lifecycleMarkup = lifecycleActions
+    ? '<div class="mentor-review-actions">' + lifecycleActions + '</div>'
+    : '';
+  return '<article class="training-card mentor-training-card" data-enrollment-card>' +
     '<div class="training-card-heading"><span class="specialty-label">' + esc(specialty.name_en || 'Clinical training') + '</span>' +
     '<span class="status-chip status-chip--' + statusTone + '">' + esc((enrollment.status || 'CONFIRMED').replaceAll('_', ' ')) + '</span></div>' +
     '<h3>' + esc(offering.title || 'Assigned training') + '</h3>' +
     '<p class="mentor-line">' + esc(dateTime(enrollment.starts_at)) + ' — ' + esc(dateTime(enrollment.ends_at)) + '</p>' +
     '<div class="mentor-entry-stats"><span>' + entries.length + ' native entries</span><span>' + submittedCount + ' awaiting review</span></div>' +
-    (isRegisteredHtml
-      ? '<p class="workspace-note">Existing HTML logbook state is available for read-only review, with item-level mentor decisions and feedback stored in the review audit trail.</p>' +
+    (isRegisteredHtml && enrollment.status !== 'CANCELLED'
+      ? '<p class="workspace-note">Existing HTML logbook is read-only in this mentor view. Item-level reviews are available only while the enrollment remains open or completed.</p>' +
         '<button class="button button--secondary button--small" type="button" data-open-html-logbook-readonly="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open HTML logbook · read only</button>'
       : '') +
+    lifecycleMarkup +
   '</article>';
+}
+
+function bindMentorEnrollmentActions(user) {
+  document.querySelectorAll('[data-enrollment-action]').forEach((button) => button.addEventListener('click', async () => {
+    const enrollmentId = button.dataset.enrollmentId;
+    const action = button.dataset.enrollmentAction;
+    if (!enrollmentId || !['START', 'COMPLETE', 'CANCEL'].includes(action)) return;
+
+    let reason = null;
+    if (action === 'CANCEL') {
+      reason = window.prompt('Enter a cancellation reason (10–1000 characters). This action is recorded in the audit log.');
+      if (reason === null) return;
+      reason = reason.trim();
+      if (reason.length < 10 || reason.length > 1000) {
+        message('Enter a cancellation reason of 10–1000 characters.', 'error');
+        return;
+      }
+    } else {
+      const label = action === 'START' ? 'start this training' : 'mark this training as completed';
+      if (!window.confirm('Are you sure you want to ' + label + '? The change will be recorded in the enrollment audit log.')) return;
+    }
+
+    const card = button.closest('[data-enrollment-card]');
+    card?.querySelectorAll('button').forEach((item) => { item.disabled = true; });
+    setBusy(button, true, action === 'START' ? 'Starting…' : action === 'COMPLETE' ? 'Completing…' : 'Cancelling…');
+    const { error } = await supabase.rpc('transition_my_training_enrollment', {
+      p_enrollment_id: enrollmentId, p_action: action, p_reason: reason
+    });
+    if (error) {
+      message(errorText(error), 'error');
+      setBusy(button, false);
+      card?.querySelectorAll('button').forEach((item) => { item.disabled = false; });
+      return;
+    }
+
+    await renderMentorDashboard(user);
+    message(
+      action === 'START' ? 'Training started. The enrollment is now active.'
+        : action === 'COMPLETE' ? 'Training completed. The logbook is now read-only for the trainee.'
+          : 'Training cancelled. The reason and status change were recorded.',
+      'success'
+    );
+  }));
 }
 
 function bindMentorApplicationActions(user) {
