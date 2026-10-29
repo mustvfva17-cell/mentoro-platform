@@ -356,6 +356,18 @@ check(
   'closed trainee logbooks open read-only and hide structured draft/revision mutations while preserving history'
 );
 
+const mentorEnrollmentCardStart = mainWorkspace.indexOf('function mentorEnrollmentCard(enrollment)');
+const mentorEnrollmentCardEnd = mainWorkspace.indexOf(String.fromCharCode(10) + 'function bindMentorEnrollmentActions', mentorEnrollmentCardStart + 10);
+const mentorEnrollmentCard = mentorEnrollmentCardStart >= 0 && mentorEnrollmentCardEnd > mentorEnrollmentCardStart
+  ? mainWorkspace.slice(mentorEnrollmentCardStart, mentorEnrollmentCardEnd)
+  : '';
+check(
+  mentorEnrollmentCard.includes("data-open-html-logbook-readonly=") &&
+  mentorEnrollmentCard.includes("Closed training history remains viewable") &&
+  !mentorEnrollmentCard.includes("enrollment.status !== 'CANCELLED'"),
+  'assigned Mentors retain read-only HTML logbook history access for cancelled enrollments'
+);
+
 check(
   mainWorkspace.includes("import { startEnrollmentLifecycleMonitor } from './enrollment-lifecycle-monitor.js';") &&
   mainWorkspace.includes('startEnrollmentLifecycleMonitor({') &&
