@@ -31,6 +31,10 @@ BEGIN
      OR position('/logbooks/general-surgery/index.html' IN v_definition) = 0 THEN
     RAISE EXCEPTION 'HTML state saver no longer covers both registered HTML logbook assets';
   END IF;
+
+  IF position('USING ERRCODE = ''PT409'';' IN v_definition) = 0 THEN
+    RAISE EXCEPTION 'HTML state saver must preserve the PT409 stale-revision conflict code';
+  END IF;
 END;
 $test$;
 
