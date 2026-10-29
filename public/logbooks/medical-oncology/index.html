@@ -947,7 +947,7 @@ function applyReadOnlyMode(){
   if(button.hasAttribute('data-view')||button.id==='themeToggle')return;
   button.disabled=true;
   button.setAttribute('aria-disabled','true');
-  button.title='Read-only mentor review';
+  button.title='Read-only logbook';
  });
  document.querySelectorAll('input,textarea,select').forEach(control=>{
   if(control.type==='search')return;
