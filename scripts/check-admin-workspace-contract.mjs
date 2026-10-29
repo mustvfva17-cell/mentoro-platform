@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 const admin = await read('../src/admin-workspace.js');
 const mainWorkspace = await read('../src/main.js');
+const enrollmentLifecycleMonitor = await read('../src/enrollment-lifecycle-monitor.js');
 const enrollmentLifecycleMigration = await read('../supabase/migrations/20261029103946_add_enrollment_lifecycle_controls.sql');
 const enrollmentLifecycleTest = await read('../supabase/tests/enrollment_lifecycle_integration.sql');
 const enrollmentCancellationSyncMigration = await read('../supabase/migrations/20261029165759_sync_application_status_on_enrollment_cancellation.sql');
@@ -356,13 +357,19 @@ check(
 );
 
 check(
+  mainWorkspace.includes("import { startEnrollmentLifecycleMonitor } from './enrollment-lifecycle-monitor.js';") &&
+  mainWorkspace.includes('startEnrollmentLifecycleMonitor({') &&
+  mainWorkspace.includes('onClosed: () => setHTMLLogbookReadOnly(instanceId)') &&
   mainWorkspace.includes('async function reloadExistingHTMLLogbookReadOnly(instanceId)') &&
-  mainWorkspace.includes('async function refreshHTMLLogbookLifecycle(instanceId)') &&
-  mainWorkspace.includes("setInterval(() => { void refreshHTMLLogbookLifecycle(instanceId); }, 5000)") &&
-  mainWorkspace.includes(".from('training_enrollments')") &&
-  mainWorkspace.includes(".select('id,status')") &&
   mainWorkspace.includes('enrollmentId: button.dataset.enrollmentId') &&
   traineeLogbookCard.includes('data-enrollment-id=') &&
+  enrollmentLifecycleMonitor.includes("const OPEN_ENROLLMENT_STATUSES = new Set(['CONFIRMED', 'ACTIVE'])") &&
+  enrollmentLifecycleMonitor.includes(".from('training_enrollments')") &&
+  enrollmentLifecycleMonitor.includes(".select('id,status')") &&
+  enrollmentLifecycleMonitor.includes(".eq('id', enrollmentId)") &&
+  enrollmentLifecycleMonitor.includes('if (!data || !OPEN_ENROLLMENT_STATUSES.has(data.status))') &&
+  enrollmentLifecycleMonitor.includes("schedule(() => { void refresh(); }, intervalMs)") &&
+  enrollmentLifecycleMonitor.includes("if (error) return { status: 'transient-error', error }") &&
   mainWorkspace.includes("postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SET_READ_ONLY' })") &&
   mainWorkspace.includes('sync.readOnly = true') &&
   mainWorkspace.includes('stopHTMLLogbookLifecyclePolling(sync)') &&
@@ -372,7 +379,7 @@ check(
   mainWorkspace.includes("error: 'This logbook is read-only. Changes are not saved.'") &&
   legacyHtml.includes("msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'") &&
   generalSurgeryHtml.includes("msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'"),
-  'open trainee HTML logbooks poll enrollment status, switch to read-only after remote closure, reload saved state, and suppress pending cloud saves'
+  'open trainee HTML logbooks monitor enrollment status, switch to read-only after remote closure, reload saved state, and suppress pending cloud saves'
 );
 
 console.log('Administrator workspace safety contracts passed.');
