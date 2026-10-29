@@ -14,6 +14,7 @@ const htmlLogbookSync = new Map();
 function openHTMLLogbook(instanceId, options = {}) {
   const readOnly = options.readOnly === true;
   const htmlPath = options.htmlPath || '/logbooks/medical-oncology/index.html';
+  const enrollmentId = options.enrollmentId || null;
   if (!supabase || !/^[0-9a-f-]{36}$/i.test(instanceId || '') || !REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)) {
     message('This logbook is not available for this training.', 'error'); return;
   }
@@ -21,12 +22,7 @@ function openHTMLLogbook(instanceId, options = {}) {
   if (existing && !existing.closed) {
     const sync = htmlLogbookSync.get(instanceId);
     if (readOnly && sync && !sync.readOnly) {
-      sync.readOnly = true;
-      if (sync.timer) clearTimeout(sync.timer);
-      sync.timer = null;
-      sync.state = null;
-      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SET_READ_ONLY' });
-      void reloadExistingHTMLLogbookReadOnly(instanceId);
+      void setHTMLLogbookReadOnly(instanceId);
     }
     existing.focus();
     return;
@@ -36,11 +32,76 @@ function openHTMLLogbook(instanceId, options = {}) {
   const child = window.open(htmlPath + '?' + query.toString(), '_blank');
   if (!child) { message('Your browser blocked the logbook window. Allow pop-ups for this site and try again.', 'error'); return; }
   htmlLogbookWindows.set(instanceId, child);
-  htmlLogbookSync.set(instanceId, { revision: null, timer: null, saving: false, state: null, readOnly, cloudStateLoaded: false });
+  const sync = {
+    revision: null,
+    timer: null,
+    saving: false,
+    state: null,
+    readOnly,
+    cloudStateLoaded: false,
+    enrollmentId,
+    lifecycleTimer: null,
+    lifecycleCheckInFlight: false
+  };
+  htmlLogbookSync.set(instanceId, sync);
+  if (!readOnly && enrollmentId) {
+    sync.lifecycleTimer = setInterval(() => { void refreshHTMLLogbookLifecycle(instanceId); }, 5000);
+    void refreshHTMLLogbookLifecycle(instanceId);
+  }
 }
 function postHTMLLogbookMessage(instanceId, payload) {
   const child = htmlLogbookWindows.get(instanceId);
   if (child && !child.closed) child.postMessage({ ...payload, instanceId }, window.location.origin);
+}
+function stopHTMLLogbookLifecyclePolling(sync) {
+  if (sync?.lifecycleTimer !== null && sync?.lifecycleTimer !== undefined) {
+    clearInterval(sync.lifecycleTimer);
+    sync.lifecycleTimer = null;
+  }
+}
+async function setHTMLLogbookReadOnly(instanceId) {
+  const sync = htmlLogbookSync.get(instanceId);
+  if (!sync || sync.readOnly) return;
+  sync.readOnly = true;
+  stopHTMLLogbookLifecyclePolling(sync);
+  if (sync.timer) clearTimeout(sync.timer);
+  sync.timer = null;
+  sync.state = null;
+  postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SET_READ_ONLY' });
+  await reloadExistingHTMLLogbookReadOnly(instanceId);
+}
+async function refreshHTMLLogbookLifecycle(instanceId) {
+  const sync = htmlLogbookSync.get(instanceId);
+  if (!sync || sync.readOnly || !sync.enrollmentId) {
+    stopHTMLLogbookLifecyclePolling(sync);
+    return;
+  }
+  const child = htmlLogbookWindows.get(instanceId);
+  if (!child || child.closed) {
+    stopHTMLLogbookLifecyclePolling(sync);
+    htmlLogbookWindows.delete(instanceId);
+    htmlLogbookSync.delete(instanceId);
+    return;
+  }
+  if (sync.lifecycleCheckInFlight) return;
+  sync.lifecycleCheckInFlight = true;
+  try {
+    const { data, error } = await supabase
+      .from('training_enrollments')
+      .select('id,status')
+      .eq('id', sync.enrollmentId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data || !['CONFIRMED', 'ACTIVE'].includes(data.status)) {
+      await setHTMLLogbookReadOnly(instanceId);
+    }
+  } catch {
+    // A transient status-read failure does not itself change the training state.
+    // The database still rejects HTML saves after closure; the next poll retries.
+  } finally {
+    const current = htmlLogbookSync.get(instanceId);
+    if (current === sync) current.lifecycleCheckInFlight = false;
+  }
 }
 async function reloadExistingHTMLLogbookReadOnly(instanceId) {
   const sync = htmlLogbookSync.get(instanceId);
@@ -833,7 +894,7 @@ function logbookCard(enrollment) {
       <p class="mentor-line">${esc(mentor.display_name || 'Assigned mentor')}</p>
       <div class="logbook-meta"><span>${entries.length} entries</span><span>${draftCount} drafts / revisions</span></div>
       ${instance && isRegisteredHtml
-        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '" data-read-only="' + (enrollmentClosed ? 'true' : 'false') + '">Open ' + (enrollmentClosed ? 'read-only' : 'interactive') + ' logbook</button><p class="workspace-note">' + (enrollmentClosed ? 'This training is closed. The logbook is read-only; do not enter patient-identifying information.' : 'This uses the original HTML logbook for this training. Cloud changes save to this enrollment only; do not enter patient-identifying information.') + '</p>'
+        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '" data-enrollment-id="' + esc(enrollment.id) + '" data-html-path="' + esc(htmlPath || '') + '" data-read-only="' + (enrollmentClosed ? 'true' : 'false') + '">Open ' + (enrollmentClosed ? 'read-only' : 'interactive') + ' logbook</button><p class="workspace-note">' + (enrollmentClosed ? 'This training is closed. The logbook is read-only; do not enter patient-identifying information.' : 'This uses the original HTML logbook for this training. Cloud changes save to this enrollment only; do not enter patient-identifying information.') + '</p>'
         : ''}
       ${instance && !isRegisteredHtml ? `
         ${enrollmentClosed
@@ -946,7 +1007,7 @@ async function loadOfferings(user, isVerified) {
 }
 
 function bindEntryForms(user) {
-  document.querySelectorAll('[data-open-html-logbook]').forEach((button) => button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbook, { readOnly: button.dataset.readOnly === 'true', htmlPath: button.dataset.htmlPath })));
+  document.querySelectorAll('[data-open-html-logbook]').forEach((button) => button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbook, { readOnly: button.dataset.readOnly === 'true', htmlPath: button.dataset.htmlPath, enrollmentId: button.dataset.enrollmentId })));
   document.querySelectorAll('.entry-form').forEach((form) => form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const data = new FormData(form);
