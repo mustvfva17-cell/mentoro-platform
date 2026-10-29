@@ -64,7 +64,7 @@ try {
       const result = await logbook.evaluate(() => {
         const controls = Array.from(document.querySelectorAll('input, textarea, select'))
           .filter((control) => control.type !== 'search' && control.id !== 'roadGroupSelect');
-        const guardedButtons = Array.from(document.querySelectorAll('button[title="Read-only mentor review"]'));
+        const guardedButtons = Array.from(document.querySelectorAll('button[title="Read-only logbook"]'));
         return {
           hasReadOnlyClass: document.body.classList.contains('html-logbook-readonly'),
           closedNoticeVisible: document.body.innerText.includes('This training is closed. The logbook is read-only.'),
