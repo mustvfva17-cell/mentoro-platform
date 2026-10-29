@@ -36,6 +36,8 @@ jobs:
         run: npm run check:migrations
       - name: Validate frontend/schema contracts
         run: npm run check:contracts
+      - name: Verify enrollment lifecycle monitor behavior
+        run: node scripts/test-enrollment-lifecycle-monitor.mjs
       - name: Build production assets
         run: npm run build
       - name: Verify HTML logbook read-only behavior in Chromium
