@@ -355,4 +355,14 @@ check(
   'closed trainee logbooks open read-only and hide structured draft/revision mutations while preserving history'
 );
 
+check(
+  mainWorkspace.includes('async function reloadExistingHTMLLogbookReadOnly(instanceId)') &&
+  mainWorkspace.includes("postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SET_READ_ONLY' })") &&
+  mainWorkspace.includes('sync.readOnly = true') &&
+  mainWorkspace.includes('if (sync.timer) clearTimeout(sync.timer)') &&
+  legacyHtml.includes("msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'") &&
+  generalSurgeryHtml.includes("msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'"),
+  'already-open HTML logbook windows switch to read-only and reload saved cloud state after enrollment closure'
+);
+
 console.log('Administrator workspace safety contracts passed.');
