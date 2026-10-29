@@ -11,7 +11,7 @@ const mentorRegistrationByEmailTest = await read('../supabase/tests/admin_regist
 const schema = await read('../supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql');
 const legacyHtml = await read('../public/logbooks/medical-oncology/index.html');
 const generalSurgeryHtml = await read('../public/logbooks/general-surgery/index.html');
-const reviewIntegrityMigration = await read('../supabase/migrations/20261029102000_bind_html_logbook_review_integrity.sql');
+const reviewIntegrityMigration = await read('../supabase/migrations/20261029102420_bind_html_logbook_review_integrity.sql');
 const reviewIntegrityTest = await read('../supabase/tests/logbook_html_state_integration.sql');
 
 function check(condition, message) {
