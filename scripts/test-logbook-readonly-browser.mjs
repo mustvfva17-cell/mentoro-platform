@@ -53,14 +53,15 @@ try {
       const popupPromise = parent.waitForEvent('popup');
       await parent.getByRole('button', { name: 'Open logbook' }).click();
       const logbook = await popupPromise;
+      const pageErrors = [];
+      logbook.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
+      logbook.on('console', (entry) => {
+        if (entry.type() === 'error') pageErrors.push('console: ' + entry.text());
+      });
       await logbook.waitForLoadState('load');
 
       await parent.evaluate(() => window.mentoroSendClosedMessage());
-      await logbook.waitForFunction(() =>
-        document.body.classList.contains('html-logbook-readonly') &&
-        document.body.innerText.includes('This training is closed. The logbook is read-only.')
-      );
-
+      await sleep(500);
       const result = await logbook.evaluate(() => {
         const controls = Array.from(document.querySelectorAll('input, textarea, select'))
           .filter((control) => control.type !== 'search' && control.id !== 'roadGroupSelect');
@@ -78,7 +79,13 @@ try {
       if (!result.hasReadOnlyClass || !result.closedNoticeVisible ||
           result.controlCount === 0 || result.enabledControls !== 0 ||
           result.guardedButtonCount === 0 || result.enabledGuardedButtons !== 0) {
-        throw new Error(`${testCase.template} did not fully switch to read-only mode: ${JSON.stringify(result)}`);
+        const diagnostics = await logbook.evaluate(() => ({
+          url: window.location.href,
+          title: document.title,
+          instanceId: new URLSearchParams(window.location.search).get('instance'),
+          bodyText: document.body.innerText.slice(0, 1200)
+        }));
+        throw new Error(`${testCase.template} did not fully switch to read-only mode: ${JSON.stringify({ result, diagnostics, pageErrors })}`);
       }
       console.log(`PASS ${testCase.template}: message-triggered closure disables mutable controls and action buttons`);
     } finally {
