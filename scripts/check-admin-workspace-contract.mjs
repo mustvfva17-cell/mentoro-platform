@@ -168,6 +168,8 @@ check(
 
 const publicationMigration = await read('../supabase/migrations/20261028151327_admin_publish_logbook_template_version.sql');
 const publicationVersioningMigration = await read('../supabase/migrations/20261028153201_keep_only_latest_assignable_template_version.sql');
+const publicationVersioningFix = await read('../supabase/migrations/20261029120000_restore_single_assignable_template_version.sql');
+const publicationVersioningTest = await read('../supabase/tests/logbook_template_publication_versioning.sql');
 const templateVersionDraftMigration = await read('../supabase/migrations/20261028153539_admin_create_logbook_template_version_draft.sql');
 check(
   admin.includes('CLINICAL GOVERNANCE') &&
@@ -192,6 +194,20 @@ check(
   publicationVersioningMigration.includes('SET status = \'PUBLISHED\'') &&
   publicationVersioningMigration.toLowerCase().includes('because existing offerings, enrollments, and logbook instances still reference them'),
   'publishing a new version stops assigning older versions to new offerings while preserving historical references'
+);
+
+check(
+  publicationVersioningFix.includes('v_target_template_id uuid;') &&
+  publicationVersioningFix.includes('FROM public.logbook_templates t') &&
+  publicationVersioningFix.includes('FOR UPDATE') &&
+  publicationVersioningFix.includes('SET is_assignable = false') &&
+  publicationVersioningFix.includes('AND id <> p_version_id') &&
+  publicationVersioningFix.includes('v_template_id IS DISTINCT FROM v_target_template_id') &&
+  publicationVersioningTest.startsWith('-- Rollback-only integration test') &&
+  publicationVersioningTest.includes('Older published version was incorrectly made non-published or remained assignable') &&
+  publicationVersioningTest.includes('Expected exactly one assignable version') &&
+  publicationVersioningTest.trimEnd().endsWith('ROLLBACK;'),
+  'forward publication fix serializes version changes and keeps exactly one assignable version while preserving published history'
 );
 
 check(

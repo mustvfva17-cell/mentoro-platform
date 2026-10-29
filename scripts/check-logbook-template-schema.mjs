@@ -293,6 +293,12 @@ for (const [name, runtime] of [
   const readyAt = runtime.indexOf('window.opener.postMessage({type:\'MENTORO_LOGBOOK_READY\'');
   assert.ok(loadStateAt >= 0 && readyAt > loadStateAt, `${name} must load state after the bridge is ready`);
 }
+const htmlConflictMigration = await read('supabase/migrations/20261029120100_fix_html_state_conflict_status.sql');
+assert.ok(htmlConflictMigration.includes("RAISE SQLSTATE 'PT409'"), 'Stale HTML state writes must use PostgREST HTTP 409 instead of retryable SQLSTATE 40001');
+assert.ok(htmlConflictMigration.includes('LOGBOOK_STATE_CONFLICT'), 'Conflict code must preserve the frontend sentinel message');
+assert.ok(!htmlConflictMigration.includes("ERRCODE = '40001'"), 'Conflict fix must not retain SQLSTATE 40001');
+assert.ok(htmlStateTest.includes("EXCEPTION WHEN SQLSTATE 'PT409' THEN"), 'HTML state integration test must exercise the HTTP-409 conflict code');
+
 console.log('HTML logbook cloud bootstrap guard prevents stale local state from overwriting saved cloud state.');
 
 

@@ -178,7 +178,7 @@ BEGIN
   v_rejected := false;
   BEGIN
     PERFORM public.save_my_logbook_html_state(v_instance_a, v_state_a, 1);
-  EXCEPTION WHEN SQLSTATE '40001' THEN
+  EXCEPTION WHEN SQLSTATE 'PT409' THEN
     v_rejected := true;
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'Stale revision should have been rejected'; END IF;
