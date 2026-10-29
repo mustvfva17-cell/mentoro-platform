@@ -673,6 +673,12 @@ window.addEventListener('message',event=>{
   renderMentorReviewPanel();
   return;
  }
+ if(msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'){
+  readonlyMode=true;
+  render();
+  setCloudNotice('This training is closed. The logbook is read-only. Do not enter patient-identifying information.');
+  return;
+ }
  if(msg.type==='MENTORO_LOGBOOK_LOAD_STATE'){
   readonlyMode=readonlyMode||msg.readOnly===true;
   const incoming=msg.state;
