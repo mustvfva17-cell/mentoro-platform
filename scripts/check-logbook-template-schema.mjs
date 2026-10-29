@@ -174,8 +174,15 @@ assert.ok(mentorReviewMigration.includes('v_actor_id <> v_mentor_id OR NOT app_p
 assert.ok(mentorReviewMigration.includes('The selected item is not present in this training logbook'));
 assert.ok(mentorReviewMigration.includes("'VERIFIED', 'FEEDBACK', 'NEEDS_REVISION'"));
 const mentorReviewIntegrationTest = await read('supabase/tests/logbook_html_state_integration.sql');
-assert.ok(mentorReviewIntegrationTest.includes('Latest mentor item review did not win deterministic ordering'));
+assert.ok(mentorReviewIntegrationTest.includes('Current session review was not returned with its content fingerprint'));
+assert.ok(mentorReviewIntegrationTest.includes('Same-ID items with different types must retain separate latest review decisions'));
+assert.ok(mentorReviewIntegrationTest.includes('Changing or removing a reviewed item must mark its decision as stale'));
 assert.ok(mentorReviewIntegrationTest.includes('Trainee must not be able to issue mentor review decisions'));
+const htmlReviewIntegrityMigration = await read('supabase/migrations/20261029102000_bind_html_logbook_review_integrity.sql');
+assert.ok(htmlReviewIntegrityMigration.includes('item_digest text'));
+assert.ok(htmlReviewIntegrityMigration.includes('reviewed_state_revision bigint'));
+assert.ok(htmlReviewIntegrityMigration.includes("extensions.digest(v_item::text, 'sha256')"));
+assert.ok(htmlReviewIntegrityMigration.includes("'is_current', true"));
 console.log('Both legacy HTML logbooks expose item-level mentor decisions through the assigned-mentor-only review bridge.');
 
 console.log('Existing HTML logbook launch, origin-checked cloud state bridge, per-instance local cache, and revisioned RPC integration passed.');
