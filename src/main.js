@@ -2,6 +2,7 @@ import './style.css';
 import { renderAdminWorkspace } from './admin-workspace.js';
 import { LOGBOOK_ENTRY_TYPES, collectTemplatePayload, getTemplateFields, renderPayloadSummary, renderTemplateFields } from './logbook-schema.js';
 import { createClient } from '@supabase/supabase-js';
+import { startEnrollmentLifecycleMonitor } from './enrollment-lifecycle-monitor.js';
 
 const app = document.querySelector('#app');
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -40,13 +41,27 @@ function openHTMLLogbook(instanceId, options = {}) {
     readOnly,
     cloudStateLoaded: false,
     enrollmentId,
-    lifecycleTimer: null,
-    lifecycleCheckInFlight: false
+    lifecycleMonitor: null
   };
   htmlLogbookSync.set(instanceId, sync);
   if (!readOnly && enrollmentId) {
-    sync.lifecycleTimer = setInterval(() => { void refreshHTMLLogbookLifecycle(instanceId); }, 5000);
-    void refreshHTMLLogbookLifecycle(instanceId);
+    sync.lifecycleMonitor = startEnrollmentLifecycleMonitor({
+      supabase,
+      enrollmentId,
+      intervalMs: 5000,
+      isReadOnly: () => sync.readOnly,
+      isWindowClosed: () => {
+        const currentChild = htmlLogbookWindows.get(instanceId);
+        return !currentChild || currentChild.closed;
+      },
+      onClosed: () => setHTMLLogbookReadOnly(instanceId),
+      onWindowClosed: () => {
+        if (htmlLogbookSync.get(instanceId) === sync) {
+          htmlLogbookWindows.delete(instanceId);
+          htmlLogbookSync.delete(instanceId);
+        }
+      }
+    });
   }
 }
 function postHTMLLogbookMessage(instanceId, payload) {
@@ -54,10 +69,9 @@ function postHTMLLogbookMessage(instanceId, payload) {
   if (child && !child.closed) child.postMessage({ ...payload, instanceId }, window.location.origin);
 }
 function stopHTMLLogbookLifecyclePolling(sync) {
-  if (sync?.lifecycleTimer !== null && sync?.lifecycleTimer !== undefined) {
-    clearInterval(sync.lifecycleTimer);
-    sync.lifecycleTimer = null;
-  }
+  if (!sync?.lifecycleMonitor) return;
+  sync.lifecycleMonitor.stop();
+  sync.lifecycleMonitor = null;
 }
 async function setHTMLLogbookReadOnly(instanceId) {
   const sync = htmlLogbookSync.get(instanceId);
@@ -69,39 +83,6 @@ async function setHTMLLogbookReadOnly(instanceId) {
   sync.state = null;
   postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SET_READ_ONLY' });
   await reloadExistingHTMLLogbookReadOnly(instanceId);
-}
-async function refreshHTMLLogbookLifecycle(instanceId) {
-  const sync = htmlLogbookSync.get(instanceId);
-  if (!sync || sync.readOnly || !sync.enrollmentId) {
-    stopHTMLLogbookLifecyclePolling(sync);
-    return;
-  }
-  const child = htmlLogbookWindows.get(instanceId);
-  if (!child || child.closed) {
-    stopHTMLLogbookLifecyclePolling(sync);
-    htmlLogbookWindows.delete(instanceId);
-    htmlLogbookSync.delete(instanceId);
-    return;
-  }
-  if (sync.lifecycleCheckInFlight) return;
-  sync.lifecycleCheckInFlight = true;
-  try {
-    const { data, error } = await supabase
-      .from('training_enrollments')
-      .select('id,status')
-      .eq('id', sync.enrollmentId)
-      .maybeSingle();
-    if (error) throw error;
-    if (!data || !['CONFIRMED', 'ACTIVE'].includes(data.status)) {
-      await setHTMLLogbookReadOnly(instanceId);
-    }
-  } catch {
-    // A transient status-read failure does not itself change the training state.
-    // The database still rejects HTML saves after closure; the next poll retries.
-  } finally {
-    const current = htmlLogbookSync.get(instanceId);
-    if (current === sync) current.lifecycleCheckInFlight = false;
-  }
 }
 async function reloadExistingHTMLLogbookReadOnly(instanceId) {
   const sync = htmlLogbookSync.get(instanceId);
