@@ -636,7 +636,7 @@ function applyReadOnlyMode(){
     button.hasAttribute('data-lb-type')||inline.includes('window.print()')||/export/i.test(inline)||
     inline.includes('go(')||inline.includes('moreGo(')||inline.includes('toggleMoreSheet(')||inline.includes('closeQuickAdd()');
   if(safeNavigation)return;
-  button.disabled=true;button.setAttribute('aria-disabled','true');button.title='Read-only mentor review';
+  button.disabled=true;button.setAttribute('aria-disabled','true');button.title='Read-only logbook';
  });
  document.querySelectorAll('input,textarea,select').forEach(control=>{
   if(control.type==='search'||control.id==='roadGroupSelect')return;
