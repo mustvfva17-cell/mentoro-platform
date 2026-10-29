@@ -223,6 +223,9 @@ BEGIN
   IF v_result->>'status'<>'CANCELLED' OR NOT EXISTS(
     SELECT 1 FROM public.training_enrollments WHERE id=v_enrollment_c AND status='CANCELLED' AND cancelled_at IS NOT NULL
   ) THEN RAISE EXCEPTION 'Admin cancellation was not persisted with cancelled_at'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.training_applications WHERE id=v_app_c AND status='CANCELLED') THEN
+    RAISE EXCEPTION 'Admin cancellation did not update its trainee-facing application status';
+  END IF;
 
   -- A completed enrollment becomes read-only and cannot be cancelled again.
   PERFORM set_config('request.jwt.claim.sub',v_mentor::text,true);
@@ -231,6 +234,9 @@ BEGIN
   IF v_result->>'status'<>'COMPLETED' OR NOT EXISTS(
     SELECT 1 FROM public.training_enrollments WHERE id=v_enrollment_b AND status='COMPLETED' AND completed_at IS NOT NULL
   ) THEN RAISE EXCEPTION 'Expired active training was not completed with completed_at'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.training_applications WHERE id=v_app_b AND status='ADMIN_CONFIRMED') THEN
+    RAISE EXCEPTION 'Completion should preserve the original confirmed application history';
+  END IF;
 
   v_rejected:=false;
   BEGIN
@@ -245,6 +251,9 @@ BEGIN
   IF v_result->>'status'<>'CANCELLED' OR NOT EXISTS(
     SELECT 1 FROM public.training_enrollments WHERE id=v_enrollment_a AND status='CANCELLED' AND cancelled_at IS NOT NULL
   ) THEN RAISE EXCEPTION 'Assigned Mentor could not cancel active training with a reason'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.training_applications WHERE id=v_app_a AND status='CANCELLED') THEN
+    RAISE EXCEPTION 'Mentor cancellation did not update its trainee-facing application status';
+  END IF;
 
   -- Direct entry writes are blocked after cancellation/completion even when using a privileged SQL session.
   PERFORM set_config('request.jwt.claim.sub',v_trainee::text,true);
