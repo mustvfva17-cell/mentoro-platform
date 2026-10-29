@@ -5,7 +5,7 @@ const admin = await read('../src/admin-workspace.js');
 const wrappers = await read('../supabase/migrations/20261028062421_current_user_workflow_wrappers.sql');
 const adminSetup = await read('../supabase/migrations/20261028062818_mentor_reviews_and_admin_training_setup.sql');
 const mentorRegistrationGuard = await read('../supabase/migrations/20261028201121_guard_admin_mentor_registration_target.sql');
-const mentorRegistrationByEmailMigration = await read('../supabase/migrations/20261029090000_enable_admin_mentor_registration_without_profile.sql');
+const mentorRegistrationByEmailMigration = await read('../supabase/migrations/20261029095003_enable_admin_mentor_registration_without_profile.sql');
 const mentorRegistrationTest = await read('../supabase/tests/admin_register_mentor_authorization.sql');
 const mentorRegistrationByEmailTest = await read('../supabase/tests/admin_register_mentor_by_email.sql');
 const schema = await read('../supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql');
@@ -168,7 +168,7 @@ check(
 
 const publicationMigration = await read('../supabase/migrations/20261028151327_admin_publish_logbook_template_version.sql');
 const publicationVersioningMigration = await read('../supabase/migrations/20261028153201_keep_only_latest_assignable_template_version.sql');
-const publicationVersioningFix = await read('../supabase/migrations/20261029120000_restore_single_assignable_template_version.sql');
+const publicationVersioningFix = await read('../supabase/migrations/20261029095252_restore_single_assignable_template_version.sql');
 const publicationVersioningTest = await read('../supabase/tests/logbook_template_publication_versioning.sql');
 const templateVersionDraftMigration = await read('../supabase/migrations/20261028153539_admin_create_logbook_template_version_draft.sql');
 check(

@@ -293,7 +293,7 @@ for (const [name, runtime] of [
   const readyAt = runtime.indexOf('window.opener.postMessage({type:\'MENTORO_LOGBOOK_READY\'');
   assert.ok(loadStateAt >= 0 && readyAt > loadStateAt, `${name} must load state after the bridge is ready`);
 }
-const htmlConflictMigration = await read('supabase/migrations/20261029120100_fix_html_state_conflict_status.sql');
+const htmlConflictMigration = await read('supabase/migrations/20261029095307_fix_html_state_conflict_status.sql');
 assert.ok(htmlConflictMigration.includes("RAISE SQLSTATE 'PT409'"), 'Stale HTML state writes must use PostgREST HTTP 409 instead of retryable SQLSTATE 40001');
 assert.ok(htmlConflictMigration.includes('LOGBOOK_STATE_CONFLICT'), 'Conflict code must preserve the frontend sentinel message');
 assert.ok(!htmlConflictMigration.includes("ERRCODE = '40001'"), 'Conflict fix must not retain SQLSTATE 40001');
