@@ -1,15 +1,30 @@
 import { spawn } from 'node:child_process';
+import { copyFile, mkdir, rm, rmdir } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { chromium } from 'playwright';
 
 const port = Number(process.env.MENTORO_BROWSER_TEST_PORT || 4178);
 const baseUrl = `http://127.0.0.1:${port}`;
+const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const distRoot = resolve(projectRoot, 'dist');
+const harnessSource = resolve(projectRoot, 'tests/browser/logbook-readonly-harness.html');
+const harnessTarget = resolve(distRoot, 'tests/browser/logbook-readonly-harness.html');
+
+// Vite's build does not copy repository test fixtures into dist. Stage only the
+// harness into the generated output so the popup test exercises production assets.
+await mkdir(dirname(harnessTarget), { recursive: true });
+await copyFile(harnessSource, harnessTarget);
+
 const server = spawn(process.execPath, [
   './node_modules/vite/bin/vite.js',
+  'preview',
   '--host', '127.0.0.1',
   '--port', String(port),
   '--strictPort'
 ], {
+  cwd: projectRoot,
   stdio: ['ignore', 'pipe', 'pipe'],
   env: { ...process.env, VITE_SUPABASE_URL: '', VITE_SUPABASE_PUBLISHABLE_KEY: '' }
 });
@@ -100,4 +115,7 @@ try {
 } finally {
   if (browser) await browser.close();
   server.kill('SIGTERM');
+  await rm(harnessTarget, { force: true });
+  await rmdir(dirname(harnessTarget)).catch(() => {});
+  await rmdir(resolve(distRoot, 'tests')).catch(() => {});
 }
