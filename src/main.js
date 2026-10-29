@@ -738,8 +738,8 @@ function mentorEnrollmentCard(enrollment) {
     '<h3>' + esc(offering.title || 'Assigned training') + '</h3>' +
     '<p class="mentor-line">' + esc(dateTime(enrollment.starts_at)) + ' — ' + esc(dateTime(enrollment.ends_at)) + '</p>' +
     '<div class="mentor-entry-stats"><span>' + entries.length + ' native entries</span><span>' + submittedCount + ' awaiting review</span></div>' +
-    (isRegisteredHtml && enrollment.status !== 'CANCELLED'
-      ? '<p class="workspace-note">Existing HTML logbook is read-only in this mentor view. Item-level reviews are available only while the enrollment remains open or completed.</p>' +
+    (isRegisteredHtml
+      ? '<p class="workspace-note">Existing HTML logbook is read-only in this mentor view. Closed training history remains viewable; item-level reviews are available only while the enrollment remains open or completed.</p>' +
         '<button class="button button--secondary button--small" type="button" data-open-html-logbook-readonly="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open HTML logbook · read only</button>'
       : '') +
     lifecycleMarkup +
