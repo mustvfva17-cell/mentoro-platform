@@ -19,7 +19,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
 
   try {
     const [
-      verificationResult, applicationResult, offeringResult, profileResult,
+      verificationResult, applicationResult, offeringResult, enrollmentResult, profileResult,
       mentorRolesResult, mentorResult, specialtyResult, templateVersionResult
     ] = await Promise.all([
       supabase.from('verification_documents')
@@ -31,6 +31,9 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       supabase.from('training_offerings')
         .select('id,title,status,delivery_mode,mentor_profile_id,mentor_profiles(display_name,professional_title),specialties(name_en),training_slots(id,starts_at,ends_at,status,capacity)')
         .order('created_at', { ascending: false }).limit(100),
+      supabase.from('training_enrollments')
+        .select('id,status,starts_at,ends_at,completed_at,cancelled_at,training_offerings(title),trainee_profiles(university_name,faculty_name,profiles(full_name,email)),mentor_profiles(display_name,professional_title),specialties(name_en)')
+        .order('starts_at', { ascending: false }).limit(100),
       supabase.from('profiles').select('id').eq('id', user.id).maybeSingle(),
       supabase.from('profile_roles').select('user_id').eq('role', 'MENTOR').is('revoked_at', null),
       supabase.from('mentor_profiles')
@@ -42,7 +45,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         .order('version_number', { ascending: false })
     ]);
     for (const result of [
-      verificationResult, applicationResult, offeringResult, profileResult,
+      verificationResult, applicationResult, offeringResult, enrollmentResult, profileResult,
       mentorRolesResult, mentorResult, specialtyResult, templateVersionResult
     ]) {
       if (result.error) throw result.error;
@@ -82,6 +85,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
     const initialVersionLayout = JSON.stringify(initialTemplateVersion?.template_definition || { sections: [] }, null, 2);
     const applications = applicationResult.data || [];
     const offerings = offeringResult.data || [];
+    const enrollments = enrollmentResult.data || [];
     const pendingSlots = (offering) => (offering.training_slots || []).filter((slot) => slot.status === 'OPEN').length;
 
     shell(
@@ -91,6 +95,44 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
           '<article class="stat-card"><span>Verification queue</span><strong>' + verificationDocs.length + '</strong><small>University documents awaiting review</small></article>' +
           '<article class="stat-card"><span>Bookings to confirm</span><strong>' + applications.length + '</strong><small>Approved by the assigned mentor</small></article>' +
           '<article class="stat-card"><span>Training offerings</span><strong>' + offerings.length + '</strong><small>' + offerings.filter((item) => item.status === 'PUBLISHED').length + ' published</small></article>' +
+        '</section>' +
+        '<section class="section-block" id="admin-enrollment-lifecycle"><div class="section-heading"><div><p class="eyebrow">TRAINING CONTROL</p><h2>Enrollment lifecycle</h2></div><span class="count-badge">' + enrollments.length + '</span></div>' +
+          '<p class="workspace-note">Start only during the scheduled window, complete after its scheduled end, or cancel a confirmed/active training with a recorded reason. Status changes are validated by the database and written to the audit log.</p>' +
+          (enrollments.length ? '<div class="mentor-queue-grid">' + enrollments.map((enrollment) => {
+            const traineeRel = enrollment.trainee_profiles || {};
+            const traineeProfile = traineeRel.profiles || {};
+            const mentor = enrollment.mentor_profiles || {};
+            const offering = enrollment.training_offerings || {};
+            const specialty = enrollment.specialties || {};
+            const startTime = new Date(enrollment.starts_at).getTime();
+            const endTime = new Date(enrollment.ends_at).getTime();
+            const now = Date.now();
+            let actions = '';
+            if (enrollment.status === 'CONFIRMED') {
+              actions = startTime > now
+                ? '<p class="workspace-note">Start action unlocks at the scheduled start time.</p>'
+                : endTime > now
+                  ? '<button class="button button--primary button--small" type="button" data-admin-enrollment-action="START" data-enrollment-id="' + escape(enrollment.id) + '">Start training</button>'
+                  : '<p class="workspace-note">The scheduled window has passed; review or cancel this enrollment.</p>';
+            } else if (enrollment.status === 'ACTIVE') {
+              actions = endTime <= now
+                ? '<button class="button button--primary button--small" type="button" data-admin-enrollment-action="COMPLETE" data-enrollment-id="' + escape(enrollment.id) + '">Complete training</button>'
+                : '<p class="workspace-note">Completion is available after the scheduled end time.</p>';
+            }
+            if (['CONFIRMED', 'ACTIVE'].includes(enrollment.status)) {
+              actions += '<button class="button button--secondary button--small" type="button" data-admin-enrollment-action="CANCEL" data-enrollment-id="' + escape(enrollment.id) + '">Cancel training</button>';
+            }
+            return '<article class="activity-card admin-enrollment-card" data-admin-enrollment-card>' +
+              '<div class="activity-main"><div class="training-card-heading"><span class="specialty-label">' + escape(specialty.name_en || 'Clinical training') + '</span><span class="status-chip status-chip--' + (['CONFIRMED', 'ACTIVE'].includes(enrollment.status) ? 'good' : 'neutral') + '">' + escape(enrollment.status) + '</span></div>' +
+              '<h3>' + escape(offering.title || 'Training') + '</h3>' +
+              '<p><strong>Trainee:</strong> ' + escape(traineeProfile.full_name || traineeProfile.email || 'Trainee') + '</p>' +
+              '<p><strong>Mentor:</strong> ' + escape(mentor.display_name || mentor.professional_title || 'Assigned mentor') + '</p>' +
+              '<p>' + escape(formatDate(enrollment.starts_at)) + ' — ' + escape(formatDate(enrollment.ends_at)) + '</p>' +
+              (enrollment.completed_at ? '<small>Completed ' + escape(formatDate(enrollment.completed_at)) + '</small>' : '') +
+              (enrollment.cancelled_at ? '<small>Cancelled ' + escape(formatDate(enrollment.cancelled_at)) + '</small>' : '') +
+              (actions ? '<div class="mentor-review-actions">' + actions + '</div>' : '') +
+              '</div></article>';
+          }).join('') + '</div>' : '<div class="empty-state"><strong>No confirmed enrollments yet</strong><p>Confirmed bookings appear here when an enrollment and its individual logbook instance are created.</p></div>') +
         '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">IDENTITY & ACCESS</p><h2>Trainee verification</h2></div><span class="count-badge">' + verificationDocs.length + '</span></div>' +
           '<p class="workspace-note">Approving verification unlocks trainee applications. Review the private document in the authorized verification workflow before deciding.</p>' +
@@ -575,6 +617,47 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       }
       await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
       showMessage('Booking confirmed. A separate logbook instance was created for this enrollment.', 'success');
+    }));
+
+    document.querySelectorAll('[data-admin-enrollment-action]').forEach((button) => button.addEventListener('click', async () => {
+      const enrollmentId = button.dataset.enrollmentId;
+      const action = button.dataset.adminEnrollmentAction;
+      if (!enrollmentId || !['START', 'COMPLETE', 'CANCEL'].includes(action)) return;
+
+      let reason = null;
+      if (action === 'CANCEL') {
+        reason = window.prompt('Enter a cancellation reason (10–1000 characters). This is saved in the enrollment audit log.');
+        if (reason === null) return;
+        reason = reason.trim();
+        if (reason.length < 10 || reason.length > 1000) {
+          showMessage('Enter a cancellation reason of 10–1000 characters.', 'error');
+          return;
+        }
+      } else {
+        const label = action === 'START' ? 'start this training' : 'mark this training as completed';
+        if (!window.confirm('Are you sure you want to ' + label + '? This will be recorded in the enrollment audit log.')) return;
+      }
+
+      const card = button.closest('[data-admin-enrollment-card]');
+      card?.querySelectorAll('button').forEach((item) => { item.disabled = true; });
+      busy(button, true, action === 'START' ? 'Starting…' : action === 'COMPLETE' ? 'Completing…' : 'Cancelling…');
+      const { error } = await supabase.rpc('transition_my_training_enrollment', {
+        p_enrollment_id: enrollmentId, p_action: action, p_reason: reason
+      });
+      if (error) {
+        showMessage((errorText || ((err) => err?.message || 'Could not change enrollment status.'))(error), 'error');
+        busy(button, false);
+        card?.querySelectorAll('button').forEach((item) => { item.disabled = false; });
+        return;
+      }
+
+      await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
+      showMessage(
+        action === 'START' ? 'Training started. Enrollment is now active.'
+          : action === 'COMPLETE' ? 'Training completed. Its logbook is now read-only for the trainee.'
+            : 'Training cancelled. The reason and status change were recorded.',
+        'success'
+      );
     }));
 
     document.querySelectorAll('[data-create-slot]').forEach((form) => form.addEventListener('submit', async (event) => {
