@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MENTORO logbook read-only browser test harness</title>
+</head>
+<body>
+  <h1>Logbook read-only browser test harness</h1>
+  <button id="open-logbook" type="button">Open logbook</button>
+  <script>
+    (() => {
+      const instanceId = '123e4567-e89b-12d3-a456-426614174000';
+      const params = new URLSearchParams(window.location.search);
+      const surgery = params.get('template') === 'general-surgery';
+      const path = surgery
+        ? '/logbooks/general-surgery/index.html'
+        : '/logbooks/medical-oncology/index.html';
+      window.mentoroTestInstanceId = instanceId;
+      window.mentoroTestPopup = null;
+      document.getElementById('open-logbook').addEventListener('click', () => {
+        window.mentoroTestPopup = window.open(path + '?instance=' + instanceId, '_blank');
+      });
+      window.mentoroSendClosedMessage = () => {
+        if (!window.mentoroTestPopup) throw new Error('Logbook popup was not opened');
+        window.mentoroTestPopup.postMessage({
+          type: 'MENTORO_LOGBOOK_SET_READ_ONLY',
+          instanceId
+        }, window.location.origin);
+      };
+    })();
+  </script>
+</body>
+</html>
