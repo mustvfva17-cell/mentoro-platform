@@ -77,6 +77,8 @@ window.addEventListener('message', async (event) => {
       postHTMLLogbookMessage(instanceId, {
         type: 'MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT',
         ok: false,
+        itemId: event.data.itemId,
+        itemType: event.data.itemType,
         error: 'Mentor review actions are available only in the assigned read-only review view.'
       });
       return;
@@ -94,6 +96,7 @@ window.addEventListener('message', async (event) => {
         ok: !error,
         review: error ? null : review,
         itemId: event.data.itemId,
+        itemType: event.data.itemType,
         error: error?.message || null
       });
     } catch (error) {
@@ -102,6 +105,7 @@ window.addEventListener('message', async (event) => {
         ok: false,
         review: null,
         itemId: event.data.itemId,
+        itemType: event.data.itemType,
         error: error?.message || 'Could not save the mentor review. Check your connection and try again.'
       });
     }
