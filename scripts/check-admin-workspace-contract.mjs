@@ -341,7 +341,7 @@ check(
 );
 
 const traineeLogbookCardStart = mainWorkspace.indexOf('function logbookCard(enrollment)');
-const traineeLogbookCardEnd = mainWorkspace.indexOf('\\nfunction ', traineeLogbookCardStart + 10);
+const traineeLogbookCardEnd = mainWorkspace.indexOf(String.fromCharCode(10) + 'function ', traineeLogbookCardStart + 10);
 const traineeLogbookCard = traineeLogbookCardStart >= 0 && traineeLogbookCardEnd > traineeLogbookCardStart
   ? mainWorkspace.slice(traineeLogbookCardStart, traineeLogbookCardEnd)
   : '';
