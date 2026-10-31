@@ -44,7 +44,7 @@ BEGIN
   IF length(trim(coalesce(p_full_name, ''))) < 2 OR length(trim(p_full_name)) > 160
      OR length(trim(coalesce(p_university_name, ''))) < 2 OR length(trim(p_university_name)) > 200
      OR length(trim(coalesce(p_faculty_name, ''))) < 2 OR length(trim(p_faculty_name)) > 200
-     OR p_year_of_study NOT BETWEEN 1 AND 12 THEN
+     OR p_year_of_study IS NULL OR p_year_of_study NOT BETWEEN 1 AND 12 THEN
     RAISE EXCEPTION 'Complete your name, university, faculty, and valid year of study' USING ERRCODE = '22023';
   END IF;
 
@@ -172,7 +172,7 @@ BEGIN
     admin_decision_by, admin_decided_at, admin_decision_reason
   ) VALUES (
     p_trainee_profile_id, v_offering.id, v_slot.id, nullif(trim(p_reason), ''),
-    'ADMIN_ASSIGNED', v_actor_id, clock_timestamp(), nullif(trim(p_reason), 'Assigned directly by platform administration')
+    'ADMIN_ASSIGNED', v_actor_id, clock_timestamp(), coalesce(nullif(trim(p_reason), ''), 'Assigned directly by platform administration')
   ) RETURNING id INTO v_application_id;
 
   INSERT INTO public.training_enrollments (
