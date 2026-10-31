@@ -116,8 +116,10 @@ BEGIN
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM public.trainee_profiles tp
+    JOIN public.profiles p ON p.id = tp.profile_id
     JOIN public.profile_roles r ON r.user_id = tp.profile_id
     WHERE tp.profile_id = p_trainee_profile_id
+      AND p.account_status <> 'SUSPENDED'
       AND r.role = 'TRAINEE' AND r.revoked_at IS NULL
   ) THEN
     RAISE EXCEPTION 'Selected account is not an active trainee profile' USING ERRCODE = '42501';
@@ -137,7 +139,7 @@ BEGIN
   JOIN public.profile_roles mr ON mr.user_id = mp.profile_id
   WHERE o.id = v_slot.offering_id
     AND o.status = 'PUBLISHED'
-    AND mp.profile_status = 'APPROVED'
+    AND mp.profile_status = 'APPROVED' AND mp.is_public = true
     AND mr.role = 'MENTOR' AND mr.revoked_at IS NULL
   FOR SHARE OF o, mp;
   IF NOT FOUND THEN
