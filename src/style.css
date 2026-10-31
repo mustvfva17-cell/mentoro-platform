@@ -330,3 +330,28 @@ h1,h2,h3,p { margin-top: 0; }
 }
 .admin-advanced-template-details[open] > summary { margin-bottom: 14px; }
 .admin-advanced-template-details .workspace-note { margin: 0 0 14px; }
+
+/* Focused authentication screen */
+.auth-page { min-height: 100vh; display: grid; place-items: center; padding: 36px 18px; background: radial-gradient(ellipse at 50% 0%, rgba(235,63,79,.10), transparent 34rem), #f7f8fb; }
+.auth-card--centered { width: min(100%, 456px); margin: 0 auto; padding: 34px; border: 1px solid var(--border); border-radius: 24px; background: rgba(255,255,255,.96); box-shadow: 0 24px 80px rgba(23,36,59,.10); }
+.auth-brand { display: flex; justify-content: center; margin: 0 auto 28px; }
+.auth-card--centered .card-heading { text-align: center; margin-bottom: 22px; }
+.auth-card--centered .card-heading h1 { margin: 0 0 8px; color: var(--navy); font-size: clamp(25px, 6vw, 31px); letter-spacing: -.04em; }
+.auth-card--centered .card-heading p:last-child { margin: 0; color: var(--muted); }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: var(--muted); font-size: 12px; }
+.auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--border); }
+.button--google { display: flex; justify-content: center; align-items: center; gap: 11px; border: 1px solid var(--border); background: white; color: var(--navy); font-weight: 700; }
+.button--google:hover { background: #f8fafc; border-color: #cbd5e1; }
+.google-g { font: 700 18px/1 Arial, sans-serif; color: #4285f4; }
+.auth-footnote { margin: 20px 0 0; color: var(--muted); text-align: center; font-size: 12px; line-height: 1.6; }
+.password-rules { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-top: 9px; color: var(--muted); font-size: 11px; }
+.password-rules span::before { content: "○"; margin-right: 6px; color: #9aa5b4; }
+.password-rules span.is-met { color: #16805d; }
+.password-rules span.is-met::before { content: "✓"; color: #16805d; font-weight: 800; }
+.profile-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; }
+.profile-actions .workspace-note { margin: 0; }
+@media (max-width: 520px) {
+  .auth-card--centered { padding: 26px 20px; border-radius: 20px; }
+  .profile-actions { align-items: stretch; flex-direction: column; }
+  .profile-actions .button { width: 100%; }
+}
