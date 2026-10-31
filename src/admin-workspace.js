@@ -90,8 +90,10 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
     const offerings = offeringResult.data || [];
     const enrollments = enrollmentResult.data || [];
     const traineeProfiles = traineeProfileResult.data || [];
-    const assignableOfferings = offerings.filter((offering) =>
-      offering.status === 'PUBLISHED' && (offering.training_slots || []).some((slot) => slot.status === 'OPEN' && new Date(slot.starts_at).getTime() > Date.now())
+    const assignableHtmlTemplates = templateVersions.filter((version) =>
+      version.template?.is_active &&
+      version.template_definition?.renderer === 'HTML' &&
+      ['/logbooks/medical-oncology/index.html', '/logbooks/general-surgery/index.html'].includes(version.template_definition.html_path)
     );
     const pendingSlots = (offering) => (offering.training_slots || []).filter((slot) => slot.status === 'OPEN').length;
 
@@ -294,25 +296,21 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
             }).join('') + '</div>'
             : '<div class="empty-state"><strong>No template drafts awaiting review</strong><p>New drafts will appear here for clinical review before they can be assigned to training.</p></div>') +
         '</section>' +
-        '<section class="section-block" id="admin-assign-logbook"><div class="section-heading"><div><p class="eyebrow">TRAINEE RECORDS</p><h2>Assign a logbook to a trainee</h2></div><span class="status-chip status-chip--neutral">Admin only</span></div>' +
-          '<p class="workspace-note">Choose an existing trainee and a future slot from a published logbook offering. MENTORO creates a separate enrollment and private logbook instance for that trainee; existing trainee records stay independent.</p>' +
-          (traineeProfiles.length && assignableOfferings.length
+        '<section class="section-block" id="admin-assign-logbook"><div class="section-heading"><div><p class="eyebrow">TRAINEE RECORDS</p><h2>Assign a personal logbook</h2></div><span class="status-chip status-chip--neutral">Admin only</span></div>' +
+          '<p class="workspace-note">Assign an active HTML logbook directly to any existing trainee profile. The assignment creates a private record for that trainee and does not publish the template as a general offering.</p>' +
+          (traineeProfiles.length && assignableHtmlTemplates.length
             ? '<form id="admin-assign-logbook-form" class="admin-form-card"><div class="admin-form-grid">' +
                 '<div class="field"><label for="admin-assignment-trainee">Trainee</label><select id="admin-assignment-trainee" name="traineeId" required><option value="">Select a trainee</option>' +
                   traineeProfiles.map((trainee) => { const p = trainee.profiles || {}; return '<option value="' + escape(trainee.profile_id) + '">' + escape(p.full_name || p.email || trainee.profile_id) + (p.email ? ' · ' + escape(p.email) : '') + '</option>'; }).join('') +
                 '</select></div>' +
-                '<div class="field"><label for="admin-assignment-slot">Logbook and training slot</label><select id="admin-assignment-slot" name="slotId" required><option value="">Select a published logbook slot</option>' +
-                  assignableOfferings.flatMap((offering) => (offering.training_slots || []).filter((slot) => slot.status === 'OPEN' && new Date(slot.starts_at).getTime() > Date.now()).map((slot) => {
-                    const mentor = offering.mentor_profiles || {};
-                    const specialty = offering.specialties || {};
-                    return '<option value="' + escape(slot.id) + '">' + escape(offering.title || specialty.name_en || 'Training') + ' · ' + escape(mentor.display_name || mentor.professional_title || 'Mentor') + ' · ' + escape(formatDate(slot.starts_at)) + '</option>';
-                  })).join('') +
+                '<div class="field"><label for="admin-assignment-template">Logbook</label><select id="admin-assignment-template" name="templateVersionId" required><option value="">Select a logbook</option>' +
+                  assignableHtmlTemplates.map((version) => '<option value="' + escape(version.id) + '">' + escape(version.template?.title || version.template?.slug || 'Logbook') + ' · v' + escape(version.version_number) + (version.status === 'PUBLISHED' ? '' : ' · private draft') + '</option>').join('') +
                 '</select></div>' +
                 '<div class="field admin-form-wide"><label for="admin-assignment-reason">Assignment note (optional)</label><textarea id="admin-assignment-reason" name="reason" rows="2" maxlength="1000" placeholder="Optional context for this assignment"></textarea></div>' +
-              '</div><button class="button button--primary" type="submit">Assign logbook</button></form>'
-            : '<div class="empty-state"><strong>Assignment options are not ready</strong><p>' +
-                (!traineeProfiles.length ? 'No trainee profiles are available. ' : '') +
-                (!assignableOfferings.length ? 'Publish an approved logbook offering and add a future open slot first.' : '') +
+              '</div><button class="button button--primary" type="submit">Assign personal logbook</button></form>'
+            : '<div class="empty-state"><strong>No personal logbook choices are available</strong><p>' +
+                (!traineeProfiles.length ? 'Create a trainee profile first. ' : '') +
+                (!assignableHtmlTemplates.length ? 'An active HTML logbook template is required.' : '') +
               '</p></div>') +
         '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">TRAINING SETUP</p><h2>Create training offering</h2></div><span class="status-chip status-chip--neutral">Admin only</span></div>' +
@@ -637,14 +635,14 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       if (!form.reportValidity()) return;
       const data = new FormData(form);
       const traineeId = String(data.get('traineeId') || '');
-      const slotId = String(data.get('slotId') || '');
-      if (!traineeId || !slotId) return showMessage('Choose a trainee and a published logbook slot.', 'error');
-      if (!window.confirm('Assign this training and create a private logbook for the selected trainee?')) return;
+      const templateVersionId = String(data.get('templateVersionId') || '');
+      if (!traineeId || !templateVersionId) return showMessage('Choose a trainee and a logbook.', 'error');
+      if (!window.confirm('Assign a private copy of this logbook to the selected trainee?')) return;
       const button = form.querySelector('button[type="submit"]');
       busy(button, true, 'Assigning…');
       const { error } = await supabase.rpc('admin_assign_trainee_logbook', {
         p_trainee_profile_id: traineeId,
-        p_slot_id: slotId,
+        p_template_version_id: templateVersionId,
         p_reason: String(data.get('reason') || '').trim() || null
       });
       if (error) {
@@ -653,7 +651,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         return;
       }
       await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
-      showMessage('A separate logbook was assigned and is now available in the trainee’s workspace.', 'success');
+      showMessage('A personal logbook was assigned and is now available in the trainee’s workspace.', 'success');
     });
 
     document.querySelectorAll('[data-confirm-application]').forEach((button) => button.addEventListener('click', async () => {
