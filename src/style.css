@@ -355,3 +355,11 @@ h1,h2,h3,p { margin-top: 0; }
   .profile-actions { align-items: stretch; flex-direction: column; }
   .profile-actions .button { width: 100%; }
 }
+
+/* Keep inline form controls compact in the authentication card. */
+#mentor-intent-field .checkbox-field { display: flex; align-items: flex-start; gap: 10px; width: fit-content; color: var(--navy); font-size: 12px; font-weight: 650; line-height: 1.5; cursor: pointer; }
+#mentor-intent-field input[type="checkbox"] { flex: 0 0 18px; width: 18px; min-width: 18px; height: 18px; min-height: 18px; margin: 1px 0 0; padding: 0; accent-color: var(--red); }
+.password-input-wrap { position: relative; }
+.password-input-wrap input { padding-right: 62px; }
+.password-toggle { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); padding: 5px 4px; border: 0; background: transparent; color: #53617a; font-size: 11px; font-weight: 700; cursor: pointer; }
+.password-toggle:hover { color: var(--red); }
