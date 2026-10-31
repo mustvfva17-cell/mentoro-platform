@@ -342,7 +342,7 @@ function renderAuth() {
           <span class="brand-word">mentoro<span>o</span></span>
         </a>
         <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
-        <div class="card-heading"><p class="eyebrow">CLINICAL MENTORSHIP</p><h1 id="auth-title">Welcome to MENTORO</h1><p>Sign in to your personal training space.</p></div>
+        <div class="card-heading"><p class="eyebrow">CLINICAL MENTORSHIP</p><h1 id="auth-title">Welcome to MENTORO</h1><p id="auth-subtitle">Sign in to your personal training space.</p></div>
         <div class="tab-list" role="tablist" aria-label="Account access">
           <button class="tab is-active" type="button" data-auth-tab="signin" role="tab" aria-selected="true">Sign in</button>
           <button class="tab" type="button" data-auth-tab="signup" role="tab" aria-selected="false">Create account</button>
@@ -353,7 +353,7 @@ function renderAuth() {
           <div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required></div>
           <div class="field">
             <label for="password">Password</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required aria-describedby="password-rules">
+            <div class="password-input-wrap"><input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required aria-describedby="password-rules"><button class="password-toggle" id="password-toggle" type="button" aria-label="Show password">Show</button></div>
             <div id="password-rules" class="password-rules" hidden aria-live="polite">
               <span data-password-rule="length">12 characters</span>
               <span data-password-rule="upper">One uppercase letter</span>
@@ -397,6 +397,13 @@ function renderAuth() {
     return valid;
   };
   password.addEventListener('input', updatePasswordFeedback);
+  document.querySelector('#password-toggle')?.addEventListener('click', (event) => {
+    const button = event.currentTarget;
+    const show = password.type === 'password';
+    password.type = show ? 'text' : 'password';
+    button.textContent = show ? 'Hide' : 'Show';
+    button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  });
   document.querySelectorAll('[data-auth-tab]').forEach((tab) => tab.addEventListener('click', () => {
     mode = tab.dataset.authTab;
     document.querySelectorAll('[data-auth-tab]').forEach((item) => {
@@ -417,6 +424,9 @@ function renderAuth() {
       : 'Use your registered email to continue.';
     submit.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
     document.querySelector('#auth-title').textContent = mode === 'signup' ? 'Create your account' : 'Welcome to MENTORO';
+    document.querySelector('#auth-subtitle').textContent = mode === 'signup'
+      ? 'Create your secure account to start your training profile.'
+      : 'Sign in to your personal training space.';
     message('');
   }));
   mentorIntentCheckbox.addEventListener('change', () => {
