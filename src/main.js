@@ -334,35 +334,42 @@ function shell(content, user = null) {
 }
 
 function renderAuth() {
-  shell(`
-    <main class="auth-layout">
-      <section class="hero">
-        <p class="eyebrow">MEDICAL TRAINING, WITH DIRECTION</p>
-        <h1>Build clinical confidence.<br><span>With a mentor beside you.</span></h1>
-        <p class="hero-copy">A single home for your training applications, verified clinical exposure, and a separate logbook for every confirmed training.</p>
-        <div class="value-list">
-          <div><span class="value-icon">01</span><div><strong>Real clinical mentorship</strong><p>Find structured training with experienced physicians.</p></div></div>
-          <div><span class="value-icon">02</span><div><strong>Your own learning record</strong><p>Every confirmed training gets its own independent logbook.</p></div></div>
-          <div><span class="value-icon">03</span><div><strong>Verified trainee access</strong><p>Your university ID is reviewed before applying for training.</p></div></div>
-        </div>
-      </section>
-      <section class="auth-card">
-        <div class="card-heading"><p class="eyebrow">GET STARTED</p><h2>Welcome to MENTORO</h2><p>Create a trainee account or prepare a separate account for administrator-assigned Mentor access.</p></div>
+  app.innerHTML = `
+    <main class="auth-page">
+      <section class="auth-card auth-card--centered" aria-labelledby="auth-title">
+        <a class="brand auth-brand" href="/" aria-label="MENTORO home">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+          <span class="brand-word">mentoro<span>o</span></span>
+        </a>
+        <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+        <div class="card-heading"><p class="eyebrow">CLINICAL MENTORSHIP</p><h1 id="auth-title">Welcome to MENTORO</h1><p>Sign in to your personal training space.</p></div>
         <div class="tab-list" role="tablist" aria-label="Account access">
           <button class="tab is-active" type="button" data-auth-tab="signin" role="tab" aria-selected="true">Sign in</button>
           <button class="tab" type="button" data-auth-tab="signup" role="tab" aria-selected="false">Create account</button>
         </div>
-        <form id="auth-form" class="form-stack">
+        <form id="auth-form" class="form-stack" novalidate>
           <div id="name-field" class="field" hidden><label for="full-name">Full name</label><input id="full-name" name="fullName" autocomplete="name" placeholder="Your full name" minlength="2"></div>
-          <div id="mentor-intent-field" class="field" hidden><label class="checkbox-field"><input id="mentor-account-intent" name="mentorAccountIntent" type="checkbox" value="yes"> This is a dedicated Mentor account</label><small>Select this only for a separate account that a platform administrator will register. This choice does not grant Mentor access.</small></div>
+          <div id="mentor-intent-field" class="field" hidden><label class="checkbox-field"><input id="mentor-account-intent" name="mentorAccountIntent" type="checkbox" value="yes"> This is a dedicated Mentor account</label><small>This selection does not grant Mentor access. An administrator must register the account.</small></div>
           <div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required></div>
-          <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" minlength="8" placeholder="At least 8 characters" required></div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required aria-describedby="password-rules">
+            <div id="password-rules" class="password-rules" hidden aria-live="polite">
+              <span data-password-rule="length">12 characters</span>
+              <span data-password-rule="upper">One uppercase letter</span>
+              <span data-password-rule="lower">One lowercase letter</span>
+              <span data-password-rule="number">One number</span>
+              <span data-password-rule="symbol">One symbol</span>
+            </div>
+          </div>
           <p class="form-hint" id="auth-hint">Use your registered email to continue.</p>
           <button class="button button--primary button--full" type="submit" id="auth-submit">Sign in</button>
         </form>
-        <p class="privacy-note">Your verification documents stay in private storage and are visible only to authorized reviewers.</p>
+        <div class="auth-divider"><span>or</span></div>
+        <button class="button button--google button--full" type="button" id="google-sign-in"><span class="google-g" aria-hidden="true">G</span> Continue with Google</button>
+        <p class="auth-footnote">Your trainee profile, verification document, and logbooks are private to your account.</p>
       </section>
-    </main>`);
+    </main>`;
 
   let mode = 'signin';
   const form = document.querySelector('#auth-form');
@@ -370,7 +377,26 @@ function renderAuth() {
   const mentorIntentField = document.querySelector('#mentor-intent-field');
   const mentorIntentCheckbox = document.querySelector('#mentor-account-intent');
   const password = document.querySelector('#password');
+  const rules = document.querySelector('#password-rules');
   const submit = document.querySelector('#auth-submit');
+  const passwordChecks = {
+    length: (value) => value.length >= 12,
+    upper: (value) => /[A-Z]/.test(value),
+    lower: (value) => /[a-z]/.test(value),
+    number: (value) => /[0-9]/.test(value),
+    symbol: (value) => /[^A-Za-z0-9]/.test(value)
+  };
+  const updatePasswordFeedback = () => {
+    const value = password.value;
+    const valid = Object.entries(passwordChecks).every(([key, check]) => {
+      const passed = check(value);
+      document.querySelector('[data-password-rule="' + key + '"]')?.classList.toggle('is-met', passed);
+      return passed;
+    });
+    password.setCustomValidity(mode === 'signup' && value && !valid ? 'Use at least 12 characters with uppercase, lowercase, number, and symbol.' : '');
+    return valid;
+  };
+  password.addEventListener('input', updatePasswordFeedback);
   document.querySelectorAll('[data-auth-tab]').forEach((tab) => tab.addEventListener('click', () => {
     mode = tab.dataset.authTab;
     document.querySelectorAll('[data-auth-tab]').forEach((item) => {
@@ -380,33 +406,56 @@ function renderAuth() {
     });
     nameField.hidden = mode !== 'signup';
     mentorIntentField.hidden = mode !== 'signup';
+    rules.hidden = mode !== 'signup';
     document.querySelector('#full-name').required = mode === 'signup';
     password.autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
+    password.setCustomValidity('');
     document.querySelector('#auth-hint').textContent = mode === 'signup'
       ? (mentorIntentCheckbox.checked
-        ? 'Confirm your email, then wait for the administrator to register this dedicated Mentor account before signing in.'
-        : 'Confirm your email before signing in to create your trainee profile.')
+        ? 'Confirm your email, then ask an administrator to register this dedicated Mentor account.'
+        : 'Create your trainee account with a strong password.')
       : 'Use your registered email to continue.';
     submit.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
+    document.querySelector('#auth-title').textContent = mode === 'signup' ? 'Create your account' : 'Welcome to MENTORO';
     message('');
   }));
-
   mentorIntentCheckbox.addEventListener('change', () => {
     if (mode !== 'signup') return;
     document.querySelector('#auth-hint').textContent = mentorIntentCheckbox.checked
-      ? 'Confirm your email, then wait for the administrator to register this dedicated Mentor account before signing in.'
-      : 'Confirm your email before signing in to create your trainee profile.';
+      ? 'Confirm your email, then ask an administrator to register this dedicated Mentor account.'
+      : 'Create your trainee account with a strong password.';
+  });
+
+  document.querySelector('#google-sign-in')?.addEventListener('click', async (event) => {
+    if (!supabase) return message('Supabase is not configured for this deployment.', 'error');
+    const button = event.currentTarget;
+    setBusy(button, true, 'Connecting to Google…');
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+      });
+      if (error) throw error;
+    } catch (error) {
+      message(errorText(error), 'error');
+      setBusy(button, false);
+    }
   });
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (!form.reportValidity()) return;
     if (!supabase) {
-      message('Supabase is not configured for this deployment. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in the Vercel Preview environment.', 'error');
+      message('Supabase is not configured for this deployment. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.', 'error');
       return;
     }
     const data = new FormData(form);
     const email = String(data.get('email')).trim().toLowerCase();
     const pass = String(data.get('password'));
+    if (mode === 'signup' && !updatePasswordFeedback()) {
+      password.reportValidity();
+      return;
+    }
     setBusy(submit, true, mode === 'signup' ? 'Creating account…' : 'Signing in…');
     try {
       if (mode === 'signup') {
@@ -426,8 +475,8 @@ function renderAuth() {
           document.querySelector('[data-auth-tab="signin"]').click();
           message(
             isDedicatedMentor
-              ? 'Account created. Confirm the email, then ask the platform administrator to register this dedicated Mentor account before signing in.'
-              : 'Account created. Check your email and confirm your address, then return here to sign in.',
+              ? 'Account created. Confirm your email, then ask an administrator to register the Mentor account.'
+              : 'Account created. Check your email to confirm your address, then sign in.',
             'success'
           );
         }
@@ -444,21 +493,23 @@ function renderAuth() {
     }
   });
 }
-
 async function renderDashboard(user) {
   shell('<main class="dashboard"><section class="loading-panel"><span class="spinner"></span><p>Preparing your training workspace…</p></section></main>', user);
   try {
     const { data: profile, error: profileError } = await supabase
       .from('profiles').select('id,email,full_name,account_status,verification_reason').eq('id', user.id).single();
     if (profileError) throw profileError;
-    const [docResult, applicationsResult, enrollmentsResult] = await Promise.all([
+    const [docResult, applicationsResult, enrollmentsResult, traineeDetailsResult] = await Promise.all([
       supabase.from('verification_documents').select('id,status,document_type,created_at,review_note').eq('trainee_profile_id', user.id).order('created_at', { ascending: false }).limit(1),
       supabase.from('training_applications').select('id,status,created_at,applicant_note,training_offerings(title,description,delivery_mode,specialties(name_en,name_ar),mentor_profiles(display_name,professional_title)),training_slots(starts_at,ends_at)').eq('trainee_profile_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('training_enrollments').select('id,status,starts_at,ends_at,training_offerings(title,mentor_profiles(display_name,professional_title),specialties(name_en,name_ar)),logbook_instances(id,status,template_version_id,logbook_template_versions(id,version_number,status,schema_definition,template_definition),logbook_entries(id,title,entry_date,status,entry_type,payload,created_at,submitted_at,entry_reviews(decision,feedback,reviewed_at)))').eq('trainee_profile_id', user.id).order('created_at', { ascending: false })
+      supabase.from('training_enrollments').select('id,status,starts_at,ends_at,training_offerings(title,mentor_profiles(display_name,professional_title),specialties(name_en,name_ar)),logbook_instances(id,status,template_version_id,logbook_template_versions(id,version_number,status,schema_definition,template_definition),logbook_entries(id,title,entry_date,status,entry_type,payload,created_at,submitted_at,entry_reviews(decision,feedback,reviewed_at)))').eq('trainee_profile_id', user.id).order('created_at', { ascending: false }),
+      supabase.from('trainee_profiles').select('university_name,faculty_name,year_of_study').eq('profile_id', user.id).maybeSingle()
     ]);
     if (applicationsResult.error) throw applicationsResult.error;
     if (enrollmentsResult.error) throw enrollmentsResult.error;
     if (docResult.error) throw docResult.error;
+    if (traineeDetailsResult.error) throw traineeDetailsResult.error;
+    const traineeDetails = traineeDetailsResult.data || {};
     const latestDoc = docResult.data?.[0] || null;
     const accountStatus = profile.account_status || 'PENDING';
     const isVerified = accountStatus === 'VERIFIED';
@@ -475,6 +526,7 @@ async function renderDashboard(user) {
           <article class="stat-card"><span>My trainings</span><strong>${enrollments.length}</strong><small>Each has its own logbook</small></article>
           <article class="stat-card"><span>Account status</span><strong class="stat-status">${esc(accountStatus.replaceAll('_', ' '))}</strong><small>Reviewed by MENTORO admin</small></article>
         </section>
+        ${profilePanel(profile, traineeDetails)}
         ${!isVerified ? verificationPanel(latestDoc, profile) : ''}
         <section class="section-block">
           <div class="section-heading"><div><p class="eyebrow">DISCOVER</p><h2>Available training</h2></div><p>Applications are available after your trainee account is verified.</p></div>
@@ -489,6 +541,7 @@ async function renderDashboard(user) {
           <div class="logbook-grid">${enrollments.length ? enrollments.map(logbookCard).join('') : '<div class="empty-state"><strong>Your logbooks will appear here</strong><p>A separate logbook is created automatically when a training booking is confirmed.</p></div>'}</div>
         </section>
       </main>`, user);
+    bindProfileForm(user);
     bindVerificationUpload(user, latestDoc);
     await loadOfferings(user, isVerified);
     bindEntryForms(user);
@@ -816,6 +869,48 @@ function bindMentorApplicationActions(user) {
       ? 'Application approved. MENTORO administration can now confirm the booking.'
       : 'Application rejected. Your decision has been recorded.', 'success');
   }));
+}
+
+function profilePanel(profile, traineeDetails) {
+  const year = Number(traineeDetails.year_of_study || 1);
+  return `
+    <section class="section-block profile-section">
+      <div class="section-heading"><div><p class="eyebrow">YOUR ACCOUNT</p><h2>Personal profile</h2></div><span class="status-chip status-chip--neutral">${esc(profile.email || '')}</span></div>
+      <form id="trainee-profile-form" class="admin-form-card">
+        <div class="admin-form-grid">
+          <div class="field"><label for="profile-full-name">Full name</label><input id="profile-full-name" name="fullName" value="${esc(profile.full_name || '')}" minlength="2" maxlength="160" autocomplete="name" required></div>
+          <div class="field"><label for="profile-university">University</label><input id="profile-university" name="university" value="${esc(traineeDetails.university_name || '')}" maxlength="200" required></div>
+          <div class="field"><label for="profile-faculty">Faculty</label><input id="profile-faculty" name="faculty" value="${esc(traineeDetails.faculty_name || '')}" maxlength="200" required></div>
+          <div class="field"><label for="profile-year">Year of study</label><select id="profile-year" name="year" required>${Array.from({ length: 12 }, (_, i) => i + 1).map((value) => '<option value="' + value + '"' + (value === year ? ' selected' : '') + '>Year ' + value + '</option>').join('')}</select></div>
+        </div>
+        <div class="profile-actions"><p class="workspace-note">Your email and verification status are managed securely by MENTORO.</p><button class="button button--secondary button--small" type="submit">Save profile</button></div>
+      </form>
+    </section>`;
+}
+
+function bindProfileForm(user) {
+  const form = document.querySelector('#trainee-profile-form');
+  if (!form) return;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    const data = new FormData(form);
+    const button = form.querySelector('button[type="submit"]');
+    setBusy(button, true, 'Saving…');
+    const { error } = await supabase.rpc('update_current_trainee_profile', {
+      p_full_name: String(data.get('fullName') || '').trim(),
+      p_university_name: String(data.get('university') || '').trim(),
+      p_faculty_name: String(data.get('faculty') || '').trim(),
+      p_year_of_study: Number(data.get('year'))
+    });
+    if (error) {
+      message(errorText(error), 'error');
+      setBusy(button, false);
+      return;
+    }
+    await renderDashboard(user);
+    message('Your profile has been saved.', 'success');
+  });
 }
 
 function verificationPanel(doc, profile) {
