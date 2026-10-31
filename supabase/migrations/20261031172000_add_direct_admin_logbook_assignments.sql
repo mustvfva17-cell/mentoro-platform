@@ -300,6 +300,8 @@ $function$;
 
 
 
+DROP FUNCTION IF EXISTS public.admin_assign_trainee_logbook(uuid, uuid, text);
+DROP FUNCTION IF EXISTS app_private.admin_assign_trainee_logbook(uuid, uuid, text);
 CREATE OR REPLACE FUNCTION app_private.admin_assign_trainee_logbook(
   p_trainee_profile_id uuid,
   p_template_version_id uuid,
@@ -367,8 +369,6 @@ BEGIN
   RETURN v_instance_id;
 END;
 $$;
-DROP FUNCTION IF EXISTS public.admin_assign_trainee_logbook(uuid, uuid, text);
-DROP FUNCTION IF EXISTS app_private.admin_assign_trainee_logbook(uuid, uuid, text);
 REVOKE ALL ON FUNCTION app_private.admin_assign_trainee_logbook(uuid, uuid, text)
   FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION app_private.admin_assign_trainee_logbook(uuid, uuid, text)
