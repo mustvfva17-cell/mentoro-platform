@@ -299,3 +299,94 @@ END;
 $function$;
 
 
+
+CREATE OR REPLACE FUNCTION app_private.admin_assign_trainee_logbook(
+  p_trainee_profile_id uuid,
+  p_template_version_id uuid,
+  p_reason text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_actor_id uuid := auth.uid();
+  v_instance_id uuid;
+  v_template_definition jsonb;
+  v_template_status text;
+BEGIN
+  IF v_actor_id IS NULL OR NOT app_private.is_platform_admin() THEN
+    RAISE EXCEPTION 'Active platform admin session required' USING ERRCODE = '42501';
+  END IF;
+  IF p_trainee_profile_id IS NULL OR p_template_version_id IS NULL THEN
+    RAISE EXCEPTION 'Choose a trainee and an active HTML logbook' USING ERRCODE = '22023';
+  END IF;
+  IF length(trim(coalesce(p_reason, ''))) > 1000 THEN
+    RAISE EXCEPTION 'Assignment note must be 1000 characters or fewer' USING ERRCODE = '22023';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.trainee_profiles tp
+    JOIN public.profiles p ON p.id = tp.profile_id
+    JOIN public.profile_roles r ON r.user_id = tp.profile_id
+    WHERE tp.profile_id = p_trainee_profile_id
+      AND p.account_status <> 'SUSPENDED'
+      AND r.role = 'TRAINEE' AND r.revoked_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'Selected account is not an active trainee profile' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT tv.template_definition, tv.status
+    INTO v_template_definition, v_template_status
+  FROM public.logbook_template_versions tv
+  JOIN public.logbook_templates t ON t.id = tv.template_id
+  WHERE tv.id = p_template_version_id AND t.is_active = true
+  FOR SHARE OF tv, t;
+  IF NOT FOUND OR v_template_definition ->> 'renderer' IS DISTINCT FROM 'HTML'
+     OR coalesce(v_template_definition ->> 'html_path', '') NOT IN (
+       '/logbooks/medical-oncology/index.html',
+       '/logbooks/general-surgery/index.html'
+     ) THEN
+    RAISE EXCEPTION 'Selected logbook is not an active registered HTML template' USING ERRCODE = '55000';
+  END IF;
+
+  INSERT INTO public.logbook_instances (
+    enrollment_id, trainee_profile_id, assigned_by, assignment_reason, template_version_id, status
+  ) VALUES (
+    NULL, p_trainee_profile_id, v_actor_id, nullif(trim(p_reason), ''),
+    p_template_version_id, 'ACTIVE'
+  ) RETURNING id INTO v_instance_id;
+
+  INSERT INTO public.audit_logs (actor_profile_id, action, entity_type, entity_id, reason, metadata)
+  VALUES (
+    v_actor_id, 'ADMIN_ASSIGNED_TRAINEE_LOGBOOK', 'LOGBOOK_INSTANCE', v_instance_id,
+    nullif(trim(p_reason), ''),
+    jsonb_build_object('trainee_profile_id', p_trainee_profile_id, 'template_version_id', p_template_version_id,
+                       'template_status', v_template_status, 'private_assignment', true)
+  );
+  RETURN v_instance_id;
+END;
+$$;
+DROP FUNCTION IF EXISTS public.admin_assign_trainee_logbook(uuid, uuid, text);
+DROP FUNCTION IF EXISTS app_private.admin_assign_trainee_logbook(uuid, uuid, text);
+REVOKE ALL ON FUNCTION app_private.admin_assign_trainee_logbook(uuid, uuid, text)
+  FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION app_private.admin_assign_trainee_logbook(uuid, uuid, text)
+  TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.admin_assign_trainee_logbook(
+  p_trainee_profile_id uuid,
+  p_template_version_id uuid,
+  p_reason text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+  SELECT app_private.admin_assign_trainee_logbook(p_trainee_profile_id, p_template_version_id, p_reason);
+$$;
+REVOKE ALL ON FUNCTION public.admin_assign_trainee_logbook(uuid, uuid, text)
+  FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_assign_trainee_logbook(uuid, uuid, text)
+  TO authenticated;
