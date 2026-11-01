@@ -18,9 +18,9 @@ The standalone app's browser-only storage was not carried over as the source of 
 - Trainees cannot self-mark an entry as mentor-verified.
 - Export is blocked in read-only review mode and while cloud state is loading.
 
-## Database allowlist migration
+## Database migrations
 
-The proposed migration expands the fixed HTML asset allowlist for:
+The proposed trusted allowlist migration expands the fixed HTML asset allowlist for:
 - template schema guard and admin publication;
 - state load and save;
 - mentor review load and review mutation.
