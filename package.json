@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "check:contracts": "node scripts/check-logbook-entry-types.mjs && node scripts/check-trainee-workflow-contract.mjs && node scripts/check-logbook-template-schema.mjs && node scripts/check-admin-workspace-contract.mjs && node scripts/check-initial-admin-bootstrap.mjs && npm run check:specialty-registry",
     "check:migrations": "node scripts/check-migration-history.mjs",
-    "check:specialty-registry": "node scripts/check-specialty-html-registry.mjs"
+    "check:specialty-registry": "node scripts/check-specialty-html-registry.mjs && node scripts/check-general-surgery-runtime.mjs"
   },
   "devDependencies": {
     "vite": "^6.4.1"
