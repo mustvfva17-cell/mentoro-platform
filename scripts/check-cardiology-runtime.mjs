@@ -61,6 +61,8 @@ assert.ok(migration.includes("v_enrollment_status := 'CONFIRMED'"),
   'Cardiology saves must retain the newest direct-admin-owned logbook lifecycle path.');
 assert.ok((migration.match(/\/logbooks\/cardiology\/index\.html/g) || []).length >= 6,
   'The Cardiology path must be added to the schema, publish, state, and review allowlists.');
+assert.ok(migration.includes("AND v_html_path IS DISTINCT FROM '/logbooks/cardiology/index.html' THEN"),
+  'Admin publication must include Cardiology in the three-way HTML asset check.');
 
 assert.ok(seedMigration.includes("'cardiology-html'"));
 assert.ok(seedMigration.includes("'DRAFT'"));
