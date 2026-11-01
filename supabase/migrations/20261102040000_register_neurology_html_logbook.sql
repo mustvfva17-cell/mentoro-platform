@@ -1,4 +1,4 @@
--- Register the central Cardiology HTML runtime while preserving the latest
+-- Register the central Neurology HTML runtime while preserving the latest
 -- trusted authorization, state revision, enrollment locking, and item-review integrity.
 -- Clinical template publication remains a separate administrator review decision.
 

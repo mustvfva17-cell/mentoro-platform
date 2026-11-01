@@ -58,7 +58,7 @@ BEGIN
         'readiness', 'DRAFT: neurologist review of Tier, Depth, Frequency, and clinical prompts is required before assignment',
         'versionLabel', 'HTML-v1'
       ),
-      'Source: owner-provided MENTORO Neurology Logbook V1. The source README requires review of Tier, Depth, and Frequency by a neurologist; the clinical team must also approve the examination consent/chaperone guidance and emergency learning prompts before publication.'
+      'Source: owner-provided MENTORO Neurology Logbook V1. The source README requires review of Tier, Depth, and Frequency by a neurologist; the clinical team must also approve the emergency learning prompts before publication.'
     );
   END IF;
 END
