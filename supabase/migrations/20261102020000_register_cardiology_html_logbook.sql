@@ -175,8 +175,9 @@ BEGIN
   END IF;
 
   IF v_renderer = 'HTML' THEN
-    IF v_html_path IS DISTINCT FROM '/logbooks/medical-oncology/index.html' AND v_html_path IS DISTINCT FROM '/logbooks/general-surgery/index.html',
-       '/logbooks/cardiology/index.html' THEN
+    IF v_html_path IS DISTINCT FROM '/logbooks/medical-oncology/index.html'
+       AND v_html_path IS DISTINCT FROM '/logbooks/general-surgery/index.html'
+       AND v_html_path IS DISTINCT FROM '/logbooks/cardiology/index.html' THEN
       RAISE EXCEPTION 'This HTML logbook path is not registered as an available MENTORO asset' USING ERRCODE = '22023';
     END IF;
   ELSE
