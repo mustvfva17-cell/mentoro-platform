@@ -257,9 +257,11 @@ check(
 
 check(
   admin.includes('EXISTING HTML LOGBOOKS') &&
-  admin.includes('/logbooks/medical-oncology/index.html?mode=preview') &&
+  admin.includes("import { listSpecialtyModules } from './logbooks/module-registry.js';") &&
+  admin.includes('REGISTERED_HTML_LOGBOOK_MODULES.map') &&
+  admin.includes("escape(module.htmlPath + '?mode=preview')") &&
   admin.includes('<details class="admin-advanced-template-details">'),
-  'existing HTML logbooks are surfaced first and the manual JSON authoring tools are optional/collapsed'
+  'all registered HTML logbooks are surfaced from the central registry, and manual JSON authoring tools are optional/collapsed'
 );
 
 check(
