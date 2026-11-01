@@ -75,7 +75,7 @@ Exact SQL types, constraints, grants, RLS policies, RPC signatures, locking/isol
 
 ## Specialty Modules
 - Each specialty retains its own roadmap, log types, validation rules, and presentation requirements.
-- The six source modules are consolidated beneath the same central application and Vercel deployment.
+- The six source modules are to be consolidated beneath the same central application and Vercel deployment.
 - Shared platform services manage identity, authorization, logbook provisioning, enrollments, and common infrastructure.
 
 ## Coverage Semantics
