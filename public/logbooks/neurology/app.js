@@ -121,49 +121,60 @@ function save(options) {
   }
 }
 
-const groupDefs = [
-  { id: "presentations", label: "Clinical Presentations", start: "Headache", end: "Acute ischemic stroke" },
-  { id: "cerebro", label: "Stroke & Cerebrovascular Disease", start: "Acute ischemic stroke", end: "Epileptic seizure versus syncope" },
-  { id: "epilepsy", label: "Epilepsy & Seizure Disorders", start: "Epileptic seizure versus syncope", end: "Migraine" },
-  { id: "headache", label: "Headache & Facial Pain", start: "Migraine", end: "Parkinson disease" },
-  { id: "movement", label: "Movement & Cognitive Disorders", start: "Parkinson disease", end: "Meningitis and encephalitis" },
-  { id: "infection", label: "Neuro-infection & Inflammation", start: "Meningitis and encephalitis", end: "Peripheral neuropathy (diabetic)" },
-  { id: "neuromusc", label: "Neuromuscular & Peripheral Nerve", start: "Peripheral neuropathy (diabetic)", end: "Head injury assessment" },
-  { id: "spine", label: "Spine, Cord, Trauma & Tumors", start: "Head injury assessment", end: "Focused neurological history (onset, tempo, progression)" },
-  { id: "history", label: "History Taking", start: "Focused neurological history (onset, tempo, progression)", end: "Mental state and cognitive screen (MMSE / MoCA)" },
-  { id: "exam", label: "Neurological Examination & Procedural Skills", start: "Mental state and cognitive screen (MMSE / MoCA)", end: "Bedside glucose" },
-  { id: "labs", label: "Laboratory & CSF Investigations", start: "Bedside glucose", end: "CT head (non-contrast)" },
-  { id: "imaging", label: "Neuro-imaging", start: "CT head (non-contrast)", end: "EEG" },
-  { id: "neurophys", label: "Neurophysiology & Cardiac Work-up", start: "EEG", end: null }
-];
-const journeyItems = [
-  "Initial neurological assessment", "Lesion localization (where is the problem?)",
-  "Cause and differential diagnosis", "Investigations ordered and reviewed",
-  "Acute treatment decision", "Ward or stroke unit care",
-  "Rehabilitation and supportive care", "Outpatient follow-up",
-  "Patient and family education"
-];
-const interpretationItems = [
-  "Correlating clinical findings with investigation results",
-  "Recognizing when a result changes management vs. is confirmatory/incidental",
-  "Understanding indications/contraindications for common investigations",
-  "Recognizing when further investigation is needed vs. proceeding to intervention",
-  "Understanding the limits of a single test"
-];
+let groupDefs = [];
+const patientJourneyGroup = { id: "patientJourney", label: "Neurology Patient Journey" };
+const interpretationGroup = { id: "interpretation", label: "Clinical Interpretation & Decision-making" };
 function buildRoadmap() {
+  if (!Array.isArray(content.groups) || !Array.isArray(content.patientJourney) || !Array.isArray(content.clinicalInterpretation)) {
+    throw new Error("Neurology roadmap grouping metadata is incomplete.");
+  }
+  groupDefs = content.groups.slice();
   const items = [];
+  const coveredIndexes = new Set();
   groupDefs.forEach(function (group) {
-    const start = content.roadmap.findIndex((row) => row[0] === group.start);
-    const end = group.end ? content.roadmap.findIndex((row) => row[0] === group.end) : content.roadmap.length;
-    for (let index = start; index < (end < 0 ? content.roadmap.length : end); index++) {
-      const row = content.roadmap[index];
-      items.push({ id: "r_" + index, item: row[0], tier: row[1], depth: row[2], frequency: row[3], group: group.id, groupLabel: group.label });
+    const startIndex = content.roadmap.findIndex((row) => row[0] === group.start);
+    const endIndex = group.end ? content.roadmap.findIndex((row) => row[0] === group.end) : content.roadmap.length;
+    if (startIndex < 0 || endIndex < 0 || endIndex <= startIndex) {
+      throw new Error("Neurology roadmap group boundary is invalid: " + group.label);
     }
-    if (group.id === "cardem") {
-      journeyItems.forEach((item, index) => items.push({ id: "journey_" + index, item: item, tier: "—", depth: "—", frequency: "—", group: "patientJourney", groupLabel: "Neurology Patient Journey" }));
+    for (let index = startIndex; index < endIndex; index++) {
+      if (coveredIndexes.has(index)) throw new Error("Neurology roadmap groups overlap at item " + index);
+      coveredIndexes.add(index);
+      const row = content.roadmap[index];
+      items.push({
+        id: "r_" + index,
+        item: row[0],
+        tier: row[1],
+        depth: row[2],
+        frequency: row[3],
+        group: group.id,
+        groupLabel: group.label
+      });
+    }
+    if (group.id === "spine") {
+      content.patientJourney.forEach((item, index) => items.push({
+        id: "journey_" + index,
+        item: item,
+        tier: "—",
+        depth: "—",
+        frequency: "—",
+        group: patientJourneyGroup.id,
+        groupLabel: patientJourneyGroup.label
+      }));
     }
   });
-  interpretationItems.forEach((item, index) => items.push({ id: "interp_" + index, item: item, tier: "—", depth: "—", frequency: "—", group: "interpretation", groupLabel: "Clinical Interpretation & Decision-making" }));
+  if (coveredIndexes.size !== content.roadmap.length) {
+    throw new Error("Neurology roadmap groups do not cover every catalogue item.");
+  }
+  content.clinicalInterpretation.forEach((item, index) => items.push({
+    id: "interp_" + index,
+    item: item,
+    tier: "—",
+    depth: "—",
+    frequency: "—",
+    group: interpretationGroup.id,
+    groupLabel: interpretationGroup.label
+  }));
   return items;
 }
 function roadmapStatus(id) { return data.roadmap[id] === "done"; }
@@ -199,8 +210,7 @@ function renderRoadmap() {
 function fillRoadGroups() {
   const select = document.getElementById("roadGroup");
   const options = groupDefs.map((group) => ({ id: group.id, label: group.label }));
-  options.push({ id: "patientJourney", label: "Neurology Patient Journey" });
-  options.push({ id: "interpretation", label: "Clinical Interpretation & Decision-making" });
+  options.push(patientJourneyGroup, interpretationGroup);
   select.innerHTML = options.map((group) => "<option value=\"" + esc(group.id) + "\">" + esc(group.label) + "</option>").join("");
   select.value = activeGroup;
 }
@@ -635,7 +645,9 @@ async function initialize() {
     const response = await fetch("./content.json", { cache: "no-store" });
     if (!response.ok) throw new Error("Neurology clinical catalogue could not be loaded.");
     content = await response.json();
-    if (!Array.isArray(content.roadmap) || content.roadmap.length !== 117) throw new Error("Neurology roadmap catalogue is incomplete.");
+    if (!Array.isArray(content.roadmap) || content.roadmap.length !== 115) throw new Error("Neurology roadmap catalogue is incomplete.");
+    if (!content.emergencyTemplates || Object.keys(content.emergencyTemplates).length !== 5) throw new Error("Neurology emergency catalogue is incomplete.");
+    if (!Array.isArray(content.groups) || content.groups.length !== 13) throw new Error("Neurology roadmap groups are incomplete.");
     roadmapItems = buildRoadmap();
     fillRoadGroups();
     bindEvents();
