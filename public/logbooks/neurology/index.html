@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#c91f33">
+  <title>MENTORO · Neurology Logbook</title>
+  <link rel="stylesheet" href="./style.css">
+  <script>
+    document.documentElement.dataset.specialty = "neurology";
+    try {
+      const savedTheme = localStorage.getItem("mentoro_theme");
+      document.documentElement.dataset.theme = savedTheme || "light";
+    } catch (_) { document.documentElement.dataset.theme = "light"; }
+  </script>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="#" aria-label="MENTORO Neurology">
+      <span class="brand-mark">M</span><span><strong>mentoro</strong><small>Neurology logbook</small></span>
+    </a>
+    <div class="nav-label">Workspace</div>
+    <nav class="navigation">
+      <button class="nav-item active" data-view="dashboard">Overview</button>
+      <button class="nav-item" data-view="roadmap">Clinical roadmap</button>
+      <button class="nav-item" data-view="sessions">Sessions</button>
+      <button class="nav-item" data-view="cases">Clinical cases</button>
+      <button class="nav-item" data-view="procedures">Procedures & discussions</button>
+      <button class="nav-item" data-view="emergency">Emergency</button>
+      <button class="nav-item" data-view="progress">Reflection</button>
+    </nav>
+    <div class="sidebar-foot">
+      <p>Observe · Discuss · Participate · Reflect · Improve</p>
+      <button class="button secondary full" id="exportButton">Export backup</button>
+      <button class="button secondary full" id="printButton">Print / Save PDF</button>
+    </div>
+  </aside>
+
+  <main class="main-area" id="workspace">
+    <header class="topbar">
+      <div><div class="crumb">MENTORO <span>/</span> Neurology</div><div class="mobile-title">Neurology logbook</div></div>
+      <div class="top-actions"><span id="syncStatus" class="sync-status">Local preview</span><button class="button secondary theme-toggle" id="themeButton">Dark mode</button><button class="button primary" id="quickAddButton">+ Log activity</button></div>
+    </header>
+
+    <div class="privacy-banner">Do not enter patient-identifying information, including names, hospital IDs, phone numbers, or addresses.</div>
+    <div class="readonly-banner" id="readonlyBanner" hidden>This logbook is in read-only mode.</div>
+
+    <section class="view active" id="view-dashboard">
+      <div class="eyebrow">Clinical logbook</div><h1>Neurology</h1>
+      <p class="intro">A record of clinical exposure, meaningful cases, procedures, emergencies, and learning progress.</p>
+      <div class="stat-grid">
+        <article class="stat-card"><span>Sessions</span><strong id="statSessions">0</strong><small id="latestSession">No sessions yet</small></article>
+        <article class="stat-card"><span>Clinical cases</span><strong id="statCases">0</strong><small>Cases recorded</small></article>
+        <article class="stat-card"><span>Procedures</span><strong id="statProcedures">0</strong><small>Procedures and discussions</small></article>
+        <article class="stat-card"><span>Roadmap coverage</span><strong id="statCoverage">0%</strong><small id="coverageText">0 items logged</small></article>
+      </div>
+      <div class="dashboard-grid">
+        <article class="panel hero-panel"><div class="eyebrow">MENTORO · Neurology</div><h2>Log what actually happened.</h2><p>Capture meaningful exposure as it happens. Link learning to the roadmap and review your progress over time.</p><div class="button-row"><button class="button primary" id="quickAddHero">+ Log today's exposure</button><button class="button secondary" data-go="roadmap">View roadmap</button></div></article>
+        <article class="panel"><div class="panel-heading"><div><h2>Recent activity</h2><p>Latest saved records</p></div></div><div id="recentActivity" class="activity-list"><p class="muted">Nothing logged yet.</p></div></article>
+      </div>
+      <article class="panel"><div class="panel-heading"><div><h2>Next focus</h2><p>Open Core items in your clinical roadmap</p></div><button class="button secondary" data-go="roadmap">View roadmap</button></div><div id="nextFocus" class="focus-list"></div></article>
+    </section>
+
+    <section class="view" id="view-roadmap">
+      <div class="eyebrow">Clinical curriculum</div><h1>Clinical roadmap</h1><p class="intro">Mark an item as logged only after you have encountered or discussed it.</p>
+      <article class="panel">
+        <div class="toolbar"><input id="roadSearch" class="control search-control" type="search" placeholder="Search presentations, skills, investigations…"><select id="roadTier" class="control"><option value="">All tiers</option><option>Core</option><option>Expanded</option><option>Advanced</option></select><select id="roadStatus" class="control"><option value="">All statuses</option><option value="todo">Not logged</option><option value="done">Logged</option></select></div>
+        <div class="toolbar"><select id="roadGroup" class="control group-control"></select><span id="roadCount" class="muted"></span></div>
+        <div class="table-wrap"><table><thead><tr><th>Roadmap item</th><th>Tier</th><th>Depth</th><th>Frequency</th><th>Status</th></tr></thead><tbody id="roadRows"></tbody></table></div>
+      </article>
+    </section>
+
+    <section class="view" id="view-sessions">
+      <div class="eyebrow">Clinical record</div><h1>Sessions</h1><p class="intro">Record clinical sessions and meaningful teaching encounters.</p>
+      <article class="panel"><div class="panel-heading"><div><h2>Session records</h2><p id="sessionCount">0 entries</p></div><button class="button primary add-entry" data-add="session">+ Add session</button></div><div id="sessionRows" class="record-list"></div></article>
+    </section>
+
+    <section class="view" id="view-cases">
+      <div class="eyebrow">Clinical record</div><h1>Clinical cases</h1><p class="intro">Keep concise, de-identified case records focused on reasoning and learning.</p>
+      <article class="panel"><div class="panel-heading"><div><h2>Case records</h2><p id="caseCount">0 entries</p></div><button class="button primary add-entry" data-add="case">+ Add case</button></div><div id="caseRows" class="record-list"></div></article>
+    </section>
+
+    <section class="view" id="view-procedures">
+      <div class="eyebrow">Clinical record</div><h1>Procedures & discussions</h1><p class="intro">Record your role and the key teaching points from procedural and discussion-based learning.</p>
+      <article class="panel"><div class="panel-heading"><div><h2>Procedure records</h2><p id="procedureCount">0 entries</p></div><button class="button primary add-entry" data-add="procedure">+ Add procedure</button></div><div id="procedureRows" class="record-list"></div></article>
+      <article class="panel"><div class="panel-heading"><div><h2>Discussion records</h2><p id="discussionCount">0 entries</p></div><button class="button secondary add-entry" data-add="discussion">+ Add discussion</button></div><div id="discussionRows" class="record-list"></div></article>
+    </section>
+
+    <section class="view" id="view-emergency">
+      <div class="eyebrow">Acute care exposure</div><h1>Emergency</h1><p class="intro">Use a structured prompt to capture red flags, differentials, investigations, decisions, and learning.</p>
+      <article class="panel"><div class="panel-heading"><div><h2>Emergency templates</h2><p>Clinical prompts are learning aids, not treatment protocols.</p></div></div><div id="emergencyTemplates" class="template-grid"></div></article>
+      <article class="panel"><div class="panel-heading"><div><h2>Emergency records</h2><p id="emergencyCount">0 entries</p></div></div><div id="emergencyRows" class="record-list"></div></article>
+    </section>
+
+    <section class="view" id="view-progress">
+      <div class="eyebrow">Reflection</div><h1>Learning reflection</h1><p class="intro">Use this space to identify learning needs and plan the next stage of exposure.</p>
+      <article class="panel form-panel"><form id="reflectionForm"><label>Areas where I feel more confident<textarea name="confident" rows="3"></textarea></label><label>Areas where exposure is still limited<textarea name="limited" rows="3"></textarea></label><label>Clinical topics I want to understand in greater depth<textarea name="deeper" rows="3"></textarea></label><label>My next learning priorities<textarea name="next" rows="3"></textarea></label><div class="button-row"><button class="button primary" type="submit">Save reflection</button><span id="reflectionStatus" class="muted"></span></div></form></article>
+    </section>
+
+    <section class="panel review-panel" id="mentorReviewPanel" hidden></section>
+  </main>
+</div>
+
+<dialog id="entryDialog"><form id="entryForm" method="dialog"><div class="dialog-head"><div><div class="eyebrow">Neurology logbook</div><h2 id="dialogTitle">New entry</h2></div><button type="button" class="icon-button" id="dialogClose" aria-label="Close">×</button></div><div id="dialogFields" class="dialog-fields"></div><div class="dialog-actions"><button type="button" class="button secondary" id="dialogCancel">Cancel</button><button type="submit" class="button primary">Save entry</button></div></form></dialog>
+
+<script src="./app.js" defer></script>
+</body>
+</html>
