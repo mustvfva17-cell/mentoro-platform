@@ -14,9 +14,10 @@ assert.deepEqual(
   new Set(htmlPaths),
   new Set([
     '/logbooks/general-surgery/index.html',
-    '/logbooks/medical-oncology/index.html'
+    '/logbooks/medical-oncology/index.html',
+    '/logbooks/cardiology/index.html'
   ]),
-  'Only the two currently integrated HTML runtime pages may be registered.'
+  'Only the three currently integrated HTML runtime pages may be registered.'
 );
 
 for (const module of htmlModules) {
@@ -33,4 +34,4 @@ for (const module of modules.filter((candidate) => candidate.renderer !== 'HTML'
     `${module.id} must not claim an HTML runtime before one is ported.`);
 }
 
-console.log('Specialty registry contract passed: six modules, two registered HTML runtimes.');
+console.log('Specialty registry contract passed: six modules, three registered HTML runtimes.');
