@@ -88,7 +88,7 @@ html.dark .mobile-brand span{border-color:var(--line)}html.dark .progress-track-
     <button data-view="emergency" title="Emergency"><span class="ico">!</span>Emergency</button>
     <button data-view="progress" title="Progress"><span class="ico">↗</span>Progress</button>
   </nav>
-  <div class="side-bottom"><div class="journey"><b>MENTORO</b><p>Observe · Discuss · Participate · Reflect · Improve</p></div><button class="btn" onclick="window.print()">Print / Save PDF</button></div>
+  <div class="side-bottom"><div class="journey"><b>MENTORO</b><p>Observe · Discuss · Participate · Reflect · Improve</p></div><button class="btn" onclick="exportLogbook()">Export backup</button><button class="btn" onclick="window.print()">Print / Save PDF</button></div>
 </aside>
 
 <div class="main">
@@ -329,6 +329,33 @@ const phaseDefs=[{id:'04',label:'Surgical Roadmap',groups:['presentations','hern
 function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function currentCloudState(){
  return {sessions:data.sessions,cases:data.cases,procedures:data.procedures,roadmap:data.roadmap,emergency:data.emergency,reflection:data.reflection};
+}
+
+function exportLogbook(){
+ if(readonlyMode){
+  setCloudNotice('Backup export is unavailable in read-only review views.','error');
+  return;
+ }
+ if(instanceId&&window.opener&&!htmlCloudReady){
+  setCloudNotice('The cloud logbook is still loading. Wait for the connection before exporting a backup.','error');
+  return;
+ }
+ const payload={
+  version:4,
+  specialty:'general-surgery',
+  exportedAt:new Date().toISOString(),
+  data:currentCloudState()
+ };
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob);
+ const link=document.createElement('a');
+ link.href=url;
+ link.download=`mentoro-general-surgery-logbook-${new Date().toISOString().slice(0,10)}.json`;
+ document.body.appendChild(link);
+ link.click();
+ link.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+ setCloudNotice('A JSON backup of the current General Surgery logbook was exported.');
 }
 function setCloudLoading(loading){
  if(!instanceId||!window.opener)return;
@@ -633,7 +660,7 @@ function applyReadOnlyMode(){
   const inline=button.getAttribute('onclick')||'';
   const safeNavigation=button.hasAttribute('data-view')||button.classList.contains('theme-toggle')||
     button.classList.contains('phase-tab')||button.classList.contains('filter')||button.classList.contains('status-filter')||
-    button.hasAttribute('data-lb-type')||inline.includes('window.print()')||/export/i.test(inline)||
+    button.hasAttribute('data-lb-type')||inline.includes('window.print()')||
     inline.includes('go(')||inline.includes('moreGo(')||inline.includes('toggleMoreSheet(')||inline.includes('closeQuickAdd()');
   if(safeNavigation)return;
   button.disabled=true;button.setAttribute('aria-disabled','true');button.title='Read-only logbook';
