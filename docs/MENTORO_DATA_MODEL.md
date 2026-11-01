@@ -4,6 +4,23 @@
 **Phase:** Architecture and Data Model  
 **Implementation status:** Documentation only; no migrations or database tests are claimed.
 
+## 0.1 Accepted lifecycle addendum — L-42 (2026-11-02)
+
+The accepted cardinality rule is one persistent logbook per trainee per specialty, not one logbook per booking or training enrollment. This addendum supersedes conflicting enrollment-owned logbook assumptions in the earlier draft below.
+
+- Canonical ownership is the pair (trainee_profile_id, specialty_id); PostgreSQL must enforce uniqueness for that pair.
+- Training enrollments remain separate records for mentor, slot, dates, booking status, and training history. Multiple enrollments in the same specialty reference the same canonical logbook instance.
+- The template catalogue is centrally managed. Only an administrator may provision a trainee's logbook. A trainee cannot select, create, or activate a template from the catalogue.
+- A different specialty may have its own separate logbook instance, again only through administrator provisioning.
+- The selected template version remains traceable. A version change is an explicit administrative transition on the same persistent logbook, never a new logbook instance.
+- The future physical model must replace the current one-instance-per-enrollment assumption with a trainee-specialty owner plus an enrollment-to-logbook association. Enrollment and logbook creation/linking must be atomic and concurrency-safe.
+- Existing instances must be backfilled and reconciled with complete preservation of entries, HTML state, review records, revisions, audit events, and source template-version identity. Ambiguous duplicate histories require explicit reconciliation; do not silently discard or overwrite them.
+- Mentor authorization remains governed by the separate role/security decisions. The new relationship must not broaden mentor visibility as a side effect.
+
+**Current implementation gap identified on 2026-11-02:** the current schema permits a direct trainee-owned instance, but the direct assignment RPC inserts a new instance on every successful call and does not enforce one-per-specialty uniqueness. The training-backed flow still creates an instance per enrollment. The registered HTML renderer allowlist currently contains only General Surgery and Medical Oncology. Therefore L-42 is not yet implemented by the current runtime.
+
+This addendum is the accepted product/data-model rule. It is not a claim that the required schema migration, data reconciliation, application changes, or live database deployment have been completed.
+
 ## 1. Scope and principles
 
 MENTORO is a centralized medical training platform. The first release supports General Surgery, Neurology, and Anaesthesia & Critical Care.
