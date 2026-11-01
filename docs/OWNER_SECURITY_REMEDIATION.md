@@ -6,7 +6,7 @@ Scope: the isolated `mentoro-platform-test` Supabase project only. These observa
 
 ## Verified current state
 
-- The test database migration ledger contains 16 entries, matching the migration filenames recorded on the recovery branch.
+- The test database migration ledger contains 20 entries. The four later SQL files were located in the stacked `feat/mentor-workspace-mvp` branch and copied byte-for-byte into `chore/recover-migration-history` (source blob SHAs are recorded in `docs/MIGRATION_HISTORY_RECOVERY_2026-10-28.md`). This provides traceable source files, but the database ledger stores version/name metadata only and cannot prove byte-for-byte equivalence to the SQL originally executed. Do not re-apply them to the current test database; validate migration history with a clean-room replay on an isolated disposable database.
 - Supabase Security Advisor returned no security lints at the time of this check.
 - All 17 current application tables in `public` have no `MAINTAIN`, `TRUNCATE`, `REFERENCES`, or `TRIGGER` privilege for `anon` or `authenticated`. Migration `20261028113918_revoke_browser_maintain_privilege.sql` was applied to the test project; the post-migration privilege query returned zero `MAINTAIN` and zero `TRUNCATE` grants for both browser roles.
 - `authenticated` retains table-level `DELETE` on `logbook_entries` because the schema explicitly supports deleting **only owned DRAFT entries** through RLS policy `logbook_entries_delete_own_drafts` (`status = 'DRAFT' AND app_private.owns_instance(instance_id)`). No draft-delete control is currently exposed in the trainee frontend. Do not revoke this table-level privilege without intentionally removing the database-supported draft-cleanup workflow; the row-level policy is the actual row scope.
@@ -75,9 +75,27 @@ After extension installs, restores, or upgrades, rerun both read-only inventorie
 
 ## Release blockers not resolved by this document
 
-- Clean-room migration replay is still outstanding.
-- The dependency tree is not reproducible until a reviewed lockfile is generated and CI switches to `npm ci`.
+- All 20 test-ledger versions now have matching SQL source files on the recovery branch, but clean-room migration replay on an isolated disposable database is still outstanding; the database ledger does not prove the original SQL bodies.
+- The `supabase_admin` default-privilege issue requires owner/platform review; it cannot be overridden by the current `postgres` session.
+- The npm-generated `package-lock.json` is committed (`lockfileVersion: 3`, 74 packages); CI run [40692616988](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40692616988) passed using `npm ci`. The temporary lockfile bootstrap job has been removed.
 - Browser/e2e tests with actual trainee, mentor, and admin sessions are still outstanding.
-- A separate Vercel Preview project and Preview-only test Supabase configuration still require authorized team-owner action.
+- A dedicated Vercel Preview project and Preview-only test Supabase configuration require authorized team-owner action; the current Vercel scope does not list a `mentoro-platform` project.
 
 No production database was changed as part of this audit.
+
+
+## Fresh verification snapshot — 2026-10-28
+
+- The test project is currently `ACTIVE_HEALTHY` on PostgreSQL `17.11.0.003`.
+- The migration ledger has 20 records; all 20 corresponding SQL source files are present in the recovery branch after recovery of four later files. The redundant identical `20261028121500` migration has been removed from the stacked branch; the ledger-matched `20261028121405` migration is retained.
+- All 17 public application tables currently have RLS enabled. A read-only role-privilege inventory found zero `MAINTAIN`, `TRUNCATE`, `REFERENCES`, or `TRIGGER` grants to `anon` or `authenticated`. The table-level inventory reported 6 `SELECT` grants for `anon`, 17 for `authenticated`, and one table-level `DELETE` grant for `authenticated` scoped by the own-draft RLS policy. Column-level write grants are not included in those table-level counts.
+- Supabase Security Advisor returned no security lints. Performance Advisor's 19 unused-index notices are informational in this sparse test environment and do not justify index deletion.
+- Current default ACLs for `postgres` do not grant table/sequence/function privileges to `anon` or `authenticated`; broad defaults attached to reserved role `supabase_admin` remain. The current catalog reports no public relations or functions owned by that role. Do not try to assume or modify the reserved role; request a documented platform/owner review.
+- GitHub CI run [40690614144](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40690614144) failed because a contract script still referenced the duplicate migration filename after its removal. The script now points to the canonical ledger-matched migration. Follow-up recovery-branch run [40691058343](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40691058343), mentor-workspace run [40691115222](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40691115222), and final npm ci run [40692616988](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40692616988) passed their respective migration checks, frontend/schema contracts, and production builds.
+- The active Vercel scope has no `mentoro-platform` project (direct project lookup returned 404). The existing `mentoro` marketing project is separate; do not repurpose its Production settings.
+- No database writes or migration execution occurred in this verification.
+
+
+## Dependency lockfile verification — 2026-10-28
+
+The recovery branch now contains an npm-generated `package-lock.json` (`lockfileVersion: 3`, 74 package entries). The workflow's temporary lockfile-writing job was removed after generation; the ordinary workflow has read-only repository permissions and now uses `npm ci`. CI run [40692616988](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40692616988) passed dependency installation and all project checks.

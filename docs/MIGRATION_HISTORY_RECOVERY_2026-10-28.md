@@ -15,7 +15,7 @@ Recover a reproducible database history for MENTORO, verify its existing test sc
 
 ## Migration history in the database
 
-The test database currently reports these sixteen applied migration records:
+The test database currently reports these twenty applied migration records. The recovery branch initially contained sixteen matching SQL migration files. During review, the four remaining source files were found in the stacked `feat/mentor-workspace-mvp` branch and copied byte-for-byte into this recovery branch. The database ledger stores version/name metadata only, so this source recovery does not independently prove that the test database originally received identical SQL bytes:
 
 | Version | Name | SQL file in recovery branch? |
 | --- | --- | --- |
@@ -35,8 +35,14 @@ The test database currently reports these sixteen applied migration records:
 | 20261028101524 | revoke_submission_timestamp_client_write | Present |
 | 20261028103649 | prevent_nontrainee_self_provisioning | Present |
 | 20261028113918 | revoke_browser_maintain_privilege | Present |
+| 20261028115852 | mentor_scoped_application_inbox | Recovered from stacked branch (`f96bcb62d69c7c59ffe6c289c795dbffb1d19802) |
+| 20261028115928 | secure_mentor_inbox_wrapper | Recovered from stacked branch (`29f1786fb41d3a41908a2cb0cde846b47b29fcd0) |
+| 20261028120703 | logbook_review_return_workflow | Recovered from stacked branch (`5f3694760eb0999ef500854075f842c5dedaa209) |
+| 20261028121405 | fix_returned_submission_trigger_conditions | Recovered from stacked branch (`4c02f9fd8b0cb4338c292b67bf426f17b5fa632d) |
 
 The first five migration records existed in the database history but were absent from the trainee-auth branch. The SQL files were recovered from the existing `feature/independent-training-enrollments` branch. Their Git blob SHAs match the source branch blobs exactly, confirming byte-for-byte identity with those source-branch files. The database stores migration version/name metadata rather than a verifiable copy of each original SQL body, so equivalence to the SQL originally applied remains unproven.
+
+The four later migration files were recovered from the stacked `feat/mentor-workspace-mvp` branch and copied into this branch without altering their SQL bodies. Their source blob SHAs are recorded in the table above. This makes the repository history complete for the twenty version records currently in the test database, but the database metadata alone cannot prove the exact original SQL bytes that were executed. Do not re-apply these files to the existing test database; use an isolated disposable database for clean-room migration replay.
 
 ## Privilege audit and fix
 
@@ -109,7 +115,7 @@ A read-only catalog comparison between the 17 tables declared by `20261028061628
 - All 35 explicit index names declared across the repository migration set exist in the test database.
 - All 22 public-schema RLS policies declared by the migrations match the live policy names and commands; the two Storage policies are also present.
 - All seven application-table triggers declared by the migrations are enabled in the live database.
-- The current ledger contains the 16 migration versions in this recovery sequence, with repository filenames matching the recorded version/name pairs.
+- The current database ledger contains 20 records, but only 16 matching SQL files are present in this branch. The four versions `20261028115852`, `20261028115928`, `20261028120703`, and `20261028121405` were discovered in the latest ledger query and are not available on `main`, `feat/trainee-auth-foundation`, `feature/independent-training-enrollments`, or this recovery branch under their expected paths. Recover the exact original SQL bodies from the authoring source or database migration artifacts before considering the migration history complete. Do not recreate historical files from names alone or re-apply them to the test database.
 
 This establishes catalog-level consistency for these inventories, not a clean-room migration replay. It does not prove the recovered five SQL bodies were the exact scripts originally applied in the historical environment.
 
@@ -150,9 +156,9 @@ A rollback-only transaction test passed on `mentoro-platform-test`: an existing 
 
 ## Build dependency reproducibility
 
-The branch does not contain `package-lock.json` or `npm-shrinkwrap.json`. The workflow currently runs `npm install`, and `package.json` uses semver ranges for Vite and Supabase JS. The production build and contract checks pass, but the exact dependency tree is not locked in source control.
+Resolved on 2026-10-28: `package-lock.json` is now committed in the recovery branch. It is npm-generated with Node 22 / npm 10.9.x, uses `lockfileVersion: 3`, and records 74 package entries for the dependency tree resolved at the time of generation. The CI workflow now installs dependencies with `npm ci`, not `npm install`.
 
-Before treating CI as fully repeatable, generate a lockfile using the intended Node/npm toolchain, review and commit it, and switch CI to `npm ci`. Do not hand-author a lockfile: let npm resolve and record package versions and integrity data.
+GitHub Actions [run 40692616988](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40692616988) passed `npm ci`, the migration-history contract, the frontend/schema contract checks, and the production build. Dependency reproducibility is therefore improved, although the resolved versions should be intentionally refreshed only through npm when dependency changes are made. Do not hand-edit the lockfile.
 
 ## Findings and limits
 
@@ -182,4 +188,45 @@ The GitHub Actions workflow now runs `npm run check:contracts` before the produc
 
 ## Current state
 
-The five recovered historical migration files, ten subsequent hardening/repair migrations, the PostgreSQL 17 browser-privilege fix, and this audit note are present on the recovery branch. The helper-function ACL, verification-bucket limits, server-side submission timestamp trigger, application-to-slot RLS fix, and direct submitted_at write revocation were applied only to `mentoro-platform-test` and then checked through catalog queries and rollback-only functional tests. PR #1 was merged into `main` on 2026-10-28 at 11:21:59 UTC. PR #2 remains an open draft targeting `main`; this work session did not merge it. The `mentoro-platform-test` database alone was modified by the documented test migrations. Production was not accessed or modified during this work session, and no production deployment was initiated by this session.
+The five recovered historical migration files, eleven available hardening/repair migrations including the PostgreSQL 17 browser-privilege fix, and this audit note are present on the recovery branch. Four later ledger entries remain without matching source files and are an explicit release blocker. The helper-function ACL, verification-bucket limits, server-side submission timestamp trigger, application-to-slot RLS fix, and direct submitted_at write revocation were applied only to `mentoro-platform-test` and then checked through catalog queries and rollback-only functional tests. PR #1 was merged into `main` on 2026-10-28 at 11:21:59 UTC. PR #2 remains an open draft targeting `main`; this work session did not merge it. The `mentoro-platform-test` database alone was modified by the documented test migrations. Production was not accessed or modified during this work session, and no production deployment was initiated by this session.
+
+
+## Fresh verification snapshot — 2026-10-28
+
+This section supersedes earlier status statements in this document where the recovery work was still pending.
+
+### GitHub and migration inventory
+
+- PR #1 is merged into `main`; its merge commit is `fe8e6238fc7815979c1107f4431dcc6c71226461`.
+- PR #2 remains open as a draft, based on `main`, with head branch `chore/recover-migration-history`.
+- GitHub's comparison reports `chore/recover-migration-history` as **ahead of `main` with 0 commits behind** `main`, with the latest `main` commit as the merge base. This is a long forward history, not a currently reported divergence; do not rebase or force-push merely to change the commit count.
+- The test database has 20 migration-ledger records. The recovery branch's changed files contain 17 migration files; three earlier migration files remain on the shared base, giving a reconciled set of 20 SQL migration sources for the 20 recorded versions.
+- The redundant `20261028121500_fix_returned_submission_trigger_conditions.sql` was removed from the stacked mentor-workspace branch because its exact Git blob SHA and contents duplicated ledger-matched migration `20261028121405_fix_returned_submission_trigger_conditions.sql`, and version `20261028121500` is absent from the test ledger.
+- CI run [40690614144](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40690614144) failed because `scripts/check-trainee-workflow-contract.mjs` still referenced the removed duplicate filename. The reference was changed to the canonical `20261028121405` filename. Follow-up recovery-branch CI [run 40691058343](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40691058343) and stacked mentor-workspace CI [run 40691115222](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40691115222) both passed migration history validation, frontend/schema contract checks, and the production build. After the temporary lockfile-artifact export step was removed, recovery-branch CI [run 40691760203](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40691760203) also passed all three validation/build steps.
+
+### Latest read-only test-database inspection
+
+- Project `mentoro-platform-test` is `ACTIVE_HEALTHY`; PostgreSQL is `17.11.0.003`.
+- All 17 current public application tables have RLS enabled.
+- Direct table-level privilege inventory across the 17 public relations returned zero `MAINTAIN`, `TRUNCATE`, `REFERENCES`, and `TRIGGER` grants for both `anon` and `authenticated`.
+- The same inventory found 6 public relations with table-level `SELECT` for `anon`, and all 17 with table-level `SELECT` for `authenticated`. `authenticated` has table-level `DELETE` on one relation; this is intentionally constrained by the `logbook_entries_delete_own_drafts` RLS policy. The table-level aggregate does not count column-level `INSERT`/`UPDATE` grants, so it must not be interpreted as an absence of all browser write capability.
+- `pg_default_acl` confirms that the `postgres` role's defaults in `public` do not grant table/sequence/function access to `anon` or `authenticated`. The separate reserved `supabase_admin` defaults remain broad for future public tables, sequences, and functions, including `anon`, `authenticated`, and `service_role`. The current `postgres` session cannot change those reserved-role defaults.
+- The current catalog reports zero public relations and zero public functions owned by `supabase_admin`; this remains a future-object/platform ownership concern rather than evidence of current objects owned by that role.
+- Supabase Security Advisor returned zero security lints. Performance Advisor reported 19 `unused_index` informational findings during this low-activity test workload; no index was removed.
+- These checks are read-only. No test migration was replayed, and Production was not inspected or modified.
+
+### Preview deployment
+
+The currently accessible Vercel project list contains the public marketing project `mentoro` and several standalone logbook projects, but no `mentoro-platform` project. A direct lookup for `mentoro-platform` returned 404 `Project not found`. This confirms that the platform Preview is not currently available in the selected Vercel scope; it does not justify changing the existing marketing project's Production configuration. An authorized team owner must create/authorize the dedicated Preview project and configure Preview-only test Supabase variables and Auth redirects.
+
+### Static migration history guard
+
+A new `scripts/check-migration-history.mjs` contract rejects malformed migration filenames, duplicate 14-digit version prefixes, empty SQL files, and identical normalized SQL contents under different versions. CI now runs it as a dedicated step and validates PRs targeting both `main` and the stacked `chore/recover-migration-history` branch. The check passed in runs [40691058343](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40691058343) and [40691115222](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40691115222).
+
+
+## Dependency lockfile and final CI verification — 2026-10-28
+
+- The lockfile was generated by npm in the branch-scoped CI bootstrap job, committed to `chore/recover-migration-history`, and checked by parsing the committed file. It is 38,852 bytes, `lockfileVersion: 3`, with 74 package entries. The root dependency ranges match `package.json`; Vite resolved to `6.4.5` and `@supabase/supabase-js` to `2.118.0`.
+- The bootstrap job was removed immediately after the file was committed. The normal workflow now has only read-only repository permissions and installs with `npm ci`; no permanent lockfile-writing job or temporary artifact-export step remains.
+- GitHub Actions [run 40692616988](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40692616988) passed all steps: `npm ci`, migration history validation, frontend/schema contracts, and production build.
+- The recovery branch remains ahead of `main` with 0 commits behind in the current GitHub comparison; `main` remains the merge base. No force-push or rebase was performed.

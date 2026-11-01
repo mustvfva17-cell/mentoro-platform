@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - main
+      - chore/recover-migration-history
       - feat/admin-workspace-mvp
       - feat/logbook-template-drafts
 

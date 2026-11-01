@@ -1,5 +1,4 @@
--- Restrict HTML state reads/writes to an enrollment whose immutable template version
--- points at a registered HTML asset. Keep cloud state isolated by logbook instance.
+-- Restrict HTML-state RPCs to the registered HTML runtime and active training lifecycle.
 CREATE OR REPLACE FUNCTION app_private.get_my_logbook_html_state(p_instance_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -55,11 +54,6 @@ BEGIN
   RETURN jsonb_build_object('state', v_state, 'revision', v_revision, 'updated_at', v_updated_at);
 END;
 $$;
-
-REVOKE ALL ON FUNCTION app_private.get_my_logbook_html_state(uuid)
-  FROM PUBLIC, anon, service_role;
-GRANT EXECUTE ON FUNCTION app_private.get_my_logbook_html_state(uuid)
-  TO authenticated;
 
 CREATE OR REPLACE FUNCTION app_private.save_my_logbook_html_state(
   p_instance_id uuid,
@@ -175,7 +169,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION app_private.save_my_logbook_html_state(uuid, jsonb, bigint)
-  FROM PUBLIC, anon, service_role;
-GRANT EXECUTE ON FUNCTION app_private.save_my_logbook_html_state(uuid, jsonb, bigint)
-  TO authenticated;
+REVOKE ALL ON FUNCTION app_private.get_my_logbook_html_state(uuid) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION app_private.get_my_logbook_html_state(uuid) TO authenticated;
+REVOKE ALL ON FUNCTION app_private.save_my_logbook_html_state(uuid,jsonb,bigint) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION app_private.save_my_logbook_html_state(uuid,jsonb,bigint) TO authenticated;
