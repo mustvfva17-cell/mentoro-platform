@@ -269,7 +269,7 @@ assert.ok(generalSurgeryMigration.includes('app_private.guard_logbook_template_v
 assert.ok(main.includes("REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)"));
 assert.ok(main.includes("htmlPath: button.dataset.htmlPath"));
 assert.ok(main.includes("data-html-path"));
-assert.ok(admin.includes("href=\"/logbooks/general-surgery/index.html?mode=preview\""));
+assert.ok(admin.includes("escape(module.htmlPath + '?mode=preview')"));
 console.log('General Surgery HTML asset registration, per-enrollment cloud bridge, admin preview, and read-only mentor integration checks passed.');
 
 
