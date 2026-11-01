@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 
 const frontend = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
+const schemaHelper = await readFile(new URL('../src/logbook-schema.js', import.meta.url), 'utf8');
 const migrationPath = new URL('../supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql', import.meta.url);
 let migration = null;
 
@@ -33,13 +34,15 @@ if (migration !== null) {
   console.warn('Core schema migration is not present on this branch; using the reviewed entry-type contract until migration recovery is merged.');
 }
 
-const usedTypes = Array.from(
-  frontend.matchAll(/entry_type\s*:\s*['"]([A-Z_]+)['"]/g),
-  (item) => item[1]
-);
+const usedTypes = [
+  ...Array.from(frontend.matchAll(/entry_type\s*:\s*['"]([A-Z_]+)['"]/g), (item) => item[1]),
+  ...Array.from(schemaHelper.matchAll(/value:\s*['"]([A-Z_]+)['"]/g), (item) => item[1])
+];
 
-if (!usedTypes.length) {
-  throw new Error('No literal logbook entry_type assignments were found in src/main.js.');
+if (!usedTypes.length ||
+    !frontend.includes('entry_type: entryType') ||
+    !frontend.includes('LOGBOOK_ENTRY_TYPES.some((type) => type.value === entryType)')) {
+  throw new Error('Logbook entry types must be selected from the validated schema-helper allowlist.');
 }
 
 const invalid = [...new Set(usedTypes)].filter((type) => !allowedTypes.has(type));
@@ -80,7 +83,8 @@ if (provisioningCallCount !== 1 ||
     !frontend.includes("roles.has('ADMIN')") ||
     !frontend.includes("roles.has('SUPER_ADMIN')") ||
     !frontend.includes("if (role === 'MENTOR') return renderMentorDashboard(user);") ||
-    !frontend.includes("return renderAdminWorkspace(user);") ||
+    !frontend.includes("import { renderAdminWorkspace } from './admin-workspace.js';") ||
+    !frontend.includes("return renderAdminWorkspace({ user, supabase, shell, esc, dateTime, setBusy, message, errorText });") ||
     roleResolverCallCount !== 4) {
   throw new Error('Existing platform accounts must be role-checked and routed without cross-role provisioning.');
 }
@@ -96,7 +100,7 @@ if (!frontend.includes("supabase.rpc('mentor_list_my_logbook_entries'") ||
     !frontend.includes('data-entry-decision="FEEDBACK"') ||
     !frontend.includes('data-entry-decision="NEEDS_REVISION"') ||
     !frontend.includes("entry_reviews(decision,feedback,reviewed_at)") ||
-    !frontend.includes(".update({ title, entry_date: entryDate })") ||
+    !frontend.includes(".update({ title, entry_date: entryDate, payload: templatePayload.payload })") ||
     !frontend.includes("message('Revision saved and resubmitted to your mentor.', 'success')")) {
   throw new Error('Mentor logbook review and trainee revision flow must use scoped RPCs and preserve review feedback.');
 }

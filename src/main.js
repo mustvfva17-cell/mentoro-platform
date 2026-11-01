@@ -1,10 +1,131 @@
 import './style.css';
+import { renderAdminWorkspace } from './admin-workspace.js';
+import { LOGBOOK_ENTRY_TYPES, collectTemplatePayload, getTemplateFields, renderPayloadSummary, renderTemplateFields } from './logbook-schema.js';
 import { createClient } from '@supabase/supabase-js';
 
 const app = document.querySelector('#app');
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+const REGISTERED_HTML_LOGBOOK_PATHS = new Set(['/logbooks/medical-oncology/index.html', '/logbooks/general-surgery/index.html']);
+
+const htmlLogbookWindows = new Map();
+const htmlLogbookSync = new Map();
+function openHTMLLogbook(instanceId, options = {}) {
+  const readOnly = options.readOnly === true;
+  const htmlPath = options.htmlPath || '/logbooks/medical-oncology/index.html';
+  if (!supabase || !/^[0-9a-f-]{36}$/i.test(instanceId || '') || !REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)) {
+    message('This logbook is not available for this training.', 'error'); return;
+  }
+  const existing = htmlLogbookWindows.get(instanceId);
+  if (existing && !existing.closed) { existing.focus(); return; }
+  const query = new URLSearchParams({ instance: instanceId });
+  if (readOnly) query.set('readonly', '1');
+  const child = window.open(htmlPath + '?' + query.toString(), '_blank');
+  if (!child) { message('Your browser blocked the logbook window. Allow pop-ups for this site and try again.', 'error'); return; }
+  htmlLogbookWindows.set(instanceId, child);
+  htmlLogbookSync.set(instanceId, { revision: null, timer: null, saving: false, state: null, readOnly, cloudStateLoaded: false });
+}
+function postHTMLLogbookMessage(instanceId, payload) {
+  const child = htmlLogbookWindows.get(instanceId);
+  if (child && !child.closed) child.postMessage({ ...payload, instanceId }, window.location.origin);
+}
+async function flushHTMLLogbookState(instanceId) {
+  const sync = htmlLogbookSync.get(instanceId);
+  if (!sync || !sync.cloudStateLoaded || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;
+  sync.saving = true;
+  const stateToSave = sync.state;
+  try {
+    const { data, error } = await supabase.rpc('save_my_logbook_html_state', { p_instance_id: instanceId, p_state: stateToSave, p_expected_revision: sync.revision });
+    if (error) throw error;
+    sync.revision = Number(data);
+    postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: true, revision: sync.revision });
+    if (sync.state !== stateToSave) { clearTimeout(sync.timer); sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), 250); }
+  } catch (error) {
+    const detail = error?.message || 'Cloud save failed.';
+    postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: false, error: String(detail).includes('LOGBOOK_STATE_CONFLICT') ? 'This logbook changed in another tab. Close this tab and reopen it to load the latest saved version.' : detail });
+  } finally { sync.saving = false; }
+}
+window.addEventListener('message', async (event) => {
+  if (event.origin !== window.location.origin || !event.data || typeof event.data !== 'object') return;
+  const { type, instanceId } = event.data;
+  const child = htmlLogbookWindows.get(instanceId);
+  if (!child || child.closed || event.source !== child || !/^[0-9a-f-]{36}$/i.test(instanceId || '')) return;
+  if (type === 'MENTORO_LOGBOOK_READY') {
+    try {
+      const { data, error } = await supabase.rpc('get_my_logbook_html_state', { p_instance_id: instanceId });
+      if (error) throw error;
+      const sync = htmlLogbookSync.get(instanceId);
+      if (!sync) return;
+      sync.revision = Number(data?.revision ?? 0);
+      sync.cloudStateLoaded = true;
+      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_LOAD_STATE', state: data?.state && typeof data.state === 'object' ? data.state : null, revision: sync.revision, hasCloudState: sync.revision > 0, readOnly: sync.readOnly === true });
+      const { data: reviews, error: reviewsError } = await supabase.rpc('get_my_logbook_html_item_reviews', { p_instance_id: instanceId });
+      postHTMLLogbookMessage(instanceId, {
+        type: 'MENTORO_LOGBOOK_LOAD_REVIEWS',
+        reviews: Array.isArray(reviews) ? reviews : [],
+        error: reviewsError?.message || null
+      });
+    } catch (error) {
+      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_LOAD_ERROR', error: error?.message || 'Could not load this training logbook.' });
+    }
+    return;
+  }
+  if (type === 'MENTORO_LOGBOOK_MENTOR_REVIEW') {
+    const sync = htmlLogbookSync.get(instanceId);
+    if (!sync || !sync.readOnly) {
+      postHTMLLogbookMessage(instanceId, {
+        type: 'MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT',
+        ok: false,
+        itemId: event.data.itemId,
+        itemType: event.data.itemType,
+        error: 'Mentor review actions are available only in the assigned read-only review view.'
+      });
+      return;
+    }
+    try {
+      const { data: review, error } = await supabase.rpc('mentor_review_html_logbook_item', {
+        p_instance_id: instanceId,
+        p_item_id: event.data.itemId,
+        p_item_type: event.data.itemType,
+        p_decision: event.data.decision,
+        p_feedback: event.data.feedback || null
+      });
+      postHTMLLogbookMessage(instanceId, {
+        type: 'MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT',
+        ok: !error,
+        review: error ? null : review,
+        itemId: event.data.itemId,
+        itemType: event.data.itemType,
+        error: error?.message || null
+      });
+    } catch (error) {
+      postHTMLLogbookMessage(instanceId, {
+        type: 'MENTORO_LOGBOOK_MENTOR_REVIEW_RESULT',
+        ok: false,
+        review: null,
+        itemId: event.data.itemId,
+        itemType: event.data.itemType,
+        error: error?.message || 'Could not save the mentor review. Check your connection and try again.'
+      });
+    }
+    return;
+  }
+
+  if (type === 'MENTORO_LOGBOOK_STATE_CHANGED' && event.data.state && typeof event.data.state === 'object') {
+    const sync = htmlLogbookSync.get(instanceId);
+    if (!sync) return;
+    if (!sync.cloudStateLoaded) return;
+    if (sync.readOnly) {
+      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: false, error: 'This is a read-only mentor review. Changes are not saved.' });
+      return;
+    }
+    sync.state = event.data.state;
+    clearTimeout(sync.timer);
+    sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), event.data.flushNow === true ? 0 : 700);
+  }
+});
+
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -52,8 +173,18 @@ async function resolveWorkspaceRole(user) {
     .maybeSingle();
   if (profileError) throw profileError;
 
-  // A confirmed identity without a MENTORO profile enters the trainee onboarding path.
+  // User metadata may defer trainee provisioning, but never grants a workspace role.
+  // Dedicated Mentor identities must be registered separately by an active administrator.
   if (!existingProfile) {
+    if (user.user_metadata?.mentoro_account_intent === 'MENTOR') {
+      await supabase.auth.signOut();
+      renderAuth();
+      message(
+        'This account is reserved for Mentor access. Ask a platform administrator to register it before signing in again. This selection does not grant Mentor permissions.',
+        'info'
+      );
+      return null;
+    }
     await provisionCurrentTrainee(user);
     return 'TRAINEE';
   }
@@ -83,7 +214,7 @@ async function resolveWorkspaceRole(user) {
 async function renderWorkspace(user, role) {
   if (role === 'TRAINEE') return renderDashboard(user);
   if (role === 'MENTOR') return renderMentorDashboard(user);
-  return renderAdminWorkspace(user);
+  return renderAdminWorkspace({ user, supabase, shell, esc, dateTime, setBusy, message, errorText });
 }
 
 const errorText = (error) => {
@@ -133,13 +264,14 @@ function renderAuth() {
         </div>
       </section>
       <section class="auth-card">
-        <div class="card-heading"><p class="eyebrow">GET STARTED</p><h2>Welcome to MENTORO</h2><p>Create a trainee account, or sign in with your assigned mentor or administrator account.</p></div>
+        <div class="card-heading"><p class="eyebrow">GET STARTED</p><h2>Welcome to MENTORO</h2><p>Create a trainee account or prepare a separate account for administrator-assigned Mentor access.</p></div>
         <div class="tab-list" role="tablist" aria-label="Account access">
           <button class="tab is-active" type="button" data-auth-tab="signin" role="tab" aria-selected="true">Sign in</button>
           <button class="tab" type="button" data-auth-tab="signup" role="tab" aria-selected="false">Create account</button>
         </div>
         <form id="auth-form" class="form-stack">
           <div id="name-field" class="field" hidden><label for="full-name">Full name</label><input id="full-name" name="fullName" autocomplete="name" placeholder="Your full name" minlength="2"></div>
+          <div id="mentor-intent-field" class="field" hidden><label class="checkbox-field"><input id="mentor-account-intent" name="mentorAccountIntent" type="checkbox" value="yes"> This is a dedicated Mentor account</label><small>Select this only for a separate account that a platform administrator will register. This choice does not grant Mentor access.</small></div>
           <div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required></div>
           <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" minlength="8" placeholder="At least 8 characters" required></div>
           <p class="form-hint" id="auth-hint">Use your registered email to continue.</p>
@@ -152,6 +284,8 @@ function renderAuth() {
   let mode = 'signin';
   const form = document.querySelector('#auth-form');
   const nameField = document.querySelector('#name-field');
+  const mentorIntentField = document.querySelector('#mentor-intent-field');
+  const mentorIntentCheckbox = document.querySelector('#mentor-account-intent');
   const password = document.querySelector('#password');
   const submit = document.querySelector('#auth-submit');
   document.querySelectorAll('[data-auth-tab]').forEach((tab) => tab.addEventListener('click', () => {
@@ -162,14 +296,24 @@ function renderAuth() {
       item.setAttribute('aria-selected', String(active));
     });
     nameField.hidden = mode !== 'signup';
+    mentorIntentField.hidden = mode !== 'signup';
     document.querySelector('#full-name').required = mode === 'signup';
     password.autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
     document.querySelector('#auth-hint').textContent = mode === 'signup'
-      ? 'Confirm your email before your trainee profile is activated.'
+      ? (mentorIntentCheckbox.checked
+        ? 'Confirm your email, then wait for the administrator to register this dedicated Mentor account before signing in.'
+        : 'Confirm your email before signing in to create your trainee profile.')
       : 'Use your registered email to continue.';
-    submit.textContent = mode === 'signup' ? 'Create trainee account' : 'Sign in';
+    submit.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
     message('');
   }));
+
+  mentorIntentCheckbox.addEventListener('change', () => {
+    if (mode !== 'signup') return;
+    document.querySelector('#auth-hint').textContent = mentorIntentCheckbox.checked
+      ? 'Confirm your email, then wait for the administrator to register this dedicated Mentor account before signing in.'
+      : 'Confirm your email before signing in to create your trainee profile.';
+  });
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -184,9 +328,12 @@ function renderAuth() {
     try {
       if (mode === 'signup') {
         const fullName = String(data.get('fullName')).trim();
+        const isDedicatedMentor = data.get('mentorAccountIntent') === 'yes';
+        const userMetadata = { full_name: fullName };
+        if (isDedicatedMentor) userMetadata.mentoro_account_intent = 'MENTOR';
         const { data: result, error } = await supabase.auth.signUp({
           email, password: pass,
-          options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin }
+          options: { data: userMetadata, emailRedirectTo: window.location.origin }
         });
         if (error) throw error;
         if (result.session) {
@@ -194,7 +341,12 @@ function renderAuth() {
           if (workspace) await renderWorkspace(result.session.user, workspace);
         } else {
           document.querySelector('[data-auth-tab="signin"]').click();
-          message('Account created. Check your email and confirm your address, then return here to sign in.', 'success');
+          message(
+            isDedicatedMentor
+              ? 'Account created. Confirm the email, then ask the platform administrator to register this dedicated Mentor account before signing in.'
+              : 'Account created. Check your email and confirm your address, then return here to sign in.',
+            'success'
+          );
         }
       } else {
         const { data: result, error } = await supabase.auth.signInWithPassword({ email, password: pass });
@@ -219,7 +371,7 @@ async function renderDashboard(user) {
     const [docResult, applicationsResult, enrollmentsResult] = await Promise.all([
       supabase.from('verification_documents').select('id,status,document_type,created_at,review_note').eq('trainee_profile_id', user.id).order('created_at', { ascending: false }).limit(1),
       supabase.from('training_applications').select('id,status,created_at,applicant_note,training_offerings(title,description,delivery_mode,specialties(name_en,name_ar),mentor_profiles(display_name,professional_title)),training_slots(starts_at,ends_at)').eq('trainee_profile_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('training_enrollments').select('id,status,starts_at,ends_at,training_offerings(title,mentor_profiles(display_name,professional_title),specialties(name_en,name_ar)),logbook_instances(id,status,logbook_entries(id,title,entry_date,status,entry_type,created_at,submitted_at,entry_reviews(decision,feedback,reviewed_at)))').eq('trainee_profile_id', user.id).order('created_at', { ascending: false })
+      supabase.from('training_enrollments').select('id,status,starts_at,ends_at,training_offerings(title,mentor_profiles(display_name,professional_title),specialties(name_en,name_ar)),logbook_instances(id,status,template_version_id,logbook_template_versions(id,version_number,status,schema_definition,template_definition),logbook_entries(id,title,entry_date,status,entry_type,payload,created_at,submitted_at,entry_reviews(decision,feedback,reviewed_at)))').eq('trainee_profile_id', user.id).order('created_at', { ascending: false })
     ]);
     if (applicationsResult.error) throw applicationsResult.error;
     if (enrollmentsResult.error) throw enrollmentsResult.error;
@@ -272,7 +424,7 @@ async function renderMentorDashboard(user) {
       supabase.from('mentor_profiles').select('profile_id,display_name,professional_title,institution').eq('profile_id', user.id).maybeSingle(),
       supabase.rpc('mentor_list_my_applications', { p_limit: 100 }),
       supabase.from('training_enrollments')
-        .select('id,status,starts_at,ends_at,training_offerings(title,specialties(name_en)),logbook_instances(id,logbook_entries(id,status,submitted_at,entry_reviews(decision,reviewed_at)))')
+        .select('id,status,starts_at,ends_at,training_offerings(title,specialties(name_en)),logbook_instances(id,template_version_id,logbook_template_versions(id,template_definition),logbook_entries(id,status,submitted_at,entry_reviews(decision,reviewed_at)))')
         .order('starts_at', { ascending: true }),
       supabase.rpc('mentor_list_my_logbook_entries', { p_limit: 100 })
     ]);
@@ -336,6 +488,9 @@ async function renderMentorDashboard(user) {
     );
     bindMentorApplicationActions(user);
     bindMentorEntryActions(user);
+    document.querySelectorAll('[data-open-html-logbook-readonly]').forEach((button) => {
+      button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbookReadonly, { readOnly: true, htmlPath: button.dataset.htmlPath }));
+    });
   } catch (error) {
     shell(
       '<main class="dashboard"><div class="empty-state empty-state--error"><strong>Could not load your mentor workspace</strong><p>' +
@@ -453,6 +608,11 @@ function mentorEnrollmentCard(enrollment) {
   const specialty = offering.specialties || {};
   const instanceRelation = enrollment.logbook_instances;
   const instance = Array.isArray(instanceRelation) ? instanceRelation[0] : instanceRelation;
+  const templateRelation = instance?.logbook_template_versions;
+  const templateVersion = Array.isArray(templateRelation) ? templateRelation[0] : templateRelation;
+  const htmlPath = templateVersion?.template_definition?.html_path;
+  const isRegisteredHtml = templateVersion?.template_definition?.renderer === 'HTML' &&
+    REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath);
   const entries = instance?.logbook_entries || [];
   const submittedCount = entries.filter((entry) => {
     if (entry.status !== 'SUBMITTED') return false;
@@ -465,7 +625,11 @@ function mentorEnrollmentCard(enrollment) {
     '<span class="status-chip status-chip--' + statusTone + '">' + esc((enrollment.status || 'CONFIRMED').replaceAll('_', ' ')) + '</span></div>' +
     '<h3>' + esc(offering.title || 'Assigned training') + '</h3>' +
     '<p class="mentor-line">' + esc(dateTime(enrollment.starts_at)) + ' — ' + esc(dateTime(enrollment.ends_at)) + '</p>' +
-    '<div class="mentor-entry-stats"><span>' + entries.length + ' logbook entries</span><span>' + submittedCount + ' awaiting review</span></div>' +
+    '<div class="mentor-entry-stats"><span>' + entries.length + ' native entries</span><span>' + submittedCount + ' awaiting review</span></div>' +
+    (isRegisteredHtml
+      ? '<p class="workspace-note">Existing HTML logbook state is available for read-only review, with item-level mentor decisions and feedback stored in the review audit trail.</p>' +
+        '<button class="button button--secondary button--small" type="button" data-open-html-logbook-readonly="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open HTML logbook · read only</button>'
+      : '') +
   '</article>';
 }
 
@@ -496,19 +660,6 @@ function bindMentorApplicationActions(user) {
       ? 'Application approved. MENTORO administration can now confirm the booking.'
       : 'Application rejected. Your decision has been recorded.', 'success');
   }));
-}
-
-function renderAdminWorkspace(user) {
-  shell(
-    '<main class="dashboard">' +
-      '<section class="dashboard-welcome"><div><p class="eyebrow">ADMIN WORKSPACE</p><h1>Welcome back, <span>' +
-        esc(user.email || 'administrator') +
-      '</span></h1><p>Your administrator role has been recognized. Administration tools are not part of this preview slice yet.</p></div>' +
-      '<span class="status-chip status-chip--neutral">Administrator</span></section>' +
-      '<section class="empty-state"><strong>Admin dashboard is still being built</strong><p>This account was not converted to a trainee account. You can sign out safely; administrator actions will be added in a separate reviewed change.</p></section>' +
-    '</main>',
-    user
-  );
 }
 
 function verificationPanel(doc, profile) {
@@ -545,28 +696,46 @@ function logbookCard(enrollment) {
   const instanceRelation = enrollment.logbook_instances;
   // enrollment_id is unique in logbook_instances, so PostgREST may embed this as an object.
   const instance = Array.isArray(instanceRelation) ? instanceRelation[0] : instanceRelation;
-  // PostgREST does not guarantee the order of nested entries; show the most recent activity first.
+  const templateRelation = instance?.logbook_template_versions;
+  const templateVersion = Array.isArray(templateRelation) ? templateRelation[0] : templateRelation;
+  const htmlPath = templateVersion?.template_definition?.html_path;
+  const isRegisteredHtml = templateVersion?.template_definition?.renderer === 'HTML' &&
+    REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath);
+  const templateFields = getTemplateFields(templateVersion);
   const entries = [...(instance?.logbook_entries || [])].sort((a, b) =>
     String(b.entry_date || '').localeCompare(String(a.entry_date || '')) ||
     String(b.created_at || '').localeCompare(String(a.created_at || ''))
   );
   const draftCount = entries.filter((entry) => ['DRAFT', 'RETURNED'].includes(entry.status)).length;
+  const entryTypeOptions = LOGBOOK_ENTRY_TYPES.map((type) =>
+    '<option value="' + esc(type.value) + '"' + (type.value === 'LEARNING_ACTIVITY' ? ' selected' : '') +
+    '>' + esc(type.label) + '</option>'
+  ).join('');
   return `
     <article class="logbook-card">
       <div class="logbook-card-top"><span class="logbook-symbol">M</span><span class="status-chip status-chip--${enrollment.status === 'ACTIVE' ? 'good' : 'neutral'}">${esc(enrollment.status.replaceAll('_', ' '))}</span></div>
       <span class="specialty-label">${esc(specialty.name_en || 'Clinical training')}</span><h3>${esc(offering.title || 'Training logbook')}</h3>
       <p class="mentor-line">${esc(mentor.display_name || 'Assigned mentor')}</p>
       <div class="logbook-meta"><span>${entries.length} entries</span><span>${draftCount} drafts / revisions</span></div>
-      ${instance ? `
+      ${instance && isRegisteredHtml
+        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open interactive logbook</button><p class="workspace-note">This uses the original HTML logbook for this training. Cloud changes save to this enrollment only; do not enter patient-identifying information.</p>'
+        : ''}
+      ${instance && !isRegisteredHtml ? `
         <form class="entry-form" data-instance-id="${esc(instance.id)}">
-          <label for="entry-title-${esc(instance.id)}">Add a clinical learning entry</label>
-          <input id="entry-title-${esc(instance.id)}" name="title" placeholder="e.g. Observed central line insertion" maxlength="160" required>
-          <div class="entry-form-row"><input name="date" type="date" aria-label="Activity date" required value="${localDateISO()}"><button class="button button--secondary button--small" type="submit">Save draft</button></div>
+          <label for="entry-title-${esc(instance.id)}">Entry title</label>
+          <input id="entry-title-${esc(instance.id)}" name="title" placeholder="Short title for this activity" maxlength="160" required>
+          <div class="entry-form-row">
+            <label class="template-field"><span>Entry type</span><select name="entryType" required>${entryTypeOptions}</select></label>
+            <label class="template-field"><span>Activity date</span><input name="date" type="date" required value="${localDateISO()}"></label>
+          </div>
+          <p class="workspace-note">Use the fields defined by this training’s assigned logbook template.</p>
+          ${renderTemplateFields(templateFields, instance.id)}
+          <button class="button button--secondary button--small" type="submit">Save draft</button>
         </form>
-        ${entries.length ? `<div class="entry-list">${[...entries].sort((a,b)=>Number(b.status === 'RETURNED')-Number(a.status === 'RETURNED')).slice(0,6).map((entry) => {
+        ${!isRegisteredHtml && entries.length ? `<div class="entry-list">${[...entries].sort((a,b)=>Number(b.status === 'RETURNED')-Number(a.status === 'RETURNED')).slice(0,6).map((entry) => {
           const review = latestEntryReview(entry);
           const displayStatus = entry.status === 'RETURNED' ? 'NEEDS REVISION' : (entry.status === 'SUBMITTED' && review ? review.decision : entry.status);
-          return `<div class="entry-row entry-row--detail"><span class="entry-dot entry-dot--${['VERIFIED','APPROVED'].includes(displayStatus) ? 'good' : 'neutral'}"></span><div class="entry-row-copy"><strong>${esc(entry.title)}</strong><small>${esc(entry.entry_date)} · ${esc(displayStatus.replaceAll('_',' '))}</small>${review?.feedback ? `<small class="entry-feedback">Mentor feedback: ${esc(review.feedback)}</small>` : ''}</div>${entry.status === 'DRAFT' ? `<button class="text-button" data-submit-entry="${esc(entry.id)}">Submit</button>` : ''}</div>${entry.status === 'RETURNED' ? `<form class="entry-edit-form" data-edit-entry="${esc(entry.id)}"><label for="entry-edit-title-${esc(entry.id)}">Revise returned entry</label><input id="entry-edit-title-${esc(entry.id)}" name="title" value="${esc(entry.title)}" maxlength="160" required><div class="entry-form-row"><input name="date" type="date" aria-label="Revised activity date" value="${esc(entry.entry_date)}" required><button class="button button--secondary button--small" type="submit">Save &amp; resubmit</button></div></form>` : ''}`;
+          return `<div class="entry-row entry-row--detail"><span class="entry-dot entry-dot--${['VERIFIED','APPROVED'].includes(displayStatus) ? 'good' : 'neutral'}"></span><div class="entry-row-copy"><strong>${esc(entry.title)}</strong><small>${esc(entry.entry_type.replaceAll('_', ' '))} · ${esc(entry.entry_date)} · ${esc(displayStatus.replaceAll('_',' '))}</small>${renderPayloadSummary(entry.payload, templateFields)}${review?.feedback ? `<small class="entry-feedback">Mentor feedback: ${esc(review.feedback)}</small>` : ''}</div>${entry.status === 'DRAFT' ? `<button class="text-button" data-submit-entry="${esc(entry.id)}">Submit</button>` : ''}</div>${entry.status === 'RETURNED' ? `<form class="entry-edit-form" data-edit-entry="${esc(entry.id)}"><label for="entry-edit-title-${esc(entry.id)}">Revise returned entry</label><input id="entry-edit-title-${esc(entry.id)}" name="title" value="${esc(entry.title)}" maxlength="160" required><p class="workspace-note">Entry type: ${esc(entry.entry_type.replaceAll('_', ' '))}. The type stays fixed while you revise the entry.</p><div class="entry-form-row"><label class="template-field"><span>Activity date</span><input name="date" type="date" aria-label="Revised activity date" value="${esc(entry.entry_date)}" required></label></div>${renderTemplateFields(templateFields, instance.id + '-' + entry.id, entry.payload || {})}<button class="button button--secondary button--small" type="submit">Save &amp; resubmit</button></form>` : ''}`;
         }).join('')}</div>` : '<p class="empty-inline">Your first entry will appear here.</p>'}
       ` : '<p class="empty-inline">The logbook template is not yet attached to this training.</p>'}
     </article>`;
@@ -658,17 +827,32 @@ async function loadOfferings(user, isVerified) {
 }
 
 function bindEntryForms(user) {
+  document.querySelectorAll('[data-open-html-logbook]').forEach((button) => button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbook, { htmlPath: button.dataset.htmlPath })));
   document.querySelectorAll('.entry-form').forEach((form) => form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const data = new FormData(form);
     const button = form.querySelector('button[type="submit"]');
     setBusy(button, true, 'Saving…');
+    const title = String(data.get('title') || '').trim();
+    const entryDate = String(data.get('date') || '');
+    const entryType = String(data.get('entryType') || '');
+    const templatePayload = collectTemplatePayload(form);
+    if (!form.dataset.instanceId || !title || !entryDate || !LOGBOOK_ENTRY_TYPES.some((type) => type.value === entryType)) {
+      message('Complete the title, entry type, and activity date.', 'error');
+      setBusy(button, false);
+      return;
+    }
+    if (templatePayload.errors.length) {
+      message(templatePayload.errors[0], 'error');
+      setBusy(button, false);
+      return;
+    }
     const { error } = await supabase.from('logbook_entries').insert({
       instance_id: form.dataset.instanceId,
-      entry_type: 'LEARNING_ACTIVITY',
-      title: String(data.get('title')).trim(),
-      entry_date: data.get('date'),
-      payload: {},
+      entry_type: entryType,
+      title,
+      entry_date: entryDate,
+      payload: templatePayload.payload,
       status: 'DRAFT',
       created_by: user.id
     });
@@ -687,11 +871,17 @@ function bindEntryForms(user) {
     const button = form.querySelector('button[type="submit"]');
     const title = String(data.get('title') || '').trim();
     const entryDate = String(data.get('date') || '');
+    const templatePayload = collectTemplatePayload(form);
     if (!entryId || !title || !entryDate) return;
+    if (templatePayload.errors.length) {
+      message(templatePayload.errors[0], 'error');
+      setBusy(button, false);
+      return;
+    }
     setBusy(button, true, 'Saving & resubmitting…');
 
     const { error: editError } = await supabase.from('logbook_entries')
-      .update({ title, entry_date: entryDate })
+      .update({ title, entry_date: entryDate, payload: templatePayload.payload })
       .eq('id', entryId)
       .eq('status', 'RETURNED');
     if (editError) {

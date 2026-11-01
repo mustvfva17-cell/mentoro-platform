@@ -114,7 +114,7 @@ export function collectTemplatePayload(form) {
     }
 
     if (type === 'boolean') {
-      // Rendered as a three-state Yes/No select so a required boolean can validly be false.
+      // A required boolean needs an explicit Yes or No; false is a valid answer.
       const rawBoolean = String(input.value ?? '');
       if (!['true', 'false'].includes(rawBoolean)) {
         if (required) errors.push('Choose yes or no for: ' + (input.labels?.[0]?.textContent?.trim() || key));
