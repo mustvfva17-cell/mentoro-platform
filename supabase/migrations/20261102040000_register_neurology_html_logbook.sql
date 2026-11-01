@@ -79,7 +79,8 @@ BEGIN
 
   IF NEW.status = 'PUBLISHED' OR NEW.is_assignable THEN
     IF v_renderer = 'HTML' THEN
-      IF v_html_path IS DISTINCT FROM '/logbooks/medical-oncology/index.html' AND v_html_path IS DISTINCT FROM '/logbooks/general-surgery/index.html' AND v_html_path IS DISTINCT FROM '/logbooks/cardiology/index.html' AND v_html_path IS DISTINCT FROM '/logbooks/neurology/index.html' THEN
+      IF v_html_path IS DISTINCT FROM '/logbooks/medical-oncology/index.html' AND v_html_path IS DISTINCT FROM '/logbooks/general-surgery/index.html' AND v_html_path IS DISTINCT FROM '/logbooks/cardiology/index.html'
+       AND v_html_path IS DISTINCT FROM '/logbooks/neurology/index.html' THEN
         RAISE EXCEPTION 'This HTML logbook path is not registered as an available MENTORO asset' USING ERRCODE = '22023';
       END IF;
     ELSE
@@ -177,7 +178,8 @@ BEGIN
   IF v_renderer = 'HTML' THEN
     IF v_html_path IS DISTINCT FROM '/logbooks/medical-oncology/index.html'
        AND v_html_path IS DISTINCT FROM '/logbooks/general-surgery/index.html'
-       AND v_html_path IS DISTINCT FROM '/logbooks/cardiology/index.html' AND v_html_path IS DISTINCT FROM '/logbooks/neurology/index.html' THEN
+       AND v_html_path IS DISTINCT FROM '/logbooks/cardiology/index.html'
+       AND v_html_path IS DISTINCT FROM '/logbooks/neurology/index.html' THEN
       RAISE EXCEPTION 'This HTML logbook path is not registered as an available MENTORO asset' USING ERRCODE = '22023';
     END IF;
   ELSE
@@ -267,7 +269,6 @@ BEGIN
        '/logbooks/medical-oncology/index.html',
        '/logbooks/general-surgery/index.html',
        '/logbooks/cardiology/index.html',
-       '/logbooks/neurology/index.html',
        '/logbooks/neurology/index.html'
      ) THEN
     RAISE EXCEPTION 'This instance is not assigned to a registered HTML logbook' USING ERRCODE = '22023';
@@ -368,7 +369,6 @@ BEGIN
        '/logbooks/medical-oncology/index.html',
        '/logbooks/general-surgery/index.html',
        '/logbooks/cardiology/index.html',
-       '/logbooks/neurology/index.html',
        '/logbooks/neurology/index.html'
      ) THEN
     RAISE EXCEPTION 'This instance is not assigned to a registered HTML logbook' USING ERRCODE = '22023';
@@ -485,7 +485,6 @@ BEGIN
        '/logbooks/medical-oncology/index.html',
        '/logbooks/general-surgery/index.html',
        '/logbooks/cardiology/index.html',
-       '/logbooks/neurology/index.html',
        '/logbooks/neurology/index.html'
      ) THEN
     RAISE EXCEPTION 'This instance is not assigned to a registered HTML logbook' USING ERRCODE = '22023';
@@ -595,7 +594,6 @@ BEGIN
        '/logbooks/medical-oncology/index.html',
        '/logbooks/general-surgery/index.html',
        '/logbooks/cardiology/index.html',
-       '/logbooks/neurology/index.html',
        '/logbooks/neurology/index.html'
      ) THEN
     RAISE EXCEPTION 'This instance is not assigned to a registered HTML logbook' USING ERRCODE = '22023';
@@ -724,7 +722,6 @@ BEGIN
        '/logbooks/medical-oncology/index.html',
        '/logbooks/general-surgery/index.html',
        '/logbooks/cardiology/index.html',
-       '/logbooks/neurology/index.html',
        '/logbooks/neurology/index.html'
      ) THEN
     RAISE EXCEPTION 'This instance is not assigned to a registered HTML logbook' USING ERRCODE = '22023';
