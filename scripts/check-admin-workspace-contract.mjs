@@ -284,7 +284,7 @@ check(
   !admin.includes("Existing Medical Oncology HTML logbook") &&
   admin.includes("REGISTERED_HTML_LOGBOOK_PATHS.has(templateDefinition.html_path)") &&
   admin.includes("Preview existing logbook") &&
-  admin.includes("href=\"/logbooks/general-surgery/index.html?mode=preview\"") &&
+  admin.includes("escape(module.htmlPath + '?mode=preview')") &&
   admin.includes("const canPublishReviewedRuntime = isRegisteredHtml || version.fields.length > 0") &&
   admin.includes("data-publish-template") &&
   admin.includes("Pending clinical review. Preview the existing HTML asset, confirm the clinical source/reviewer notes, and record the decision before publishing."),
