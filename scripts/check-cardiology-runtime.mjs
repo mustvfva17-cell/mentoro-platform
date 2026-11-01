@@ -55,6 +55,10 @@ for (const fn of [
 ]) {
   assert.ok(migration.includes(fn), `Migration must preserve and extend ${fn}`);
 }
+assert.ok(migration.includes('WHERE li.id = p_instance_id AND li.enrollment_id IS NULL'),
+  'Cardiology state load must retain the newest direct-admin-owned logbook access path.');
+assert.ok(migration.includes("v_enrollment_status := 'CONFIRMED'"),
+  'Cardiology saves must retain the newest direct-admin-owned logbook lifecycle path.');
 assert.ok((migration.match(/\/logbooks\/cardiology\/index\.html/g) || []).length >= 6,
   'The Cardiology path must be added to the schema, publish, state, and review allowlists.');
 
