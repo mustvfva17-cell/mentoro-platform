@@ -2,6 +2,7 @@ import './style.css';
 import { renderAdminWorkspace } from './admin-workspace.js';
 import { LOGBOOK_ENTRY_TYPES, collectTemplatePayload, getTemplateFields, renderPayloadSummary, renderTemplateFields } from './logbook-schema.js';
 import { createClient } from '@supabase/supabase-js';
+import { startEnrollmentLifecycleMonitor } from './enrollment-lifecycle-monitor.js';
 
 const app = document.querySelector('#app');
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -14,25 +15,107 @@ const htmlLogbookSync = new Map();
 function openHTMLLogbook(instanceId, options = {}) {
   const readOnly = options.readOnly === true;
   const htmlPath = options.htmlPath || '/logbooks/medical-oncology/index.html';
+  const enrollmentId = options.enrollmentId || null;
   if (!supabase || !/^[0-9a-f-]{36}$/i.test(instanceId || '') || !REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)) {
     message('This logbook is not available for this training.', 'error'); return;
   }
   const existing = htmlLogbookWindows.get(instanceId);
-  if (existing && !existing.closed) { existing.focus(); return; }
+  if (existing && !existing.closed) {
+    const sync = htmlLogbookSync.get(instanceId);
+    if (readOnly && sync && !sync.readOnly) {
+      void setHTMLLogbookReadOnly(instanceId);
+    }
+    existing.focus();
+    return;
+  }
   const query = new URLSearchParams({ instance: instanceId });
   if (readOnly) query.set('readonly', '1');
   const child = window.open(htmlPath + '?' + query.toString(), '_blank');
   if (!child) { message('Your browser blocked the logbook window. Allow pop-ups for this site and try again.', 'error'); return; }
   htmlLogbookWindows.set(instanceId, child);
-  htmlLogbookSync.set(instanceId, { revision: null, timer: null, saving: false, state: null, readOnly, cloudStateLoaded: false });
+  const sync = {
+    revision: null,
+    timer: null,
+    saving: false,
+    state: null,
+    readOnly,
+    cloudStateLoaded: false,
+    enrollmentId,
+    lifecycleMonitor: null
+  };
+  htmlLogbookSync.set(instanceId, sync);
+  if (!readOnly && enrollmentId) {
+    sync.lifecycleMonitor = startEnrollmentLifecycleMonitor({
+      supabase,
+      enrollmentId,
+      intervalMs: 5000,
+      isReadOnly: () => sync.readOnly,
+      isWindowClosed: () => {
+        const currentChild = htmlLogbookWindows.get(instanceId);
+        return !currentChild || currentChild.closed;
+      },
+      onClosed: () => setHTMLLogbookReadOnly(instanceId),
+      onWindowClosed: () => {
+        if (htmlLogbookSync.get(instanceId) === sync) {
+          htmlLogbookWindows.delete(instanceId);
+          htmlLogbookSync.delete(instanceId);
+        }
+      }
+    });
+  }
 }
 function postHTMLLogbookMessage(instanceId, payload) {
   const child = htmlLogbookWindows.get(instanceId);
   if (child && !child.closed) child.postMessage({ ...payload, instanceId }, window.location.origin);
 }
+function stopHTMLLogbookLifecyclePolling(sync) {
+  if (!sync?.lifecycleMonitor) return;
+  sync.lifecycleMonitor.stop();
+  sync.lifecycleMonitor = null;
+}
+async function setHTMLLogbookReadOnly(instanceId) {
+  const sync = htmlLogbookSync.get(instanceId);
+  if (!sync || sync.readOnly) return;
+  sync.readOnly = true;
+  stopHTMLLogbookLifecyclePolling(sync);
+  if (sync.timer) clearTimeout(sync.timer);
+  sync.timer = null;
+  sync.state = null;
+  postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SET_READ_ONLY' });
+  await reloadExistingHTMLLogbookReadOnly(instanceId);
+}
+async function reloadExistingHTMLLogbookReadOnly(instanceId) {
+  const sync = htmlLogbookSync.get(instanceId);
+  if (!sync) return;
+  try {
+    const { data, error } = await supabase.rpc('get_my_logbook_html_state', { p_instance_id: instanceId });
+    if (error) throw error;
+    sync.revision = Number(data?.revision ?? 0);
+    sync.state = data?.state && typeof data.state === 'object' ? data.state : null;
+    sync.cloudStateLoaded = true;
+    postHTMLLogbookMessage(instanceId, {
+      type: 'MENTORO_LOGBOOK_LOAD_STATE',
+      state: sync.state,
+      revision: sync.revision,
+      hasCloudState: sync.revision > 0,
+      readOnly: true
+    });
+    const { data: reviews, error: reviewsError } = await supabase.rpc('get_my_logbook_html_item_reviews', { p_instance_id: instanceId });
+    postHTMLLogbookMessage(instanceId, {
+      type: 'MENTORO_LOGBOOK_LOAD_REVIEWS',
+      reviews: Array.isArray(reviews) ? reviews : [],
+      error: reviewsError?.message || null
+    });
+  } catch (error) {
+    postHTMLLogbookMessage(instanceId, {
+      type: 'MENTORO_LOGBOOK_LOAD_ERROR',
+      error: error?.message || 'Could not reload this closed training logbook.'
+    });
+  }
+}
 async function flushHTMLLogbookState(instanceId) {
   const sync = htmlLogbookSync.get(instanceId);
-  if (!sync || !sync.cloudStateLoaded || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;
+  if (!sync || sync.readOnly || !sync.cloudStateLoaded || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;
   sync.saving = true;
   const stateToSave = sync.state;
   try {
@@ -40,7 +123,7 @@ async function flushHTMLLogbookState(instanceId) {
     if (error) throw error;
     sync.revision = Number(data);
     postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: true, revision: sync.revision });
-    if (sync.state !== stateToSave) { clearTimeout(sync.timer); sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), 250); }
+    if (!sync.readOnly && sync.state !== stateToSave) { clearTimeout(sync.timer); sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), 250); }
   } catch (error) {
     const detail = error?.message || 'Cloud save failed.';
     postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: false, error: String(detail).includes('LOGBOOK_STATE_CONFLICT') ? 'This logbook changed in another tab. Close this tab and reopen it to load the latest saved version.' : detail });
@@ -117,7 +200,7 @@ window.addEventListener('message', async (event) => {
     if (!sync) return;
     if (!sync.cloudStateLoaded) return;
     if (sync.readOnly) {
-      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: false, error: 'This is a read-only mentor review. Changes are not saved.' });
+      postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SAVE_RESULT', ok: false, error: 'This logbook is read-only. Changes are not saved.' });
       return;
     }
     sync.state = event.data.state;
@@ -442,6 +525,7 @@ async function renderMentorDashboard(user) {
     const pendingApplications = applications.filter((item) => item.status === 'SUBMITTED');
     const reviewedApplications = applications.filter((item) => item.status !== 'SUBMITTED');
     const activeEnrollments = enrollments.filter((item) => ['CONFIRMED', 'ACTIVE'].includes(item.status));
+    const pastEnrollments = enrollments.filter((item) => ['COMPLETED', 'CANCELLED'].includes(item.status));
     const displayName = mentor.display_name || profile.full_name || user.email?.split('@')[0] || 'mentor';
 
     shell(
@@ -478,6 +562,12 @@ async function renderMentorDashboard(user) {
             : '<div class="empty-state"><strong>No confirmed trainings yet</strong><p>Confirmed bookings linked to your mentor account will appear here.</p></div>') +
         '</section>' +
         '<section class="section-block">' +
+          '<div class="section-heading"><div><p class="eyebrow">TRAINING HISTORY</p><h2>Completed and cancelled trainings</h2></div><span class="count-badge">' + pastEnrollments.length + '</span></div>' +
+          (pastEnrollments.length
+            ? '<div class="mentor-queue-grid">' + pastEnrollments.map(mentorEnrollmentCard).join('') + '</div>'
+            : '<div class="empty-state"><strong>No closed trainings yet</strong><p>Completed or cancelled training records will appear here.</p></div>') +
+        '</section>' +
+        '<section class="section-block">' +
           '<div class="section-heading"><div><p class="eyebrow">DECISION HISTORY</p><h2>Recently reviewed applications</h2></div><span class="count-badge">' + reviewedApplications.length + '</span></div>' +
           (reviewedApplications.length
             ? '<div class="list-stack">' + reviewedApplications.slice(0, 8).map(mentorApplicationCard).join('') + '</div>'
@@ -488,6 +578,7 @@ async function renderMentorDashboard(user) {
     );
     bindMentorApplicationActions(user);
     bindMentorEntryActions(user);
+    bindMentorEnrollmentActions(user);
     document.querySelectorAll('[data-open-html-logbook-readonly]').forEach((button) => {
       button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbookReadonly, { readOnly: true, htmlPath: button.dataset.htmlPath }));
     });
@@ -620,17 +711,82 @@ function mentorEnrollmentCard(enrollment) {
     return !latestReview || !entry.submitted_at || new Date(entry.submitted_at) > new Date(latestReview.reviewed_at);
   }).length;
   const statusTone = ['CONFIRMED', 'ACTIVE'].includes(enrollment.status) ? 'good' : 'neutral';
-  return '<article class="training-card mentor-training-card">' +
+  const startsAt = new Date(enrollment.starts_at).getTime();
+  const endsAt = new Date(enrollment.ends_at).getTime();
+  const now = Date.now();
+  let lifecycleActions = '';
+  if (enrollment.status === 'CONFIRMED') {
+    lifecycleActions = startsAt > now
+      ? '<p class="workspace-note">Start action unlocks at the scheduled start time.</p>'
+      : endsAt > now
+        ? '<button class="button button--primary button--small" type="button" data-enrollment-action="START" data-enrollment-id="' + esc(enrollment.id) + '">Start training</button>'
+        : '<p class="workspace-note">The scheduled window has passed. Ask an administrator to review this enrollment.</p>';
+  } else if (enrollment.status === 'ACTIVE') {
+    lifecycleActions = endsAt <= now
+      ? '<button class="button button--primary button--small" type="button" data-enrollment-action="COMPLETE" data-enrollment-id="' + esc(enrollment.id) + '">Complete training</button>'
+      : '<p class="workspace-note">Completion is available after the scheduled end time.</p>';
+  }
+  if (['CONFIRMED', 'ACTIVE'].includes(enrollment.status)) {
+    lifecycleActions += '<button class="button button--secondary button--small" type="button" data-enrollment-action="CANCEL" data-enrollment-id="' + esc(enrollment.id) + '">Cancel training</button>';
+  }
+  const lifecycleMarkup = lifecycleActions
+    ? '<div class="mentor-review-actions">' + lifecycleActions + '</div>'
+    : '';
+  return '<article class="training-card mentor-training-card" data-enrollment-card>' +
     '<div class="training-card-heading"><span class="specialty-label">' + esc(specialty.name_en || 'Clinical training') + '</span>' +
     '<span class="status-chip status-chip--' + statusTone + '">' + esc((enrollment.status || 'CONFIRMED').replaceAll('_', ' ')) + '</span></div>' +
     '<h3>' + esc(offering.title || 'Assigned training') + '</h3>' +
     '<p class="mentor-line">' + esc(dateTime(enrollment.starts_at)) + ' — ' + esc(dateTime(enrollment.ends_at)) + '</p>' +
     '<div class="mentor-entry-stats"><span>' + entries.length + ' native entries</span><span>' + submittedCount + ' awaiting review</span></div>' +
     (isRegisteredHtml
-      ? '<p class="workspace-note">Existing HTML logbook state is available for read-only review, with item-level mentor decisions and feedback stored in the review audit trail.</p>' +
+      ? '<p class="workspace-note">Existing HTML logbook is read-only in this mentor view. Closed training history remains viewable; item-level reviews are available only while the enrollment remains open or completed.</p>' +
         '<button class="button button--secondary button--small" type="button" data-open-html-logbook-readonly="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open HTML logbook · read only</button>'
       : '') +
+    lifecycleMarkup +
   '</article>';
+}
+
+function bindMentorEnrollmentActions(user) {
+  document.querySelectorAll('[data-enrollment-action]').forEach((button) => button.addEventListener('click', async () => {
+    const enrollmentId = button.dataset.enrollmentId;
+    const action = button.dataset.enrollmentAction;
+    if (!enrollmentId || !['START', 'COMPLETE', 'CANCEL'].includes(action)) return;
+
+    let reason = null;
+    if (action === 'CANCEL') {
+      reason = window.prompt('Enter a cancellation reason (10–1000 characters). This action is recorded in the audit log.');
+      if (reason === null) return;
+      reason = reason.trim();
+      if (reason.length < 10 || reason.length > 1000) {
+        message('Enter a cancellation reason of 10–1000 characters.', 'error');
+        return;
+      }
+    } else {
+      const label = action === 'START' ? 'start this training' : 'mark this training as completed';
+      if (!window.confirm('Are you sure you want to ' + label + '? The change will be recorded in the enrollment audit log.')) return;
+    }
+
+    const card = button.closest('[data-enrollment-card]');
+    card?.querySelectorAll('button').forEach((item) => { item.disabled = true; });
+    setBusy(button, true, action === 'START' ? 'Starting…' : action === 'COMPLETE' ? 'Completing…' : 'Cancelling…');
+    const { error } = await supabase.rpc('transition_my_training_enrollment', {
+      p_enrollment_id: enrollmentId, p_action: action, p_reason: reason
+    });
+    if (error) {
+      message(errorText(error), 'error');
+      setBusy(button, false);
+      card?.querySelectorAll('button').forEach((item) => { item.disabled = false; });
+      return;
+    }
+
+    await renderMentorDashboard(user);
+    message(
+      action === 'START' ? 'Training started. The enrollment is now active.'
+        : action === 'COMPLETE' ? 'Training completed. The logbook is now read-only for the trainee.'
+          : 'Training cancelled. The reason and status change were recorded.',
+      'success'
+    );
+  }));
 }
 
 function bindMentorApplicationActions(user) {
@@ -701,6 +857,7 @@ function logbookCard(enrollment) {
   const htmlPath = templateVersion?.template_definition?.html_path;
   const isRegisteredHtml = templateVersion?.template_definition?.renderer === 'HTML' &&
     REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath);
+  const enrollmentClosed = !['CONFIRMED', 'ACTIVE'].includes(enrollment.status);
   const templateFields = getTemplateFields(templateVersion);
   const entries = [...(instance?.logbook_entries || [])].sort((a, b) =>
     String(b.entry_date || '').localeCompare(String(a.entry_date || '')) ||
@@ -718,9 +875,12 @@ function logbookCard(enrollment) {
       <p class="mentor-line">${esc(mentor.display_name || 'Assigned mentor')}</p>
       <div class="logbook-meta"><span>${entries.length} entries</span><span>${draftCount} drafts / revisions</span></div>
       ${instance && isRegisteredHtml
-        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open interactive logbook</button><p class="workspace-note">This uses the original HTML logbook for this training. Cloud changes save to this enrollment only; do not enter patient-identifying information.</p>'
+        ? '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '" data-enrollment-id="' + esc(enrollment.id) + '" data-html-path="' + esc(htmlPath || '') + '" data-read-only="' + (enrollmentClosed ? 'true' : 'false') + '">Open ' + (enrollmentClosed ? 'read-only' : 'interactive') + ' logbook</button><p class="workspace-note">' + (enrollmentClosed ? 'This training is closed. The logbook is read-only; do not enter patient-identifying information.' : 'This uses the original HTML logbook for this training. Cloud changes save to this enrollment only; do not enter patient-identifying information.') + '</p>'
         : ''}
       ${instance && !isRegisteredHtml ? `
+        ${enrollmentClosed
+          ? '<p class="workspace-note">This training is closed. The logbook is read-only; existing entries and mentor feedback remain available.</p>'
+          : `
         <form class="entry-form" data-instance-id="${esc(instance.id)}">
           <label for="entry-title-${esc(instance.id)}">Entry title</label>
           <input id="entry-title-${esc(instance.id)}" name="title" placeholder="Short title for this activity" maxlength="160" required>
@@ -732,11 +892,12 @@ function logbookCard(enrollment) {
           ${renderTemplateFields(templateFields, instance.id)}
           <button class="button button--secondary button--small" type="submit">Save draft</button>
         </form>
+        `}
         ${!isRegisteredHtml && entries.length ? `<div class="entry-list">${[...entries].sort((a,b)=>Number(b.status === 'RETURNED')-Number(a.status === 'RETURNED')).slice(0,6).map((entry) => {
           const review = latestEntryReview(entry);
           const displayStatus = entry.status === 'RETURNED' ? 'NEEDS REVISION' : (entry.status === 'SUBMITTED' && review ? review.decision : entry.status);
-          return `<div class="entry-row entry-row--detail"><span class="entry-dot entry-dot--${['VERIFIED','APPROVED'].includes(displayStatus) ? 'good' : 'neutral'}"></span><div class="entry-row-copy"><strong>${esc(entry.title)}</strong><small>${esc(entry.entry_type.replaceAll('_', ' '))} · ${esc(entry.entry_date)} · ${esc(displayStatus.replaceAll('_',' '))}</small>${renderPayloadSummary(entry.payload, templateFields)}${review?.feedback ? `<small class="entry-feedback">Mentor feedback: ${esc(review.feedback)}</small>` : ''}</div>${entry.status === 'DRAFT' ? `<button class="text-button" data-submit-entry="${esc(entry.id)}">Submit</button>` : ''}</div>${entry.status === 'RETURNED' ? `<form class="entry-edit-form" data-edit-entry="${esc(entry.id)}"><label for="entry-edit-title-${esc(entry.id)}">Revise returned entry</label><input id="entry-edit-title-${esc(entry.id)}" name="title" value="${esc(entry.title)}" maxlength="160" required><p class="workspace-note">Entry type: ${esc(entry.entry_type.replaceAll('_', ' '))}. The type stays fixed while you revise the entry.</p><div class="entry-form-row"><label class="template-field"><span>Activity date</span><input name="date" type="date" aria-label="Revised activity date" value="${esc(entry.entry_date)}" required></label></div>${renderTemplateFields(templateFields, instance.id + '-' + entry.id, entry.payload || {})}<button class="button button--secondary button--small" type="submit">Save &amp; resubmit</button></form>` : ''}`;
-        }).join('')}</div>` : '<p class="empty-inline">Your first entry will appear here.</p>'}
+          return `<div class="entry-row entry-row--detail"><span class="entry-dot entry-dot--${['VERIFIED','APPROVED'].includes(displayStatus) ? 'good' : 'neutral'}"></span><div class="entry-row-copy"><strong>${esc(entry.title)}</strong><small>${esc(entry.entry_type.replaceAll('_', ' '))} · ${esc(entry.entry_date)} · ${esc(displayStatus.replaceAll('_',' '))}</small>${renderPayloadSummary(entry.payload, templateFields)}${review?.feedback ? `<small class="entry-feedback">Mentor feedback: ${esc(review.feedback)}</small>` : ''}</div>${!enrollmentClosed && entry.status === 'DRAFT' ? `<button class="text-button" data-submit-entry="${esc(entry.id)}">Submit</button>` : ''}</div>${!enrollmentClosed && entry.status === 'RETURNED' ? `<form class="entry-edit-form" data-edit-entry="${esc(entry.id)}"><label for="entry-edit-title-${esc(entry.id)}">Revise returned entry</label><input id="entry-edit-title-${esc(entry.id)}" name="title" value="${esc(entry.title)}" maxlength="160" required><p class="workspace-note">Entry type: ${esc(entry.entry_type.replaceAll('_', ' '))}. The type stays fixed while you revise the entry.</p><div class="entry-form-row"><label class="template-field"><span>Activity date</span><input name="date" type="date" aria-label="Revised activity date" value="${esc(entry.entry_date)}" required></label></div>${renderTemplateFields(templateFields, instance.id + '-' + entry.id, entry.payload || {})}<button class="button button--secondary button--small" type="submit">Save &amp; resubmit</button></form>` : ''}`;
+        }).join('')}</div>` : (enrollmentClosed ? '<p class="empty-inline">No logbook entries were recorded before this training closed.</p>' : '<p class="empty-inline">Your first entry will appear here.</p>')}
       ` : '<p class="empty-inline">The logbook template is not yet attached to this training.</p>'}
     </article>`;
 }
@@ -827,7 +988,7 @@ async function loadOfferings(user, isVerified) {
 }
 
 function bindEntryForms(user) {
-  document.querySelectorAll('[data-open-html-logbook]').forEach((button) => button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbook, { htmlPath: button.dataset.htmlPath })));
+  document.querySelectorAll('[data-open-html-logbook]').forEach((button) => button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbook, { readOnly: button.dataset.readOnly === 'true', htmlPath: button.dataset.htmlPath, enrollmentId: button.dataset.enrollmentId })));
   document.querySelectorAll('.entry-form').forEach((form) => form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const data = new FormData(form);

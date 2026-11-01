@@ -947,7 +947,7 @@ function applyReadOnlyMode(){
   if(button.hasAttribute('data-view')||button.id==='themeToggle')return;
   button.disabled=true;
   button.setAttribute('aria-disabled','true');
-  button.title='Read-only mentor review';
+  button.title='Read-only logbook';
  });
  document.querySelectorAll('input,textarea,select').forEach(control=>{
   if(control.type==='search')return;
@@ -990,6 +990,12 @@ window.addEventListener('message',event=>{
   if(!note){note=document.createElement('div');note.id='cloud-sync-notice';note.className='privacy-note';note.setAttribute('role','status');const content=document.querySelector('main.content');if(kind==='error'&&content)content.before(note);else content?.prepend(note);}
   note.textContent=text;note.style.display='block';note.hidden=false;note.style.borderColor=kind==='error'?'var(--danger)':'';
  };
+ if(msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'){
+  readonlyMode=true;
+  render();
+  setCloudNotice('This training is closed. The logbook is read-only. Do not enter patient-identifying information.');
+  return;
+ }
  if(msg.type==='MENTORO_LOGBOOK_LOAD_STATE'){
   readonlyMode=readonlyMode||msg.readOnly===true;
   window.__mentoroCloudRevision=Number(msg.revision||0);

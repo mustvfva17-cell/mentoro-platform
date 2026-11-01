@@ -400,7 +400,7 @@ function renderDashboard(){
  const trackable=roadmapItems.filter(x=>x.tier!=='—');const logged=trackable.filter(x=>roadStatus(x.id)==='done').length;const pct=trackable.length?Math.round(logged/trackable.length*100):0;
  document.getElementById('statCoverage').textContent=pct+'%';document.getElementById('coverageBar').style.width=pct+'%';
  const coreTotal=trackable.filter(x=>x.tier==='Core').length;const coreLogged=trackable.filter(x=>x.tier==='Core'&&roadStatus(x.id)==='done').length;
- [['progressBig','progressWide','coverageCopy','progressLogged','progressCore','progressTotal'],['progressBig2','progressWide2','coverageCopy2','progressLogged2','progressCore2','progressTotal2']].forEach(ids=>{const [a,b,c,d,e,f]=ids;document.getElementById(a).textContent=pct+'%';document.getElementById(b).style.width=pct+'%';document.getElementById(c).textContent=`${logged} of ${trackable.length} tracked items logged.`;document.getElementById(d).textContent=logged;document.getElementById(e).textContent=coreLogged;document.getElementById(f).textContent=trackable.length;});
+ [['progressBig','progressWide','coverageCopy','progressLogged','progressCore','progressTotal'],['progressBig2','progressWide2','coverageCopy2','progressLogged2','progressCore2','progressTotal2']].forEach(ids=>{const [a,b,c,d,e,f]=ids;const nodes=[a,b,c,d,e,f].map(id=>document.getElementById(id));if(nodes[0])nodes[0].textContent=pct+'%';if(nodes[1])nodes[1].style.width=pct+'%';if(nodes[2])nodes[2].textContent=`${logged} of ${trackable.length} tracked items logged.`;if(nodes[3])nodes[3].textContent=logged;if(nodes[4])nodes[4].textContent=coreLogged;if(nodes[5])nodes[5].textContent=trackable.length;});
  const recent=[...data.sessions.map(x=>({date:x.date,title:'Session',sub:x.focus||'Session logged'})),...data.cases.map(x=>({date:x.date,title:'Clinical case',sub:x.presentation||'Case logged'})),...data.procedures.map(x=>({date:x.date,title:x.topic?'Discussion':'Procedure',sub:x.topic||x.procedure||'Entry logged'})),...data.emergency.map(x=>({date:x.date,title:x.template,sub:x.complaint||'Emergency entry'}))].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5);document.getElementById('recentList').innerHTML=recent.length?recent.map((x,i)=>`<div class="today-row"><div class="num">${i+1}</div><div><b>${esc(x.title)}</b><span>${esc(x.sub)} · ${esc(x.date||'—')}</span></div></div>`).join(''):`<div class="empty">Nothing logged yet.</div>`;
  const core=roadmapItems.filter(r=>r.tier==='Core'&&roadStatus(r.id)!=='done').slice(0,5);document.getElementById('coreList').innerHTML=core.map(r=>`<div class="list-row next-row"><div><b>${esc(r.item)}</b><div class="next-meta"><span class="group-label">${esc(r.groupLabel)}</span><span class="tag core">Core</span></div></div><button class="mini-btn" onclick="setRoadGroup('${esc(r.group)}');go('roadmap')">Open</button></div>`).join('')||`<div class="empty" style="padding:12px 0">All tracked Core items in this set are logged.</div>`;
 }
@@ -636,7 +636,7 @@ function applyReadOnlyMode(){
     button.hasAttribute('data-lb-type')||inline.includes('window.print()')||/export/i.test(inline)||
     inline.includes('go(')||inline.includes('moreGo(')||inline.includes('toggleMoreSheet(')||inline.includes('closeQuickAdd()');
   if(safeNavigation)return;
-  button.disabled=true;button.setAttribute('aria-disabled','true');button.title='Read-only mentor review';
+  button.disabled=true;button.setAttribute('aria-disabled','true');button.title='Read-only logbook';
  });
  document.querySelectorAll('input,textarea,select').forEach(control=>{
   if(control.type==='search'||control.id==='roadGroupSelect')return;
@@ -671,6 +671,12 @@ window.addEventListener('message',event=>{
    mentorHtmlReviewMessages[responseKey]=String(msg.error||'Could not save this mentor review.');
   }
   renderMentorReviewPanel();
+  return;
+ }
+ if(msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'){
+  readonlyMode=true;
+  render();
+  setCloudNotice('This training is closed. The logbook is read-only. Do not enter patient-identifying information.');
   return;
  }
  if(msg.type==='MENTORO_LOGBOOK_LOAD_STATE'){

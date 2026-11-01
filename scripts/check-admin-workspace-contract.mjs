@@ -2,6 +2,11 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 const admin = await read('../src/admin-workspace.js');
+const mainWorkspace = await read('../src/main.js');
+const enrollmentLifecycleMonitor = await read('../src/enrollment-lifecycle-monitor.js');
+const enrollmentLifecycleMigration = await read('../supabase/migrations/20261029103946_add_enrollment_lifecycle_controls.sql');
+const enrollmentLifecycleTest = await read('../supabase/tests/enrollment_lifecycle_integration.sql');
+const enrollmentCancellationSyncMigration = await read('../supabase/migrations/20261029165759_sync_application_status_on_enrollment_cancellation.sql');
 const wrappers = await read('../supabase/migrations/20261028062421_current_user_workflow_wrappers.sql');
 const adminSetup = await read('../supabase/migrations/20261028062818_mentor_reviews_and_admin_training_setup.sql');
 const mentorRegistrationGuard = await read('../supabase/migrations/20261028201121_guard_admin_mentor_registration_target.sql');
@@ -303,6 +308,90 @@ check(
   legacyHtml.includes('Not verified against current content.') &&
   generalSurgeryHtml.includes('Not verified against current content.'),
   'HTML mentor reviews are tied to exact item content and type and stale decisions are no longer shown as current'
+);
+
+check(
+  enrollmentLifecycleMigration.includes('CREATE OR REPLACE FUNCTION public.transition_my_training_enrollment') &&
+  enrollmentLifecycleMigration.includes('SECURITY INVOKER') &&
+  enrollmentLifecycleMigration.includes('FOR UPDATE') &&
+  enrollmentLifecycleMigration.includes('TRAINING_ENROLLMENT_STARTED') &&
+  enrollmentLifecycleMigration.includes('TRAINING_ENROLLMENT_COMPLETED') &&
+  enrollmentLifecycleMigration.includes('TRAINING_ENROLLMENT_CANCELLED') &&
+  enrollmentLifecycleMigration.includes('guard_enrollment_logbook_writes') &&
+  enrollmentLifecycleMigration.includes("e.status IN ('CONFIRMED', 'ACTIVE')") &&
+  enrollmentLifecycleTest.startsWith('-- Rollback-only integration test') &&
+  enrollmentLifecycleTest.trimEnd().endsWith('ROLLBACK;') &&
+  enrollmentLifecycleTest.includes('Trainee lifecycle change was not denied') &&
+  enrollmentLifecycleTest.includes('Unassigned Mentor was able to change another Mentor enrollment') &&
+  enrollmentLifecycleTest.includes('Cancelled enrollment still accepted draft writes') &&
+  admin.includes("data-admin-enrollment-action") &&
+  admin.includes("supabase.rpc('transition_my_training_enrollment'") &&
+  mainWorkspace.includes('data-enrollment-action') &&
+  mainWorkspace.includes('bindMentorEnrollmentActions(user)'),
+  'enrollment lifecycle has checked RPC transitions, database-enforced read-only closure, UI actions for Mentor/Admin and rollback-only coverage'
+);
+
+check(
+  enrollmentCancellationSyncMigration.includes("UPDATE public.training_applications") &&
+  enrollmentCancellationSyncMigration.includes("SET status = 'CANCELLED'") &&
+  enrollmentCancellationSyncMigration.includes("'source_application_id', v_enrollment.source_application_id") &&
+  enrollmentLifecycleTest.includes('Admin cancellation did not update its trainee-facing application status') &&
+  enrollmentLifecycleTest.includes('Mentor cancellation did not update its trainee-facing application status') &&
+  enrollmentLifecycleTest.includes('Completion should preserve the original confirmed application history'),
+  'cancelled enrollments stay aligned with trainee application history while completed bookings preserve approval history'
+);
+
+const traineeLogbookCardStart = mainWorkspace.indexOf('function logbookCard(enrollment)');
+const traineeLogbookCardEnd = mainWorkspace.indexOf(String.fromCharCode(10) + 'function ', traineeLogbookCardStart + 10);
+const traineeLogbookCard = traineeLogbookCardStart >= 0 && traineeLogbookCardEnd > traineeLogbookCardStart
+  ? mainWorkspace.slice(traineeLogbookCardStart, traineeLogbookCardEnd)
+  : '';
+check(
+  traineeLogbookCard.includes("const enrollmentClosed = !['CONFIRMED', 'ACTIVE'].includes(enrollment.status);") &&
+  traineeLogbookCard.includes("data-read-only=\"' + (enrollmentClosed ? 'true' : 'false') + '\"") &&
+  mainWorkspace.includes("readOnly: button.dataset.readOnly === 'true'") &&
+  traineeLogbookCard.includes("!enrollmentClosed && entry.status === 'DRAFT'") &&
+  traineeLogbookCard.includes("!enrollmentClosed && entry.status === 'RETURNED'") &&
+  traineeLogbookCard.includes('This training is closed. The logbook is read-only'),
+  'closed trainee logbooks open read-only and hide structured draft/revision mutations while preserving history'
+);
+
+const mentorEnrollmentCardStart = mainWorkspace.indexOf('function mentorEnrollmentCard(enrollment)');
+const mentorEnrollmentCardEnd = mainWorkspace.indexOf(String.fromCharCode(10) + 'function bindMentorEnrollmentActions', mentorEnrollmentCardStart + 10);
+const mentorEnrollmentCard = mentorEnrollmentCardStart >= 0 && mentorEnrollmentCardEnd > mentorEnrollmentCardStart
+  ? mainWorkspace.slice(mentorEnrollmentCardStart, mentorEnrollmentCardEnd)
+  : '';
+check(
+  mentorEnrollmentCard.includes("data-open-html-logbook-readonly=") &&
+  mentorEnrollmentCard.includes("Closed training history remains viewable") &&
+  !mentorEnrollmentCard.includes("enrollment.status !== 'CANCELLED'"),
+  'assigned Mentors retain read-only HTML logbook history access for cancelled enrollments'
+);
+
+check(
+  mainWorkspace.includes("import { startEnrollmentLifecycleMonitor } from './enrollment-lifecycle-monitor.js';") &&
+  mainWorkspace.includes('startEnrollmentLifecycleMonitor({') &&
+  mainWorkspace.includes('onClosed: () => setHTMLLogbookReadOnly(instanceId)') &&
+  mainWorkspace.includes('async function reloadExistingHTMLLogbookReadOnly(instanceId)') &&
+  mainWorkspace.includes('enrollmentId: button.dataset.enrollmentId') &&
+  traineeLogbookCard.includes('data-enrollment-id=') &&
+  enrollmentLifecycleMonitor.includes("const OPEN_ENROLLMENT_STATUSES = new Set(['CONFIRMED', 'ACTIVE'])") &&
+  enrollmentLifecycleMonitor.includes(".from('training_enrollments')") &&
+  enrollmentLifecycleMonitor.includes(".select('id,status')") &&
+  enrollmentLifecycleMonitor.includes(".eq('id', enrollmentId)") &&
+  enrollmentLifecycleMonitor.includes('if (!data || !OPEN_ENROLLMENT_STATUSES.has(data.status))') &&
+  enrollmentLifecycleMonitor.includes("schedule(() => { void refresh(); }, intervalMs)") &&
+  enrollmentLifecycleMonitor.includes("if (error) return { status: 'transient-error', error }") &&
+  mainWorkspace.includes("postHTMLLogbookMessage(instanceId, { type: 'MENTORO_LOGBOOK_SET_READ_ONLY' })") &&
+  mainWorkspace.includes('sync.readOnly = true') &&
+  mainWorkspace.includes('stopHTMLLogbookLifecyclePolling(sync)') &&
+  mainWorkspace.includes('if (sync.timer) clearTimeout(sync.timer)') &&
+  mainWorkspace.includes('if (!sync || sync.readOnly || !sync.cloudStateLoaded || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;') &&
+  mainWorkspace.includes('if (!sync.readOnly && sync.state !== stateToSave)') &&
+  mainWorkspace.includes("error: 'This logbook is read-only. Changes are not saved.'") &&
+  legacyHtml.includes("msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'") &&
+  generalSurgeryHtml.includes("msg.type==='MENTORO_LOGBOOK_SET_READ_ONLY'"),
+  'open trainee HTML logbooks monitor enrollment status, switch to read-only after remote closure, reload saved state, and suppress pending cloud saves'
 );
 
 console.log('Administrator workspace safety contracts passed.');
