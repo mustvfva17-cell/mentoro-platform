@@ -19,12 +19,17 @@ DO $seed$
 DECLARE
   v_template_id uuid;
 BEGIN
-  SELECT id INTO v_template_id
-  FROM public.logbook_templates
-  WHERE slug = 'cardiology-html';
+  SELECT t.id INTO v_template_id
+  FROM public.logbook_templates t
+  JOIN public.specialties sp ON sp.id = t.specialty_id
+  WHERE t.slug = 'cardiology-html'
+    AND sp.slug = 'cardiology';
 
   IF v_template_id IS NULL THEN
-    RAISE EXCEPTION 'Could not resolve the Cardiology HTML template after seed';
+    IF EXISTS (SELECT 1 FROM public.logbook_templates WHERE slug = 'cardiology-html') THEN
+      RAISE EXCEPTION 'The cardiology-html slug is already bound to a different specialty';
+    END IF;
+    RAISE EXCEPTION 'Could not resolve the Cardiology HTML template after seed; verify the Cardiology specialty row exists';
   END IF;
 
   IF NOT EXISTS (
