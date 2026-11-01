@@ -27,6 +27,14 @@ The proposed migration expands the fixed HTML asset allowlist for:
 
 It retains the latest existing function bodies, enrollment locking, revision conflict handling, per-item content digest integrity, authenticated actor checks, and existing mentor authorization. It does not create or publish a template.
 
+## Source features not yet ported
+
+The current runtime includes overview, roadmap filtering/status, sessions, cases,
+procedures, teaching discussions, emergency prompts, reflection, JSON backup, and
+mentor review. It is not a pixel-identical port of the standalone V1 UI; detailed
+source interactions and visual polish still need a side-by-side pass before the
+module is considered feature-complete.
+
 ## Clinical review gate
 
 The source README explicitly says Tier / Depth / Frequency need review by a cardiologist and calls for patient consent and an appropriate chaperone for precordial examination and auscultation. The imported module is therefore registered as `draft`; it is not yet assignable to students.
