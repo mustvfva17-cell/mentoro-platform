@@ -3,12 +3,17 @@ import { renderAdminWorkspace } from './admin-workspace.js';
 import { LOGBOOK_ENTRY_TYPES, collectTemplatePayload, getTemplateFields, renderPayloadSummary, renderTemplateFields } from './logbook-schema.js';
 import { createClient } from '@supabase/supabase-js';
 import { startEnrollmentLifecycleMonitor } from './enrollment-lifecycle-monitor.js';
+import { listSpecialtyModules } from './logbooks/module-registry.js';
 
 const app = document.querySelector('#app');
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-const REGISTERED_HTML_LOGBOOK_PATHS = new Set(['/logbooks/medical-oncology/index.html', '/logbooks/general-surgery/index.html']);
+const REGISTERED_HTML_LOGBOOK_PATHS = new Set(
+  listSpecialtyModules()
+    .filter((module) => module.renderer === 'HTML' && typeof module.htmlPath === 'string')
+    .map((module) => module.htmlPath)
+);
 
 const htmlLogbookWindows = new Map();
 const htmlLogbookSync = new Map();
