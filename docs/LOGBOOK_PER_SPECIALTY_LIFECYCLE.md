@@ -55,6 +55,9 @@ Exact table/column names and the final mentor visibility model must be reviewed 
 - Migration 20261031172432_add_direct_admin_logbook_assignments.sql permits either an enrollment owner or a direct trainee owner, but has no uniqueness on trainee plus specialty. Its direct assignment RPC inserts a new row each time.
 - Migration 20261031165518_add_profile_edit_and_admin_logbook_assignment.sql creates a training-backed enrollment and a new logbook instance for a direct admin slot assignment.
 - The current training confirmation path reports that each confirmed booking gets a separate instance.
+- Mentor inbox/review functions join logbook instances directly to a single enrollment through enrollment_id. The enrollment-specific write guard and entry RLS policies also assume one logbook instance belongs to one enrollment. These controls must be redesigned together; changing only the instance uniqueness constraint would break mentor review and write access.
+- The trainee dashboard currently renders logbooks from both enrollment records and directly assigned logbook instances, so it can display multiple cards for the same specialty. The workspace must be changed to display the canonical trainee-specialty logbook once.
+- HTML-state load/save and HTML mentor-review authorization also resolve access through the current instance ownership model and must be updated with the new association model.
 - The HTML logbook state functions and admin workspace currently allow only /logbooks/medical-oncology/index.html and /logbooks/general-surgery/index.html.
 - The six uploaded specialty projects are independent Vite apps. Their local-storage key names overlap, and their source-level script loading needs build adaptation. They are not yet six centrally integrated modules.
 
