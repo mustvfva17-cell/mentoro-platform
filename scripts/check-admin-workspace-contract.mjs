@@ -257,9 +257,11 @@ check(
 
 check(
   admin.includes('EXISTING HTML LOGBOOKS') &&
-  admin.includes('/logbooks/medical-oncology/index.html?mode=preview') &&
+  admin.includes("import { listSpecialtyModules } from './logbooks/module-registry.js';") &&
+  admin.includes('REGISTERED_HTML_LOGBOOK_MODULES.map') &&
+  admin.includes("escape(module.htmlPath + '?mode=preview')") &&
   admin.includes('<details class="admin-advanced-template-details">'),
-  'existing HTML logbooks are surfaced first and the manual JSON authoring tools are optional/collapsed'
+  'all registered HTML logbooks are surfaced from the central registry, and manual JSON authoring tools are optional/collapsed'
 );
 
 check(
@@ -282,7 +284,7 @@ check(
   !admin.includes("Existing Medical Oncology HTML logbook") &&
   admin.includes("REGISTERED_HTML_LOGBOOK_PATHS.has(templateDefinition.html_path)") &&
   admin.includes("Preview existing logbook") &&
-  admin.includes("href=\"/logbooks/general-surgery/index.html?mode=preview\"") &&
+  admin.includes("escape(module.htmlPath + '?mode=preview')") &&
   admin.includes("const canPublishReviewedRuntime = isRegisteredHtml || version.fields.length > 0") &&
   admin.includes("data-publish-template") &&
   admin.includes("Pending clinical review. Preview the existing HTML asset, confirm the clinical source/reviewer notes, and record the decision before publishing."),

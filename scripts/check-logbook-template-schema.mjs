@@ -108,7 +108,11 @@ assert.ok(main.includes('entry_type: entryType'));
 assert.ok(main.includes('update({ title, entry_date: entryDate, payload: templatePayload.payload })'));
 assert.ok(main.includes("renderPayloadSummary(entry.payload, templateFields)"));
 assert.ok(main.includes("data-open-html-logbook"));
-assert.ok(main.includes("'/logbooks/general-surgery/index.html'"));
+const moduleRegistry = await read('src/logbooks/module-registry.js');
+const generalSurgeryManifest = await read('src/specialties/general-surgery/manifest.js');
+assert.ok(main.includes("listSpecialtyModules"), 'HTML runtime allowlist must be sourced from the central module registry');
+assert.ok(moduleRegistry.includes("generalSurgery"), 'Central registry must register General Surgery');
+assert.ok(generalSurgeryManifest.includes("'/logbooks/general-surgery/index.html'") || generalSurgeryManifest.includes('"/logbooks/general-surgery/index.html"'), 'General Surgery route must be declared in its module manifest');
 assert.ok(main.includes("REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)"));
 assert.ok(main.includes("data-html-path"));
 const generalSurgeryHtml = await read('public/logbooks/general-surgery/index.html');
@@ -265,7 +269,7 @@ assert.ok(generalSurgeryMigration.includes('app_private.guard_logbook_template_v
 assert.ok(main.includes("REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)"));
 assert.ok(main.includes("htmlPath: button.dataset.htmlPath"));
 assert.ok(main.includes("data-html-path"));
-assert.ok(admin.includes("href=\"/logbooks/general-surgery/index.html?mode=preview\""));
+assert.ok(admin.includes("escape(module.htmlPath + '?mode=preview')"));
 console.log('General Surgery HTML asset registration, per-enrollment cloud bridge, admin preview, and read-only mentor integration checks passed.');
 
 
