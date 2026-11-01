@@ -107,6 +107,7 @@ AS $function$
 DECLARE
   v_actor_id uuid := auth.uid();
   v_template_id uuid;
+  v_target_template_id uuid;
   v_status text;
   v_schema jsonb;
   v_template_definition jsonb;
@@ -124,6 +125,25 @@ BEGIN
     RAISE EXCEPTION 'A review decision with at least 20 characters is required' USING ERRCODE = '22023';
   END IF;
 
+  -- Lock the parent template before locking any version row. This serializes publication
+  -- of two different versions belonging to the same template and avoids cross-version deadlocks.
+  SELECT v.template_id INTO v_target_template_id
+  FROM public.logbook_template_versions v
+  WHERE v.id = p_version_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Template version not found' USING ERRCODE = 'P0002';
+  END IF;
+
+  PERFORM 1
+  FROM public.logbook_templates t
+  WHERE t.id = v_target_template_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Parent logbook template not found' USING ERRCODE = 'P0002';
+  END IF;
+
   SELECT v.template_id, v.status, v.schema_definition, v.template_definition, v.source_notes
     INTO v_template_id, v_status, v_schema, v_template_definition, v_source_notes
   FROM public.logbook_template_versions v
@@ -132,6 +152,11 @@ BEGIN
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Template version not found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_template_id IS DISTINCT FROM v_target_template_id THEN
+    RAISE EXCEPTION 'Template version parent changed during publication; retry the review'
+      USING ERRCODE = '22023';
   END IF;
 
   IF v_status <> 'DRAFT' THEN
@@ -150,7 +175,8 @@ BEGIN
   END IF;
 
   IF v_renderer = 'HTML' THEN
-    IF v_html_path IS DISTINCT FROM '/logbooks/medical-oncology/index.html' AND v_html_path IS DISTINCT FROM '/logbooks/general-surgery/index.html' AND v_html_path IS DISTINCT FROM '/logbooks/cardiology/index.html' THEN
+    IF v_html_path IS DISTINCT FROM '/logbooks/medical-oncology/index.html' AND v_html_path IS DISTINCT FROM '/logbooks/general-surgery/index.html',
+       '/logbooks/cardiology/index.html' THEN
       RAISE EXCEPTION 'This HTML logbook path is not registered as an available MENTORO asset' USING ERRCODE = '22023';
     END IF;
   ELSE
@@ -161,6 +187,14 @@ BEGIN
       RAISE EXCEPTION 'A structured schema with at least one field is required before publication' USING ERRCODE = '22023';
     END IF;
   END IF;
+
+  -- Keep historical versions published for existing references, but stop assigning them to
+  -- new offerings. Parent-row locking above serializes this transition across versions.
+  UPDATE public.logbook_template_versions
+  SET is_assignable = false
+  WHERE template_id = v_template_id
+    AND id <> p_version_id
+    AND is_assignable = true;
 
   -- The BEFORE trigger validates structured fields or the fixed HTML asset allow-list.
   UPDATE public.logbook_template_versions
