@@ -9,7 +9,7 @@ assert.match(html, /function exportLogbook\(\)/,
   'General Surgery must implement its JSON backup action.');
 assert.match(html, /data:currentCloudState\(\)/,
   'Backups must reflect the current in-memory logbook state.');
-assert.match(html, /if\(readonlyMode\)\{[\s\S]*?Backup export is unavailable in read-only review views\\./,
+assert.match(html, /if\(readonlyMode\)\{[\s\S]*?Backup export is unavailable in read-only review views\./,
   'Backup export must be blocked in read-only review views.');
 assert.doesNotMatch(html, /logbookInstanceId/,
   'Portable backups must not expose internal logbook instance IDs.');
