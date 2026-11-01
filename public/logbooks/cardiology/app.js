@@ -58,10 +58,14 @@ function normalizeState(value) {
   return { state: normalized, changed };
 }
 let data;
+let localStateNeedsSync = false;
 try {
-  data = normalizeState(JSON.parse(store.get("state", "null"))).state;
+  const localState = normalizeState(JSON.parse(store.get("state", "null")));
+  data = localState.state;
+  localStateNeedsSync = localState.changed;
 } catch (_) {
   data = emptyState();
+  localStateNeedsSync = true;
 }
 
 function esc(value) {
@@ -586,8 +590,13 @@ function receiveParentMessage(event) {
       const normalized = normalizeState(message.state);
       data = normalized.state;
       changed = normalized.changed;
-    } else {
+    } else if (readOnlyMode) {
+      // Never expose browser-local trainee data in a mentor review view.
       data = emptyState();
+      changed = false;
+    } else {
+      // Preserve an instance-scoped local cache if an earlier first save was
+      // interrupted. Cloud state remains authoritative whenever it exists.
       changed = true;
     }
     cloudReady = true;
@@ -596,7 +605,7 @@ function receiveParentMessage(event) {
     setCloudLoading(false);
     render();
     setStatus(readOnlyMode ? "Read-only mentor review loaded" : "Secure cloud logbook connected");
-    if (changed && !readOnlyMode) postCloudState(true);
+    if (!readOnlyMode && (changed || localStateNeedsSync || !message.hasCloudState)) postCloudState(true);
   } else if (message.type === "MENTORO_LOGBOOK_LOAD_ERROR") {
     cloudReady = false;
     setCloudLoading(false);
