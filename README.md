@@ -17,32 +17,33 @@ The frontend work is still under review. Mentor/admin dashboards, complete templ
 
 ## Branch and migration safety
 
-The work is intentionally split across stacked draft pull requests:
+The work is tracked across these pull requests:
 
-- **PR #1 — trainee foundation:** trainee-facing UI and Auth workflow.
-- **PR #2 — migration recovery/security:** the restored core schema, migration history, and subsequent database hardening. PR #2 targets the PR #1 branch.
+- **PR #1 — trainee foundation:** merged into `main` on 2026-10-28. This does not constitute production-readiness approval.
+- **PR #2 — migration recovery/security:** open as a draft and targets `main`; it restores historical migration files and adds database hardening. The four later SQL migration sources have now been copied byte-for-byte from the stacked `feat/mentor-workspace-mvp` branch into the recovery branch. This makes the source files traceable, but the database ledger stores only version/name metadata and cannot independently prove the exact SQL bytes originally executed; clean-room replay is still required.
 
-**Do not merge or deploy PR #1 on its own.** Its frontend depends on database objects supplied by the stacked migration branch. Neither pull request is approved for production. Production has not been changed by this work.
+**Do not merge PR #2 or deploy to production until it has been reviewed and the outstanding migration/security and end-to-end checks are complete.** The test-only PostgreSQL 17 `MAINTAIN` privilege fix is recorded in PR #2. No production database changes or production deployment were initiated by the work described in the recovery PR.
 
-The test Supabase project is `mentoro-platform-test`. Do not replay the recovered migrations on that project because its migration ledger already records them as applied. A clean-room migration replay still requires an isolated disposable database. Do not run development migrations against production.
+The test Supabase project is `mentoro-platform-test`. Do not replay migrations on that project because its ledger already records them as applied. All 20 recorded versions now have matching SQL source files on the PR #2 recovery branch, but the database ledger cannot confirm the original SQL bodies. Validate history with a clean-room replay on an isolated disposable database. Do not run development migrations against production.
 
 ## Requirements and local setup
 
 Requirements: a supported Node.js LTS release and npm.
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
-Build and run the current source-contract check:
+Run all repository checks and build the application:
 
 ```sh
+npm run check:migrations
 npm run check:contracts
 npm run build
 ```
 
-The repository currently has no committed npm lockfile, so `npm install` is not yet fully reproducible. Before relying on repeatable dependency resolution, generate and review `package-lock.json` using the intended Node/npm toolchain, commit it, and switch CI to `npm ci`. Do not hand-author a lockfile.
+The repository now contains an npm-generated `package-lock.json` (`lockfileVersion: 3`, 74 locked packages). GitHub Actions uses `npm ci` against the committed lockfile; validation run [40692616988](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/40692616988) passed dependency installation, migration-history checks, frontend/schema contracts, and the Vite production build. Do not edit the lockfile by hand; regenerate it with npm when dependency definitions intentionally change.
 
 ## Preview environment
 
@@ -53,7 +54,7 @@ Use only the test Supabase project for local development and Preview deployments
 
 The publishable key is intended for browser use; database access must still be constrained by RLS and grants. Never expose a Supabase secret/service-role key through a `VITE_` variable or commit credentials to Git.
 
-The independent Preview project and environment configuration are not yet verified. A Vercel team owner must authorize or create the Preview project and connect this repository before browser-based end-to-end testing can be completed.
+The independent Preview project and environment configuration are not yet verified. Creating a separate Vercel project returned 403 in the available team context. A Vercel team owner must authorize or create the Preview project and connect this repository before browser-based end-to-end testing can be completed.
 
 ## Expected trainee flow
 
@@ -76,7 +77,6 @@ Outstanding before considering a merge:
 
 - Clean-room migration replay on an isolated database.
 - Resolve/review broad default privileges owned by `supabase_admin` for future public objects.
-- Generate and commit a reviewed npm lockfile, then use `npm ci` in CI.
 - Configure an independent Vercel Preview and test the full trainee-to-mentor/admin journey.
 - Add browser end-to-end tests and complete mentor/admin workspaces.
 - Review both stacked pull requests together; do not merge PR #1 alone.
