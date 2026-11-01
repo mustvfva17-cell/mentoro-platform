@@ -7,6 +7,7 @@ on:
       - chore/recover-migration-history
       - feat/mentor-workspace-mvp
       - feat/admin-workspace-mvp
+      - feat/enrollment-lifecycle-controls
   push:
     branches:
       - main
