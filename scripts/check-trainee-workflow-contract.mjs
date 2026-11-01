@@ -11,6 +11,7 @@ function check(name, condition) {
   checks.push(name);
 }
 
+// Keep the submission-trigger migration aligned with the test ledger; duplicate unrecorded copies are prohibited.
 const [
   frontend,
   coreSchema,
@@ -23,7 +24,11 @@ const [
   scopedSubmission,
   submissionTimestampRevocation,
   traineeRoleGuard,
-  browserMaintainPrivilege
+  browserMaintainPrivilege,
+  mentorInboxMigration,
+  secureMentorInboxMigration,
+  logbookReviewMigration,
+  returnedSubmissionTriggerFix
 ] = await Promise.all([
   read('src/main.js'),
   read('supabase/migrations/20261028061628_core_independent_enrollment_schema_v1.sql'),
@@ -36,7 +41,11 @@ const [
   read('supabase/migrations/20261028094412_fix_scoped_logbook_submission_rpc.sql'),
   read('supabase/migrations/20261028101524_revoke_submission_timestamp_client_write.sql'),
   read('supabase/migrations/20261028103649_prevent_nontrainee_self_provisioning.sql'),
-  read('supabase/migrations/20261028113918_revoke_browser_maintain_privilege.sql')
+  read('supabase/migrations/20261028113918_revoke_browser_maintain_privilege.sql'),
+  read('supabase/migrations/20261028115852_mentor_scoped_application_inbox.sql'),
+  read('supabase/migrations/20261028115928_secure_mentor_inbox_wrapper.sql'),
+  read('supabase/migrations/20261028120703_logbook_review_return_workflow.sql'),
+  read('supabase/migrations/20261028121405_fix_returned_submission_trigger_conditions.sql')
 ]);
 
 // Authentication and identity provisioning.
@@ -45,7 +54,68 @@ const [
 check('email/password sign-up is implemented', /supabase\.auth\.signUp\s*\(/.test(frontend));
 check('email/password sign-in is implemented', /supabase\.auth\.signInWithPassword\s*\(/.test(frontend));
 check('frontend uses current-user provisioning RPC', /supabase\.rpc\(['"]provision_current_trainee['"]/.test(frontend));
-check('database provisioning requires a confirmed auth email', contains(currentUserWrappers, 'u.email_confirmed_at IS NOT NULL'));
+
+check('active mentor role routes to the mentor workspace and uses the current-user decision RPC',
+  contains(frontend, "roles.has('MENTOR')") &&
+  contains(frontend, "if (role === 'MENTOR') return renderMentorDashboard(user);") &&
+  /supabase\.rpc\(['"]mentor_review_my_application['"]/.test(frontend) &&
+  contains(currentUserWrappers, 'CREATE OR REPLACE FUNCTION public.mentor_review_my_application(') &&
+  contains(currentUserWrappers, 'app_private.mentor_review_current_application(p_application_id, p_decision, p_reason)'));
+
+check('mentor application inbox is limited to the authenticated active mentor and assigned offerings',
+  contains(mentorInboxMigration, "v_actor_id uuid := auth.uid()") &&
+  contains(mentorInboxMigration, "IF v_actor_id IS NULL OR NOT app_private.is_mentor()") &&
+  contains(mentorInboxMigration, "WHERE o.mentor_profile_id = v_actor_id") &&
+  contains(mentorInboxMigration, "p_limit < 1 OR p_limit > 200") &&
+  !contains(mentorInboxMigration, "p.email"));
+check('public mentor inbox endpoint uses SECURITY INVOKER and delegates to the private implementation',
+  contains(secureMentorInboxMigration, "LANGUAGE sql STABLE SECURITY INVOKER") &&
+  contains(secureMentorInboxMigration, "FROM app_private.mentor_list_my_applications(p_limit)") &&
+  contains(secureMentorInboxMigration, "REVOKE ALL ON FUNCTION public.mentor_list_my_applications(integer) FROM PUBLIC, anon, service_role"));
+check('mentor application cards use the scoped inbox RPC and escape trainee display fields',
+  /supabase\.rpc\(['"]mentor_list_my_applications['"]/.test(frontend) &&
+  contains(frontend, "esc(item.trainee_name || 'Trainee')") &&
+  contains(frontend, "esc(education)") &&
+  contains(frontend, "data-mentor-decision=\"APPROVE\""));
+
+check('mentor logbook inbox is scoped to assigned mentor submissions and excludes already-reviewed submissions',
+  contains(logbookReviewMigration, 'IF v_actor_id IS NULL OR NOT app_private.is_mentor()') &&
+  contains(logbookReviewMigration, 'WHERE e.mentor_profile_id = v_actor_id') &&
+  contains(logbookReviewMigration, "AND le.status = 'SUBMITTED'") &&
+  contains(logbookReviewMigration, 'le.submitted_at > recent.reviewed_at') &&
+  !contains(logbookReviewMigration, 'p.email'));
+check('mentor logbook review uses a bounded private definer and an invoker-only public endpoint',
+  contains(logbookReviewMigration, 'CREATE OR REPLACE FUNCTION app_private.mentor_review_current_entry') &&
+  contains(logbookReviewMigration, 'WHERE le.id = p_entry_id') &&
+  contains(logbookReviewMigration, 'AND e.mentor_profile_id = v_actor_id') &&
+  contains(logbookReviewMigration, "p_decision NOT IN ('VERIFIED', 'FEEDBACK', 'NEEDS_REVISION')") &&
+  contains(logbookReviewMigration, 'CREATE OR REPLACE FUNCTION public.mentor_review_my_entry') &&
+  contains(logbookReviewMigration, 'SECURITY INVOKER'));
+check('requesting revision returns the entry and requires a feedback note',
+  contains(logbookReviewMigration, "p_decision IN ('FEEDBACK', 'NEEDS_REVISION') AND nullif(btrim(p_feedback), '') IS NULL") &&
+  contains(logbookReviewMigration, "UPDATE public.logbook_entries SET status = 'RETURNED'"));
+check('browser roles cannot directly change logbook submission state or insert review decisions',
+  contains(logbookReviewMigration, 'REVOKE UPDATE (status) ON TABLE public.logbook_entries FROM authenticated') &&
+  contains(logbookReviewMigration, 'REVOKE INSERT (entry_id, reviewer_profile_id, decision, feedback)') &&
+  contains(logbookReviewMigration, 'REVOKE ALL ON FUNCTION public.mentor_review_my_entry(uuid, text, text) FROM PUBLIC, anon, service_role'));
+check('resubmission from RETURNED uses a private wrapper and refreshes database timestamp/audit',
+  contains(logbookReviewMigration, 'app_private.submit_current_logbook_entry(p_actor_id, p_entry_id)') &&
+  contains(logbookReviewMigration, "OLD.status IN ('DRAFT', 'RETURNED') AND NEW.status = 'SUBMITTED'") &&
+  contains(logbookReviewMigration, "THEN 'LOGBOOK_ENTRY_RESUBMITTED'") &&
+  contains(logbookReviewMigration, "status IN ('DRAFT', 'RETURNED')"));
+
+check('submission timestamp and audit triggers explicitly fire on both DRAFT and RETURNED resubmissions',
+  contains(returnedSubmissionTriggerFix, "WHEN (OLD.status IN ('DRAFT', 'RETURNED') AND NEW.status = 'SUBMITTED')") &&
+  contains(returnedSubmissionTriggerFix, 'DROP TRIGGER IF EXISTS logbook_entry_submission_timestamp') &&
+  contains(returnedSubmissionTriggerFix, 'DROP TRIGGER IF EXISTS logbook_entry_submission_audit') &&
+  contains(returnedSubmissionTriggerFix, 'EXECUTE FUNCTION app_private.enforce_entry_submission_timestamp()') &&
+  contains(returnedSubmissionTriggerFix, 'EXECUTE FUNCTION app_private.audit_entry_submission()'));
+
+
+check('administrator roles are recognized without opening the trainee workspace',
+  contains(frontend, "roles.has('SUPER_ADMIN')") &&
+  contains(frontend, "roles.has('ADMIN')") &&
+  contains(frontend, "return renderAdminWorkspace(user)"));check('database provisioning requires a confirmed auth email', contains(currentUserWrappers, 'u.email_confirmed_at IS NOT NULL'));
 check('provisioning derives the identity from auth.uid()', contains(currentUserWrappers, 'v_user_id uuid := auth.uid()'));
 check('provisioning creates trainee role and trainee profile', contains(coreSchema, "VALUES (p_user_id, 'TRAINEE')") && contains(coreSchema, 'INSERT INTO public.trainee_profiles (profile_id)'));
 check('existing profiles cannot self-provision a TRAINEE role without an active trainee assignment',

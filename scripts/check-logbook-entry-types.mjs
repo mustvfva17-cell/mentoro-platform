@@ -71,12 +71,48 @@ if (submissionSource !== null) {
 }
 
 const provisioningCallCount = frontend.split("supabase.rpc('provision_current_trainee'").length - 1;
+const roleResolverCallCount = frontend.split('resolveWorkspaceRole(').length - 1;
 if (provisioningCallCount !== 1 ||
     !frontend.includes("from('profile_roles')") ||
     !frontend.includes(".is('revoked_at', null)") ||
-    !frontend.includes("item.role === 'TRAINEE'") ||
-    (frontend.split('requireTraineeWorkspace(').length - 1) !== 4) {
-  throw new Error('Existing platform accounts must be role-checked before trainee provisioning.');
+    !frontend.includes("roles.has('TRAINEE')") ||
+    !frontend.includes("roles.has('MENTOR')") ||
+    !frontend.includes("roles.has('ADMIN')") ||
+    !frontend.includes("roles.has('SUPER_ADMIN')") ||
+    !frontend.includes("if (role === 'MENTOR') return renderMentorDashboard(user);") ||
+    !frontend.includes("return renderAdminWorkspace(user);") ||
+    roleResolverCallCount !== 4) {
+  throw new Error('Existing platform accounts must be role-checked and routed without cross-role provisioning.');
+}
+if (!frontend.includes("supabase.rpc('mentor_review_my_application'") ||
+    !frontend.includes('data-mentor-decision="APPROVE"') ||
+    !frontend.includes('data-mentor-decision="REJECT"')) {
+  throw new Error('Mentor decisions must use the scoped current-user review RPC.');
+}
+
+if (!frontend.includes("supabase.rpc('mentor_list_my_logbook_entries'") ||
+    !frontend.includes("supabase.rpc('mentor_review_my_entry'") ||
+    !frontend.includes('data-entry-decision="VERIFIED"') ||
+    !frontend.includes('data-entry-decision="FEEDBACK"') ||
+    !frontend.includes('data-entry-decision="NEEDS_REVISION"') ||
+    !frontend.includes("entry_reviews(decision,feedback,reviewed_at)") ||
+    !frontend.includes(".update({ title, entry_date: entryDate })") ||
+    !frontend.includes("message('Revision saved and resubmitted to your mentor.', 'success')")) {
+  throw new Error('Mentor logbook review and trainee revision flow must use scoped RPCs and preserve review feedback.');
+}
+
+const mentorDashboardSource = frontend.match(
+  /async function renderMentorDashboard\(user\) \{[\s\S]*?\n\}/
+)?.[0] || '';
+const mentorApplicationCardSource = frontend.match(
+  /function mentorApplicationCard\(item\) \{[\s\S]*?\n\}/
+)?.[0] || '';
+if (!/supabase\.rpc\(['"]mentor_list_my_applications['"]/.test(mentorDashboardSource) ||
+    mentorDashboardSource.includes("from('training_applications')") ||
+    !mentorApplicationCardSource.includes("esc(item.trainee_name || 'Trainee')") ||
+    !mentorApplicationCardSource.includes('esc(education)') ||
+    !mentorApplicationCardSource.includes('item.mentor_decision_reason')) {
+  throw new Error('Mentor application data must come from the scoped inbox RPC and render escaped applicant details.');
 }
 
 if (!frontend.includes('const instanceRelation = enrollment.logbook_instances;') ||
