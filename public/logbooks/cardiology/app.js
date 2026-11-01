@@ -598,6 +598,7 @@ function receiveParentMessage(event) {
     cloudReady = true;
     cloudDirty = false;
     lastQueuedSnapshot = JSON.stringify(currentCloudState());
+    if (!readOnlyMode) store.set("state", lastQueuedSnapshot);
     setCloudLoading(false);
     render();
     setStatus(readOnlyMode ? "Read-only mentor review loaded" : "Secure cloud logbook connected");
