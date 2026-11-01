@@ -1,6 +1,10 @@
 import { getTemplateFields } from './logbook-schema.js';
+import { listSpecialtyModules } from './logbooks/module-registry.js';
 
-const REGISTERED_HTML_LOGBOOK_PATHS = new Set(['/logbooks/medical-oncology/index.html', '/logbooks/general-surgery/index.html']);
+const REGISTERED_HTML_LOGBOOK_MODULES = listSpecialtyModules().filter((module) =>
+  module.renderer === 'HTML' && typeof module.htmlPath === 'string'
+);
+const REGISTERED_HTML_LOGBOOK_PATHS = new Set(REGISTERED_HTML_LOGBOOK_MODULES.map((module) => module.htmlPath));
 
 export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTime, setBusy, message, errorText }) {
   const renderLoading = () => shell('<main class="dashboard"><section class="loading-panel"><span class="spinner"></span><p>Loading administration workspace…</p></section></main>', user);
@@ -93,7 +97,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
     const assignableHtmlTemplates = templateVersions.filter((version) =>
       version.template?.is_active &&
       version.template_definition?.renderer === 'HTML' &&
-      ['/logbooks/medical-oncology/index.html', '/logbooks/general-surgery/index.html'].includes(version.template_definition.html_path)
+      REGISTERED_HTML_LOGBOOK_PATHS.has(version.template_definition.html_path)
     );
     const pendingSlots = (offering) => (offering.training_slots || []).filter((slot) => slot.status === 'OPEN').length;
 
@@ -190,18 +194,15 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">EXISTING HTML LOGBOOKS</p><h2>Use a logbook you already have</h2></div><span class="status-chip status-chip--neutral">Existing asset</span></div>' +
           '<p class="workspace-note">These are existing interactive HTML logbooks, not forms we need to rebuild in JSON. Preview the original UI and complete end-to-end trainee and assigned-mentor checks before any clinical template is approved for real enrollment.</p>' +
           '<div class="mentor-queue-grid">' +
-            '<article class="training-card admin-existing-logbook-card"><div class="training-card-heading"><span class="specialty-label">Medical Oncology</span><span class="status-chip status-chip--neutral">HTML · Draft</span></div>' +
-              '<h3>Medical Oncology Logbook</h3><p class="mentor-line">Original interactive logbook with Roadmap, Sessions, Clinical Cases, Procedures, Emergency, Reflection, and progress views.</p>' +
-              '<div class="mentor-entry-stats"><span>Original UI preserved</span><span>Preview data stays in this browser</span></div>' +
-              '<a class="button button--primary button--small" href="/logbooks/medical-oncology/index.html?mode=preview" target="_blank" rel="noopener noreferrer">Preview existing logbook</a>' +
-            '</article>' +
-            '<article class="training-card admin-existing-logbook-card"><div class="training-card-heading"><span class="specialty-label">General Surgery</span><span class="status-chip status-chip--neutral">HTML · Draft</span></div>' +
-              '<h3>General Surgery Logbook</h3><p class="mentor-line">Original interactive logbook with Roadmap, Sessions, Clinical Cases, Procedures, Emergency, Reflection, and progress views.</p>' +
-              '<div class="mentor-entry-stats"><span>Original UI preserved</span><span>Preview data stays in this browser</span></div>' +
-              '<a class="button button--primary button--small" href="/logbooks/general-surgery/index.html?mode=preview" target="_blank" rel="noopener noreferrer">Preview existing logbook</a>' +
-            '</article>' +
+            REGISTERED_HTML_LOGBOOK_MODULES.map((module) =>
+              '<article class="training-card admin-existing-logbook-card"><div class="training-card-heading"><span class="specialty-label">' + escape(module.name) + '</span><span class="status-chip status-chip--neutral">HTML · ' + escape(module.lifecycle === 'published' ? 'Published' : 'Draft') + '</span></div>' +
+                '<h3>' + escape(module.name) + ' Logbook</h3><p class="mentor-line">Central MENTORO HTML runtime using the shared authenticated logbook state and mentor-review bridge.</p>' +
+                '<div class="mentor-entry-stats"><span>Registered runtime</span><span>Preview data stays in this browser</span></div>' +
+                '<a class="button button--primary button--small" href="' + escape(module.htmlPath + '?mode=preview') + '" target="_blank" rel="noopener noreferrer">Preview existing logbook</a>' +
+              '</article>'
+            ).join('') +
           '</div>' +
-          '<p class="workspace-note">Both existing HTML interfaces are preserved. Each confirmed enrollment uses the immutable HTML asset path attached to its template version. Clinical publication remains blocked until an authorized reviewer completes the required review.</p>' +
+          '<p class="workspace-note">Registered HTML runtimes are previewed here from the central module registry. Preview data is isolated in this browser. Clinical publication and trainee assignment remain blocked until an authorized reviewer completes the required review.</p>' +
         '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">LOGBOOK REVIEW</p><h2>Template versions</h2></div><span class="count-badge">' + allTemplateVersions.length + '</span></div>' +
           '<p class="workspace-note">Review the structure and source notes before any clinical template can be marked assignable. Draft templates are not bookable; this screen does not publish or activate them.</p>' +
@@ -214,7 +215,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
               REGISTERED_HTML_LOGBOOK_PATHS.has(templateDefinition.html_path);
             const htmlSections = Array.isArray(templateDefinition.sections) ? templateDefinition.sections : [];
             const definitions = isRegisteredHtml
-              ? '<p class="empty-inline">This version uses the existing Medical Oncology HTML logbook. It does not use JSON structured fields.</p>' +
+              ? '<p class="empty-inline">This version uses the registered ' + escape(specialty.name_en || template.title || 'specialty') + ' HTML runtime. It does not use JSON structured fields.</p>' +
                 (htmlSections.length
                   ? '<p><strong>Existing views:</strong> ' + escape(htmlSections.join(' · ')) + '</p>'
                   : '') +
