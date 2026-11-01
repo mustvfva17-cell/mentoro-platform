@@ -1,52 +1,49 @@
 # Central Specialty Logbook Foundation
 
-**Status:** Initial repository scaffold only. No specialty ZIP has been imported,
-no module is published, and no database or runtime provisioning workflow is changed.
+**Status:** Initial module registry scaffold merged. General Surgery and Medical Oncology already have central HTML runtime pages and the MENTORO HTML-state bridge. The other four specialties remain placeholders. No new database schema or provisioning behavior is implemented by this module-registry integration.
 
 ## Confirmed product lifecycle
 
 - An administrator provisions a specialty logbook for a trainee.
-- The logbook becomes visible in the trainee account immediately after the
-  provisioning transaction commits; a confirmed training enrollment is not a
-  prerequisite for visibility.
+- The logbook becomes visible in the trainee account immediately after the provisioning transaction commits; a confirmed training enrollment is not a prerequisite for visibility.
 - There is at most one persistent logbook per trainee and specialty.
-- Repeated admin assignment is idempotent: return the existing logbook and
-  preserve all entries, progress, reviews, and revisions.
-- Additional bookings, mentors, or training periods in that specialty associate
-  with the same logbook.
+- Repeated admin assignment is idempotent: return the existing logbook and preserve all entries, progress, reviews, and revisions.
+- Additional bookings, mentors, or training periods in that specialty associate with the same logbook.
 - A different specialty requires its own explicit admin provisioning.
-- Mentor access remains restricted to the mentor's assigned training context;
-  shared logbook ownership does not widen mentor visibility.
+- Mentor access remains restricted to the mentor's assigned training context; shared logbook ownership does not widen mentor visibility.
 
-## Repository structure introduced
+## Repository structure
 
-- `src/logbooks/`: shared registry, identity context, storage boundary, and
-  provisioning policy.
+- `src/logbooks/`: shared registry, identity context, storage boundary, and provisioning policy.
 - `src/specialties/<slug>/`: one module boundary per specialty.
+- `public/logbooks/<slug>/index.html`: existing HTML logbook runtime pages, where present.
 - `docs/`: integration and lifecycle contracts.
+
+## General Surgery import audit
+
+The uploaded `mentoro-general-surgery-logbook-project-v3.zip` was inspected. It contains a standalone Vite app with a template, roadmap data, clinical forms, emergency templates, styling, and browser-local persistence. Its `src/app.js` does not contain the MENTORO HTML postMessage bridge.
+
+The central repository already contains `public/logbooks/general-surgery/index.html`. That file has the parent-window handshake and state/review messages used by the current platform, including load-state, save-state, read-only, and mentor-review flows. It is the safer current runtime source; replacing it with the standalone ZIP would remove the bridge and regress cloud persistence/review behavior.
+
+Therefore this integration registers the existing central General Surgery runtime in the single module registry and makes the main application's HTML renderer allowlist derive from that registry. The standalone ZIP is retained as audited source material for a later feature/content comparison, not copied over the integrated runtime.
 
 ## Module lifecycle
 
-All six specialty IDs are registered for central administration. Their manifests
-are currently `draft`, and templates/schemas are marked pending. This is
-intentional: registry presence is not clinical approval and does not expose an
-unfinished module to trainees.
+The module registry contains six specialty IDs. General Surgery and Medical Oncology declare their existing HTML runtime paths. Their catalogue lifecycle remains `draft` pending the clinical/schema review gate; runtime registration is not the same thing as clinical approval or permission for trainees to self-select a template.
 
-## Not included in this scaffold
+Cardiology, Neurology, Pediatrics, and Anesthesia & Critical Care remain placeholders with no published runtime path. Their source ZIPs must be audited and ported through the shared bridge before they can be assigned.
+
+## Not included
 
 - No schema migration or Supabase project creation.
-- No changes to existing enrollment, mentor, RLS, or entry-write behavior.
-- No live admin UI or trainee workspace change.
-- No imported ZIP assets, templates, or clinical content.
-- No claim that the current production site now follows the new lifecycle.
+- No change to current enrollment, mentor, RLS, or entry-write behavior.
+- No new admin UI or trainee provisioning UI.
+- No blanket import of standalone ZIPs.
+- No claim that all six specialties are operational.
 
 ## Next implementation gates
 
-1. Audit the six ZIPs and map each source template, entry type, roadmap, and
-   emergency/procedure catalogue to the shared module contract.
-2. Design and test the fresh database model: canonical trainee-specialty logbook,
-   enrollment association, entry provenance, and mentor-scoped review access.
-3. Implement atomic admin provisioning and immediate trainee visibility through
-   the trusted Vercel API and PostgreSQL transaction/RLS.
-4. Port one module end-to-end, then migrate the remaining five using the same
-   contract and regression suite.
+1. Compare the uploaded General Surgery ZIP against the central integrated runtime and port only missing, verified UI/content improvements without losing bridge behavior.
+2. Design and test the fresh database model: canonical trainee-specialty logbook, enrollment association, entry provenance, and mentor-scoped review access.
+3. Implement atomic admin provisioning and immediate trainee visibility through the trusted Vercel API and PostgreSQL transaction/RLS.
+4. Port remaining specialty modules into the shared runtime contract, then validate through Preview and regression tests.
