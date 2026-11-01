@@ -332,6 +332,10 @@ function currentCloudState(){
 }
 
 function exportLogbook(){
+ if(readonlyMode){
+  setCloudNotice('Backup export is unavailable in read-only review views.','error');
+  return;
+ }
  if(instanceId&&window.opener&&!htmlCloudReady){
   setCloudNotice('The cloud logbook is still loading. Wait for the connection before exporting a backup.','error');
   return;
@@ -340,7 +344,6 @@ function exportLogbook(){
   version:4,
   specialty:'general-surgery',
   exportedAt:new Date().toISOString(),
-  logbookInstanceId:instanceId||null,
   data:currentCloudState()
  };
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
@@ -657,7 +660,7 @@ function applyReadOnlyMode(){
   const inline=button.getAttribute('onclick')||'';
   const safeNavigation=button.hasAttribute('data-view')||button.classList.contains('theme-toggle')||
     button.classList.contains('phase-tab')||button.classList.contains('filter')||button.classList.contains('status-filter')||
-    button.hasAttribute('data-lb-type')||inline.includes('window.print()')||/export/i.test(inline)||
+    button.hasAttribute('data-lb-type')||inline.includes('window.print()')||
     inline.includes('go(')||inline.includes('moreGo(')||inline.includes('toggleMoreSheet(')||inline.includes('closeQuickAdd()');
   if(safeNavigation)return;
   button.disabled=true;button.setAttribute('aria-disabled','true');button.title='Read-only logbook';
