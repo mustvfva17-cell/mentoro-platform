@@ -1,12 +1,17 @@
 # MENTORO Platform Architecture
 
 ## Project Vision
-MENTORO is a centralized medical training platform supporting three initial specialty logbooks:
-1. General Surgery
-2. Neurology
-3. Anaesthesia & Critical Care
+MENTORO is a centralized medical training platform. Specialty logbooks are modules/templates inside this single repository and are deployed with the central platform, not as separate Vercel projects.
 
-Existing logbook projects are kept outside this repository and must remain untouched. We may consult them later as references, but do not copy or import their code.
+The current source set received for consolidation contains:
+1. General Surgery
+2. Medical Oncology
+3. Cardiology
+4. Neurology
+5. Pediatrics
+6. Anaesthesia & Critical Care
+
+Standalone ZIP archives are source material for audit and controlled porting. They are not independent runtime deployments and must not be copied blindly: each module must be adapted to the central authentication, storage, authorization, review, and build contracts.
 
 ## Technology Stack
 - Frontend: Vite, Vanilla JavaScript, and CSS.
@@ -20,10 +25,15 @@ The approved security and atomicity boundaries are defined in ADR-01 in the deci
 
 ## Roles, Identity, and Enrollment Flow
 - One central identity per user.
-- A trainee may have multiple specialty assignments.
-- Each assignment links a trainee to a specialty and a specific logbook template/version.
+- A trainee may have one persistent logbook per specialty over the entire training journey in that specialty.
+- Only platform administration may provision/activate the trainee's specialty logbook. The catalogue is centrally available to administrators, not as a trainee template picker.
+- Training enrollments and mentor bookings remain separate records. Additional mentors or training periods in the same specialty reuse the same logbook instance and its history.
+- A different specialty may have a separate logbook, but it must also be provisioned by administration.
+- Template-version changes are explicit administrative transitions on the existing logbook; they do not create a second logbook.
 - Activation codes must be single-use, securely stored as hashes, and must not grant Admin privileges.
 - Subsequent access uses authenticated sessions.
+
+The cardinality and lifecycle rule is recorded in L-42 of the decision register.
 
 ## Preliminary Core Entities
 This is a preliminary list of core entities. (No columns, finalized relationships, or migrations are defined yet):
@@ -55,9 +65,18 @@ Activation/enrollment, assignment transitions, correction application, and templ
 ### Implementation boundary
 Exact SQL types, constraints, grants, RLS policies, RPC signatures, locking/isolation choices, API routing, error contracts, and audit-write failure handling remain implementation-design work. No migrations, code, secrets, deployment, or tests are created or approved by ADR-01.
 
+## Logbook Lifecycle and Cardinality (L-42)
+- The persistent logbook owner is the trainee-specialty pair, not an individual booking, mentor, slot, or enrollment.
+- PostgreSQL must enforce at most one logbook instance for each trainee and specialty.
+- Training enrollments associate with the existing specialty logbook. A new enrollment in an already provisioned specialty must reuse that logbook and must not create or reset another instance.
+- Only an authenticated platform administrator can create/provision the logbook. Trainees cannot select from the template catalogue or self-create logbooks.
+- Existing enrollment-owned logbooks must be reconciled without losing records, review history, state revisions, audit history, or template-version provenance before the model is switched.
+- Mentor access remains governed by the approved role/security decisions; sharing one persistent logbook must not silently widen a mentor's authorization scope.
+
 ## Specialty Modules
 - Each specialty retains its own roadmap, log types, validation rules, and presentation requirements.
-- Shared platform services manage identity, authorization, assignments, and common infrastructure.
+- The six source modules are to be consolidated beneath the same central application and Vercel deployment.
+- Shared platform services manage identity, authorization, logbook provisioning, enrollments, and common infrastructure.
 
 ## Coverage Semantics
 - Coverage represents documented exposure, not competence or certification.
