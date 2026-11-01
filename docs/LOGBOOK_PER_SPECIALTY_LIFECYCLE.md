@@ -6,7 +6,7 @@
 
 ## Product rule
 
-The six specialty templates are centrally available to MENTORO administration. They are not a menu from which trainees can choose. The administrator decides which specialty logbook to provision for each trainee and when to open it.
+The six specialty templates are intended to be centrally available to MENTORO administration after controlled import and registration. They are not a menu from which trainees can choose. The administrator decides which specialty logbook to provision for each trainee and when to open it.
 
 A trainee has at most one persistent logbook for a given specialty for the whole training journey in that specialty. More bookings, training periods, or mentors in that same specialty reuse the existing logbook and its complete history. A second specialty may have a separate logbook.
 
@@ -103,7 +103,7 @@ Exact table/column names and the final mentor visibility model must be reviewed 
 - Pediatrics
 - Anaesthesia & Critical Care
 
-Each is a module within the single central MENTORO repository/deployment. Clinical content must be reviewed and approved before publication; technical import does not establish medical correctness.
+Each is to become a module within the single central MENTORO repository/deployment. Clinical content must be reviewed and approved before publication; technical import does not establish medical correctness.
 
 ## Explicitly not done
 
