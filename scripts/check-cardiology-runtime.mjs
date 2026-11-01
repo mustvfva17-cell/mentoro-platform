@@ -6,6 +6,7 @@ const html = read('../public/logbooks/cardiology/index.html');
 const app = read('../public/logbooks/cardiology/app.js');
 const content = JSON.parse(read('../public/logbooks/cardiology/content.json'));
 const migration = read('../supabase/migrations/20261102020000_register_cardiology_html_logbook.sql');
+const seedMigration = read('../supabase/migrations/20261102030000_seed_cardiology_html_logbook_draft.sql');
 const manifest = read('../src/specialties/cardiology/manifest.js');
 
 assert.match(html, /<script src="\.\/app\.js" defer><\/script>/,
@@ -56,6 +57,16 @@ for (const fn of [
 }
 assert.ok((migration.match(/\/logbooks\/cardiology\/index\.html/g) || []).length >= 6,
   'The Cardiology path must be added to the schema, publish, state, and review allowlists.');
+
+assert.ok(seedMigration.includes("'cardiology-html'"));
+assert.ok(seedMigration.includes("'DRAFT'"));
+assert.ok(seedMigration.includes("false,"));
+assert.ok(seedMigration.includes("sp.slug = 'cardiology'"));
+assert.ok(seedMigration.includes('bound to a different specialty'));
+assert.ok(seedMigration.includes("'/logbooks/cardiology/index.html'"),
+  'The seeded draft must point to the central Cardiology runtime.');
+assert.ok(seedMigration.includes('cardiologist review of Tier, Depth, and Frequency'),
+  'The draft seed must preserve the clinical review requirement.');
 
 assert.match(manifest, /lifecycle: "draft"/,
   'Cardiology must remain non-assignable pending clinical review.');
