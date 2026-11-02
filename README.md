@@ -90,12 +90,13 @@ The target flow after the accepted L-42 migration is:
 
 GitHub Actions runs `npm run check:contracts` and `npm run build`. Database workflow checks have also been exercised in rollback-only transactions against the test project. These checks do **not** substitute for browser testing with separate trainee, mentor, and administrator identities.
 
-Outstanding before considering a merge:
+Outstanding before implementing L-42 or treating the platform as production-ready:
 
-- Clean-room migration replay on an isolated database.
-- Resolve/review broad default privileges owned by `supabase_admin` for future public objects.
-- Configure an independent Vercel Preview and test the full trainee-to-mentor/admin journey.
-- Add browser end-to-end tests and complete mentor/admin workspaces.
-- Review both stacked pull requests together; do not merge PR #1 alone.
+- Restore access to the intended non-production Supabase project and verify its migration ledger; the currently connected Supabase account exposes no projects.
+- Perform a clean-room replay/reconciliation on an isolated database. Resolve/review broad default privileges owned by `supabase_admin` for future public objects.
+- Implement L-42 across schema, enrollment confirmation, direct admin provisioning, trainee workspace, mentor inbox/review, HTML state access, audit and history provenance. Test repeat/concurrent assignments and multiple enrollments in one specialty.
+- Configure and verify the authorized Vercel Preview environment, then run authenticated end-to-end tests with separate trainee, mentor, and administrator identities.
+- Complete remaining mentor/admin workspace and specialty template workflows.
+- Obtain documented clinical review and authorized publication for each specialty before making any template assignable.
 
 Do not enter patient-identifying information into test environments.
