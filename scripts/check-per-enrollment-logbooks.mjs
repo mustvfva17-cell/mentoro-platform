@@ -104,6 +104,9 @@ check(
   admin.includes("supabase.rpc('admin_assign_trainee_enrollment_logbook'") &&
   admin.includes('p_slot_id: slotId') &&
   admin.includes('p_request_id: requestId') &&
+  admin.includes('window.sessionStorage.getItem(requestStorageKey)') &&
+  admin.includes('window.sessionStorage.setItem(requestStorageKey, requestId)') &&
+  admin.includes('window.sessionStorage.removeItem(requestStorageKey)') &&
   admin.includes('assignableAdminSlots') &&
   admin.includes("version.status === 'PUBLISHED'") &&
   admin.includes('version.is_assignable === true') &&
