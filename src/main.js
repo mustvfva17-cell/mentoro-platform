@@ -307,6 +307,15 @@ async function renderWorkspace(user, role) {
 }
 
 const errorText = (error) => {
+  const messageText = String(error?.message || '').toLowerCase();
+  if (
+    error?.code === 'provider_disabled' ||
+    messageText.includes('unsupported provider') ||
+    messageText.includes('provider is not enabled')
+  ) {
+    return 'Google sign-in is not enabled for this MENTORO environment yet. Please use email and password for now, or ask an administrator to finish Google OAuth setup.';
+  }
+
   const known = {
     invalid_credentials: 'Email or password is incorrect.',
     email_not_confirmed: 'Please confirm your email using the link we sent you.',
