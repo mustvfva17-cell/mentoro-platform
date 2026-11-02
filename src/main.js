@@ -20,8 +20,9 @@ const htmlLogbookSync = new Map();
 function openHTMLLogbook(instanceId, options = {}) {
   const readOnly = options.readOnly === true;
   const htmlPath = options.htmlPath || '/logbooks/medical-oncology/index.html';
-  const enrollmentId = options.enrollmentId || null;
-  if (!supabase || !/^[0-9a-f-]{36}$/i.test(instanceId || '') || !REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)) {
+  const enrollmentId = options.enrollmentId || '';
+  const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value || '');
+  if (!supabase || !isUuid(instanceId) || !isUuid(enrollmentId) || !REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath)) {
     message('This logbook is not available for this training.', 'error'); return;
   }
   const existing = htmlLogbookWindows.get(instanceId);
@@ -514,20 +515,17 @@ async function renderDashboard(user) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles').select('id,email,full_name,account_status,verification_reason').eq('id', user.id).single();
     if (profileError) throw profileError;
-    const [docResult, applicationsResult, enrollmentsResult, traineeDetailsResult, assignedLogbooksResult] = await Promise.all([
+    const [docResult, applicationsResult, enrollmentsResult, traineeDetailsResult] = await Promise.all([
       supabase.from('verification_documents').select('id,status,document_type,created_at,review_note').eq('trainee_profile_id', user.id).order('created_at', { ascending: false }).limit(1),
       supabase.from('training_applications').select('id,status,created_at,applicant_note,training_offerings(title,description,delivery_mode,specialties(name_en,name_ar),mentor_profiles(display_name,professional_title)),training_slots(starts_at,ends_at)').eq('trainee_profile_id', user.id).order('created_at', { ascending: false }),
       supabase.from('training_enrollments').select('id,status,starts_at,ends_at,training_offerings(title,mentor_profiles(display_name,professional_title),specialties(name_en,name_ar)),logbook_instances(id,status,template_version_id,logbook_template_versions(id,version_number,status,schema_definition,template_definition),logbook_entries(id,title,entry_date,status,entry_type,payload,created_at,submitted_at,entry_reviews(decision,feedback,reviewed_at)))').eq('trainee_profile_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('trainee_profiles').select('university_name,faculty_name,year_of_study').eq('profile_id', user.id).maybeSingle(),
-      supabase.from('logbook_instances').select('id,status,archived_at,template_version_id,logbook_template_versions!inner(id,version_number,status,template_definition,logbook_templates!inner(title))').eq('trainee_profile_id', user.id).order('created_at', { ascending: false })
+      supabase.from('trainee_profiles').select('university_name,faculty_name,year_of_study').eq('profile_id', user.id).maybeSingle()
     ]);
     if (applicationsResult.error) throw applicationsResult.error;
     if (enrollmentsResult.error) throw enrollmentsResult.error;
     if (docResult.error) throw docResult.error;
     if (traineeDetailsResult.error) throw traineeDetailsResult.error;
-    if (assignedLogbooksResult.error) throw assignedLogbooksResult.error;
     const traineeDetails = traineeDetailsResult.data || {};
-    const assignedLogbooks = assignedLogbooksResult.data || [];
     const latestDoc = docResult.data?.[0] || null;
     const accountStatus = profile.account_status || 'PENDING';
     const isVerified = accountStatus === 'VERIFIED';
@@ -555,8 +553,8 @@ async function renderDashboard(user) {
           <div class="list-stack">${applications.length ? applications.map(applicationCard).join('') : '<div class="empty-state"><strong>No applications yet</strong><p>When you apply for a training, its status will appear here.</p></div>'}</div>
         </section>
         <section class="section-block">
-          <div class="section-heading"><div><p class="eyebrow">CLINICAL LEARNING</p><h2>My logbooks</h2></div><span class="count-badge">${enrollments.length + assignedLogbooks.length}</span></div>
-          <div class="logbook-grid">${enrollments.length || assignedLogbooks.length ? enrollments.map(logbookCard).join('') + assignedLogbooks.map(assignedLogbookCard).join('') : '<div class="empty-state"><strong>Your logbooks will appear here</strong><p>A logbook appears when training is confirmed or an administrator assigns one to your profile.</p></div>'}</div>
+          <div class="section-heading"><div><p class="eyebrow">CLINICAL LEARNING</p><h2>My logbooks</h2></div><span class="count-badge">${enrollments.length}</span></div>
+          <div class="logbook-grid">${enrollments.length ? enrollments.map(logbookCard).join('') : '<div class="empty-state"><strong>Your logbooks will appear here</strong><p>Every confirmed training enrollment receives its own independent logbook.</p></div>'}</div>
         </section>
       </main>`, user);
     bindProfileForm(user);
@@ -651,7 +649,7 @@ async function renderMentorDashboard(user) {
     bindMentorEntryActions(user);
     bindMentorEnrollmentActions(user);
     document.querySelectorAll('[data-open-html-logbook-readonly]').forEach((button) => {
-      button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbookReadonly, { readOnly: true, htmlPath: button.dataset.htmlPath }));
+      button.addEventListener('click', () => openHTMLLogbook(button.dataset.openHtmlLogbookReadonly, { readOnly: true, htmlPath: button.dataset.htmlPath, enrollmentId: button.dataset.enrollmentId }));
     });
   } catch (error) {
     shell(
@@ -811,7 +809,7 @@ function mentorEnrollmentCard(enrollment) {
     '<div class="mentor-entry-stats"><span>' + entries.length + ' native entries</span><span>' + submittedCount + ' awaiting review</span></div>' +
     (isRegisteredHtml
       ? '<p class="workspace-note">Existing HTML logbook is read-only in this mentor view. Closed training history remains viewable; item-level reviews are available only while the enrollment remains open or completed.</p>' +
-        '<button class="button button--secondary button--small" type="button" data-open-html-logbook-readonly="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open HTML logbook · read only</button>'
+        '<button class="button button--secondary button--small" type="button" data-open-html-logbook-readonly="' + esc(instance.id) + '" data-enrollment-id="' + esc(enrollment.id) + '" data-html-path="' + esc(htmlPath || '') + '">Open HTML logbook · read only</button>'
       : '') +
     lifecycleMarkup +
   '</article>';
@@ -956,25 +954,6 @@ function latestEntryReview(entry) {
   return [...(entry.entry_reviews || [])].sort((a, b) =>
     String(b.reviewed_at || '').localeCompare(String(a.reviewed_at || ''))
   )[0] || null;
-}
-
-function assignedLogbookCard(instance) {
-  const relation = instance.logbook_template_versions;
-  const version = Array.isArray(relation) ? relation[0] : relation;
-  const templateRelation = version?.logbook_templates;
-  const template = Array.isArray(templateRelation) ? templateRelation[0] : templateRelation;
-  const htmlPath = version?.template_definition?.html_path;
-  const isRegisteredHtml = version?.template_definition?.renderer === 'HTML' &&
-    REGISTERED_HTML_LOGBOOK_PATHS.has(htmlPath);
-  const isReadOnly = instance.status !== 'ACTIVE' || Boolean(instance.archived_at);
-  if (!isRegisteredHtml) return '';
-  return '<article class="logbook-card">' +
-    '<div class="logbook-card-top"><span class="logbook-symbol">M</span><span class="status-chip status-chip--' + (isReadOnly ? 'neutral' : 'good') + '">' + (isReadOnly ? 'READ ONLY' : 'ADMIN ASSIGNED') + '</span></div>' +
-    '<span class="specialty-label">Personal clinical record</span><h3>' + esc(template?.title || 'Training logbook') + '</h3>' +
-    '<p class="mentor-line">Assigned to your profile by an administrator</p>' +
-    '<p class="workspace-note">This logbook belongs to your profile. Your saved information stays in your own record.</p>' +
-    '<button class="button button--primary button--small" type="button" data-open-html-logbook="' + esc(instance.id) + '" data-html-path="' + esc(htmlPath) + '" data-read-only="' + (isReadOnly ? 'true' : 'false') + '">Open ' + (isReadOnly ? 'read-only' : 'interactive') + ' logbook</button>' +
-  '</article>';
 }
 
 function logbookCard(enrollment) {
