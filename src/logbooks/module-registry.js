@@ -1,7 +1,7 @@
 /**
  * Central specialty module catalogue.
- * Registration does not grant a trainee access; only an admin-provisioned
- * trainee_specialty_logbook makes a module visible in that trainee workspace.
+ * Registration does not grant trainee access; a module appears only through
+ * a logbook instance linked to that trainee's specific training enrollment.
  */
 import generalSurgery from "../specialties/general-surgery/manifest.js";
 import medicalOncology from "../specialties/medical-oncology/manifest.js";

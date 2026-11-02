@@ -3,7 +3,7 @@
 **Decision:** L-43  
 **Accepted:** 2026-11-02, explicitly reconfirmed by the project owner  
 **Supersedes:** L-42 (one persistent logbook per trainee-specialty)  
-**Implementation status:** Product decision accepted; schema/runtime audit and any required migration remain pending.
+**Implementation status:** Runtime/UI correction and a guarded forward migration are proposed in PR #27; not merged, deployed, or applied. Live database inventory and migration validation remain pending.
 
 ## Product rule
 
@@ -48,11 +48,14 @@ A direct-admin assignment must not create a logbook row with no enrollment. It m
 
 ## Current repository findings (2026-11-02)
 
-- The original core schema defined `logbook_instances.enrollment_id` as `NOT NULL UNIQUE`, which matches the one-logbook-per-enrollment model.
-- The migration `20261031165518_add_profile_edit_and_admin_logbook_assignment.sql` implements `admin_assign_trainee_logbook` by creating a confirmed training enrollment and then inserting a logbook instance linked to that enrollment within the same function/transaction. This path aligns with L-43.
-- The migration `20261031172432_add_direct_admin_logbook_assignments.sql` later made `enrollment_id` nullable and added an alternative direct `trainee_profile_id` owner. Its exactly-one-owner check allows logbook instances without an enrollment. This path conflicts with L-43 and must be reviewed/deprecated or redesigned so admin provisioning always creates/activates an enrollment and linked instance atomically.
-- The current access helpers contain both enrollment-owned and direct-trainee-owned branches. The direct-trainee branch must not remain an alternate way to bypass mentor/enrollment scoping.
-- The current Supabase account connection exposed no projects during the 2026-11-02 review. The live migration ledger, actual deployed schema, and existing direct-owned rows therefore could not be inspected. No database migration or live data change is claimed.
+- The original core schema defined `logbook_instances.enrollment_id` as `NOT NULL UNIQUE`, matching L-43.
+- The migration `20261031165518_add_profile_edit_and_admin_logbook_assignment.sql` created the correct transaction pattern: insert an `ADMIN_ASSIGNED` application, create a confirmed enrollment, create the enrollment-linked logbook instance, and write the audit event in one function.
+- The later migration `20261031172432_add_direct_admin_logbook_assignments.sql` replaced that behavior with nullable `enrollment_id` and a direct `trainee_profile_id` owner. It introduced the orphan path and direct-owner access branches that conflict with L-43.
+- PR #27 proposes a forward-only correction: restore `enrollment_id NOT NULL`, remove the direct-owner column and policy branches, restore enrollment-scoped access/state functions, and replace direct assignment with a slot-based atomic enrollment/logbook RPC. The admin form is limited to future open slots whose offering, mentor, and HTML template are eligible and published.
+- The new provisioning RPC records a client request UUID in the audit log and uses a transaction advisory lock plus a unique partial index so a retry of the same request returns the original enrollment instead of creating another one.
+- The PR migration refuses to proceed if it finds any orphan logbooks, any enrollment without a logbook, any enrollment/logbook template-version mismatch, or duplicate prior request identifiers. It does not infer or reassign old data.
+- PR #27 also updates trainee and mentor HTML-logbook context handling and adds static L-43 contract checks. These changes are proposed code only until the PR is reviewed and merged.
+- The connected Supabase account exposed no accessible projects during the 2026-11-02 review. The live migration ledger, deployed schema, data inventory, SQL execution, and PostgreSQL integration tests remain unverified. No database migration or live data change is claimed.
 
 ## Required implementation and migration sequence
 
@@ -65,12 +68,12 @@ A direct-admin assignment must not create a logbook row with no enrollment. It m
 
 ### Phase 2 — Schema and trusted workflow
 
-- Reinstate a required enrollment foreign key for all active logbook instances, retaining historical references safely where archival semantics require them.
+- Reinstate a required enrollment foreign key for all logbook instances, retaining historical references safely where archival semantics require them. The proposed migration uses explicit preconditions and aborts without changing rows if legacy data needs reconciliation.
 - Enforce one logbook instance per enrollment with a unique constraint on `enrollment_id`.
 - Do not add a unique constraint on trainee plus specialty.
-- Update direct-admin provisioning so enrollment creation/activation, mentor/slot association, logbook creation, and audit writes are atomic.
+- Update direct-admin provisioning so enrollment creation, mentor/slot association, logbook creation, and audit writes are atomic. PR #27 proposes the slot-based RPC with request-level idempotency.
 - Make retry handling idempotent for the same operation/request while allowing a distinct new enrollment in the same specialty to create a new instance.
-- Update access helpers, RLS, entry/state/review writes, mentor inboxes, trainee history, and admin views to resolve authorization through the enrollment relationship only.
+- Update access helpers, RLS, HTML state reads/writes, mentor views, trainee history, and admin provisioning to resolve ownership through the enrollment relationship only. PR #27 proposes these runtime/schema changes; PostgreSQL execution and RLS integration still require non-production validation.
 - Remove or close any direct-trainee ownership path that allows a logbook to exist without an enrollment.
 - Preserve template-version identity, entries, reviews, state revisions, and audit provenance. Never copy old activities into a new enrollment's logbook.
 
@@ -89,7 +92,7 @@ A direct-admin assignment must not create a logbook row with no enrollment. It m
 
 ## Explicitly not done
 
-- L-43 has not yet been fully implemented or verified against a live Supabase project.
+- The L-43 runtime/schema correction is proposed in PR #27 but has not been merged, deployed, or verified against a live Supabase project.
 - No migration has been applied as part of this decision correction.
 - No existing logbook data has been merged, moved, deleted, or reassigned.
 - Specialty templates remain Draft/non-assignable until their own clinical review and authorized publication.

@@ -1,9 +1,15 @@
 /**
  * Validates the identity context required by every shared logbook module.
- * A logbook is owned by one trainee-specialty pair, never by a booking.
+ * A logbook instance belongs to exactly one training enrollment.
  */
 export function createLogbookContext(input) {
-  const required = ["logbookId", "traineeId", "specialtyId", "templateVersionId"];
+  const required = [
+    "logbookId",
+    "traineeId",
+    "specialtyId",
+    "templateVersionId",
+    "enrollmentId",
+  ];
   for (const key of required) {
     if (typeof input?.[key] !== "string" || !input[key].trim()) {
       throw new TypeError(`Missing logbook context field: ${key}`);
@@ -15,8 +21,7 @@ export function createLogbookContext(input) {
     traineeId: input.traineeId,
     specialtyId: input.specialtyId,
     templateVersionId: input.templateVersionId,
-    // Optional current training context; it must not redefine logbook ownership.
-    enrollmentId: input.enrollmentId ?? null,
+    enrollmentId: input.enrollmentId,
     accessMode: input.accessMode ?? "trainee",
   });
 }

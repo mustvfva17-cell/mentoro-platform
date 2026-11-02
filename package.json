@@ -8,7 +8,7 @@
     "dev:vercel": "vercel dev",
     "build": "npm run check:migrations && node --check public/logbooks/cardiology/app.js && node --check public/logbooks/neurology/app.js && node --check public/logbooks/anesthesia-icu/app.js && node scripts/check-pediatrics-runtime.mjs && node scripts/check-anesthesia-icu-runtime.mjs && vite build",
     "preview": "vite preview",
-    "check:contracts": "node scripts/check-logbook-entry-types.mjs && node scripts/check-trainee-workflow-contract.mjs && node scripts/check-logbook-template-schema.mjs && node scripts/check-admin-workspace-contract.mjs && node scripts/check-initial-admin-bootstrap.mjs && npm run check:specialty-registry",
+    "check:contracts": "node scripts/check-logbook-entry-types.mjs && node scripts/check-trainee-workflow-contract.mjs && node scripts/check-logbook-template-schema.mjs && node scripts/check-admin-workspace-contract.mjs && node scripts/check-initial-admin-bootstrap.mjs && npm run check:specialty-registry && node scripts/check-per-enrollment-logbooks.mjs",
     "check:migrations": "node scripts/check-migration-history.mjs",
     "check:specialty-registry": "node scripts/check-specialty-html-registry.mjs && node scripts/check-general-surgery-runtime.mjs && node --check public/logbooks/cardiology/app.js && node scripts/check-cardiology-runtime.mjs && node --check public/logbooks/neurology/app.js && node scripts/check-neurology-runtime.mjs && node scripts/check-pediatrics-runtime.mjs && node --check public/logbooks/anesthesia-icu/app.js && node scripts/check-anesthesia-icu-runtime.mjs"
   },
