@@ -58,7 +58,7 @@ Exact table/column names and the final mentor visibility model must be reviewed 
 - Mentor inbox/review functions join logbook instances directly to a single enrollment through enrollment_id. The enrollment-specific write guard and entry RLS policies also assume one logbook instance belongs to one enrollment. These controls must be redesigned together; changing only the instance uniqueness constraint would break mentor review and write access.
 - The trainee dashboard currently renders logbooks from both enrollment records and directly assigned logbook instances, so it can display multiple cards for the same specialty. The workspace must be changed to display the canonical trainee-specialty logbook once.
 - HTML-state load/save and HTML mentor-review authorization also resolve access through the current instance ownership model and must be updated with the new association model.
-- The HTML logbook state functions and admin workspace currently allow only /logbooks/medical-oncology/index.html and /logbooks/general-surgery/index.html.
+- The central specialty registry and trusted HTML allowlists now cover six runtime paths: Medical Oncology, General Surgery, Cardiology, Neurology, Pediatrics, and Anesthesia & Critical Care.
 - The six uploaded ZIPs are standalone Vite source archives, but six adapted HTML runtimes are now registered in the central repository. They must not be copied wholesale over the central versions because the central runtimes add the authenticated state bridge, centralized Mentor Review, and read-only behavior.
 
 ## Migration sequence (do not skip)
@@ -103,7 +103,7 @@ Exact table/column names and the final mentor visibility model must be reviewed 
 - Pediatrics
 - Anaesthesia & Critical Care
 
-Each is to become a module within the single central MENTORO repository/deployment. Clinical content must be reviewed and approved before publication; technical import does not establish medical correctness.
+All six now have central specialty registrations and HTML runtime paths in the single MENTORO repository. Clinical content must still be reviewed and approved before publication; technical integration and CI validation do not establish medical correctness or completeness.
 
 ## Explicitly not done
 
@@ -114,6 +114,3 @@ Each is to become a module within the single central MENTORO repository/deployme
 - The six original ZIP archives are retained as reference/audit sources. Their contents were adapted into central runtimes rather than copied as separate deployments.
 
 Before implementing L-42, restore access to the intended non-production Supabase project, inspect its real migration ledger and logbook-instance inventory, create a deterministic reconciliation report, then implement and test the schema/RLS/trusted-workflow transition. Do not apply the L-42 migration to production before reconciliation and isolated rollback/regression tests.
-
-
-No live database migration has been applied; no deployed site has been changed; no logbook source ZIP has yet been imported into the central app; and no production behavior is being represented as fixed by this design document.
