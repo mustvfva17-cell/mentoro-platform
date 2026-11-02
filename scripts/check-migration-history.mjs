@@ -58,6 +58,18 @@ if (
   throw new Error('Fresh-project bootstrap contract failed: optional rls_auto_enable revoke must be guarded.');
 }
 
+const medicalOncologySeed = await readFile(
+  new URL('20261028165736_seed_medical_oncology_html_logbook_draft.sql', migrationDirectory),
+  'utf8'
+);
+if (
+  !medicalOncologySeed.includes("FROM public.specialties s") ||
+  !medicalOncologySeed.includes("s.slug = 'medical-oncology'") ||
+  medicalOncologySeed.includes('5545aff6-e2d4-4fa8-85b6-1a2468112a86')
+) {
+  throw new Error('Medical Oncology seed contract failed: specialty must be resolved by slug, not a database-local UUID.');
+}
+
 console.log(
   `Migration history contract passed: ${migrationFiles.length} SQL files; unique version prefixes, unique normalized contents, and fresh-project optional-helper guard.`
 );

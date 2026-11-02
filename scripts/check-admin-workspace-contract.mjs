@@ -296,8 +296,12 @@ check(
   htmlScopeMigration.includes("v_template_definition ->> 'html_path' IS DISTINCT FROM '/logbooks/medical-oncology/index.html'") &&
   htmlScopeMigration.includes("Only the assigned trainee can save this HTML logbook") &&
   htmlSeedMigration.includes('medical-oncology-html') &&
+  htmlSeedMigration.includes("FROM public.specialties s") &&
+  htmlSeedMigration.includes("s.slug = 'medical-oncology'") &&
   htmlSeedMigration.includes("'DRAFT'") &&
-  htmlSeedMigration.includes('ON CONFLICT (id) DO NOTHING'),
+  htmlSeedMigration.includes("ON CONFLICT (slug) DO NOTHING") &&
+  htmlSeedMigration.includes("ON CONFLICT (template_id, version_number) DO NOTHING") &&
+  !htmlSeedMigration.includes('5545aff6-e2d4-4fa8-85b6-1a2468112a86'),
   'HTML publication wrapper, registered-asset access boundary, and non-assignable existing HTML seed migration are source-controlled'
 );
 
