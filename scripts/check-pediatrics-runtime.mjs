@@ -152,7 +152,7 @@ assert.ok(migration.includes("WHERE li.id = p_instance_id AND li.enrollment_id I
   "HTML state loading must retain the current direct-admin-owned logbook access path.");
 assert.ok(migration.includes("v_enrollment_status := 'CONFIRMED'"),
   "HTML state saving must retain the current direct-admin-owned lifecycle path.");
-assert.equal((migration.match(/\/logbooks/pediatrics/index\.html/g) || []).length, 7,
+assert.equal((migration.match(/\/logbooks\/pediatrics\/index\.html/g) || []).length, 7,
   "Pediatrics path must be present in each trusted HTML renderer / state / review allowlist.");
 assert.match(migration, /AND v_html_path IS DISTINCT FROM '\/logbooks\/pediatrics\/index\.html' THEN/,
   "Admin publication must include Pediatrics in the HTML asset check.");
