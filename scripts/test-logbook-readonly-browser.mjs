@@ -60,7 +60,8 @@ try {
 
   const cases = [
     { template: 'medical-oncology', path: '/logbooks/medical-oncology/index.html' },
-    { template: 'general-surgery', path: '/logbooks/general-surgery/index.html' }
+    { template: 'general-surgery', path: '/logbooks/general-surgery/index.html' },
+    { template: 'anesthesia-icu', path: '/logbooks/anesthesia-icu/index.html' }
   ];
 
   for (const testCase of cases) {
@@ -95,11 +96,16 @@ try {
       await sleep(500);
       const result = await logbook.evaluate(() => {
         const controls = Array.from(document.querySelectorAll('input, textarea, select'))
-          .filter((control) => control.type !== 'search' && control.id !== 'roadGroupSelect');
+          .filter((control) => control.type !== 'search' && control.id !== 'roadGroupSelect' &&
+            !control.closest('#mentorReviewPanel'));
         const guardedButtons = Array.from(document.querySelectorAll('button[title="Read-only logbook"]'));
         return {
           hasReadOnlyClass: document.body.classList.contains('html-logbook-readonly'),
-          closedNoticeVisible: document.body.innerText.includes('This training is closed. The logbook is read-only.'),
+          closedNoticeVisible: document.body.innerText.includes('This training is closed. The logbook is read-only.') ||
+            (document.body.innerText.includes('Read-only mentor review:') &&
+              !document.getElementById('readonlyBanner')?.hidden),
+          mentorReviewVisible: !document.getElementById('mentorReviewPanel')?.hidden,
+          mentorReviewCards: document.querySelectorAll('#mentorReviewPanel .mentor-review-card').length,
           controlCount: controls.length,
           enabledControls: controls.filter((control) => !control.disabled).length,
           guardedButtonCount: guardedButtons.length,
@@ -109,7 +115,9 @@ try {
 
       if (!result.hasReadOnlyClass || !result.closedNoticeVisible ||
           result.controlCount === 0 || result.enabledControls !== 0 ||
-          result.guardedButtonCount === 0 || result.enabledGuardedButtons !== 0) {
+          result.guardedButtonCount === 0 || result.enabledGuardedButtons !== 0 ||
+          (testCase.template === 'anesthesia-icu' &&
+            (!result.mentorReviewVisible || result.mentorReviewCards !== 1))) {
         const diagnostics = await logbook.evaluate(() => ({
           url: window.location.href,
           title: document.title,
@@ -118,7 +126,7 @@ try {
         }));
         throw new Error(`${testCase.template} did not fully switch to read-only mode: ${JSON.stringify({ result, diagnostics, pageErrors })}`);
       }
-      console.log(`PASS ${testCase.template}: ${closureStatus} status detected by lifecycle monitor switches popup to read-only`);
+      console.log(`PASS ${testCase.template}: read-only state is enforced${testCase.template === 'anesthesia-icu' ? ' and Mentor Review stays available' : ''}`);
     } finally {
       await context.close();
     }
