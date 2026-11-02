@@ -138,8 +138,8 @@ assert.equal(migration.split("v_html_path IS DISTINCT FROM '/logbooks/anesthesia
 assert.ok(migration.includes('WHERE li.id = p_instance_id AND li.enrollment_id IS NULL'));
 assert.ok(migration.includes("v_enrollment_status := 'CONFIRMED'"));
 
-assert.ok(seedMigration.includes("'anesthesia-icu-html'"));
-assert.ok(seedMigration.includes("sp.slug = 'anesthesia-icu'"));
+assert.ok(seedMigration.includes("'anaesthesia-critical-care-html'"));
+assert.ok(seedMigration.includes("sp.slug = 'anaesthesia-critical-care'"));
 assert.ok(seedMigration.includes("'DRAFT'"));
 assert.ok(seedMigration.includes('status, is_assignable'));
 assert.ok(seedMigration.includes("'DRAFT',\n      false"));
@@ -147,11 +147,13 @@ assert.ok(seedMigration.includes("'clinical_review_required', true"));
 assert.ok(seedMigration.includes('/logbooks/anesthesia-icu/index.html'));
 assert.ok(seedMigration.includes('anesthesiologist or intensivist review of Tier, Depth, Frequency'));
 
+assert.ok(manifest.includes('id: "anaesthesia-critical-care"'));
 assert.ok(manifest.includes('lifecycle: "draft"'));
 assert.ok(manifest.includes('renderer: "HTML"'));
 assert.ok(manifest.includes('htmlPath: "/logbooks/anesthesia-icu/index.html"'));
 assert.ok(manifest.includes('supportsMentorReview: true'));
 assert.ok(manifest.includes('readOnlyMentorReview: true'));
+assert.ok(moduleTemplate.includes('specialtyId: "anaesthesia-critical-care"'));
 assert.ok(moduleTemplate.includes('renderer: "HTML"'));
 assert.ok(moduleTemplate.includes('htmlPath: "/logbooks/anesthesia-icu/index.html"'));
 assert.ok(registryCheck.includes('/logbooks/anesthesia-icu/index.html'));
