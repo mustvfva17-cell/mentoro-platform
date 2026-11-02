@@ -4,7 +4,7 @@
  * Keep this template non-publishable until specialist clinical review.
  */
 export const template = Object.freeze({
-  specialtyId: "anesthesia-icu",
+  specialtyId: "anaesthesia-critical-care",
   renderer: "HTML",
   htmlPath: "/logbooks/anesthesia-icu/index.html",
   status: "clinical-review-pending",
