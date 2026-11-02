@@ -109,7 +109,7 @@ All six now have central specialty registrations and HTML runtime paths in the s
 
 - L-42 has not been implemented in the live schema/runtime. The current model still includes enrollment-owned instances and direct-admin-owned instances; no canonical trainee-specialty uniqueness constraint or complete enrollment-to-logbook association is in place.
 - No live Supabase migration has been applied or verified by this work. The connected Supabase account returned no accessible projects on 2026-11-02, so the remote migration ledger and any existing rows could not be inspected.
-- The latest GitHub commit has a successful Vercel status (“Deployment has completed”), but the deployment environment/alias was not independently verified; no production-domain claim is made.
+- The runtime/code commit `daf555ae8b2ddb10fb5d50c844b5531c5348d427` received a Vercel success status (“Deployment has completed”), but the deployment environment/alias was not independently verified. The later docs-only main commit `9433f2517156a8d4943ac73efa851ccdfb7a0a89` received Vercel status failure: “Deployment rate limited — retry in 24 hours.” No new deployment or production-domain claim is made.
 - No specialty has received verified clinical approval or has been made assignable by these integration merges.
 - The six original ZIP archives are retained as reference/audit sources. Their contents were adapted into central runtimes rather than copied as separate deployments.
 
