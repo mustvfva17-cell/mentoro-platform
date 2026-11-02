@@ -566,7 +566,7 @@ L-35 is design-only. It does not authorize database migrations, schema changes, 
 
 
 ### L-42 — One Persistent Logbook per Trainee per Specialty
-**Status: Accepted — confirmed by project owner on 2026-11-02**
+**Status: Superseded on 2026-11-02 by L-43 after explicit project-owner correction. Retained for decision history; do not implement.**
 
 - The platform may contain multiple specialty logbook templates, but a trainee does not browse, select, create, or switch between templates. Only platform administration may assign and activate a logbook for that trainee.
 - There is exactly one persistent logbook instance for each trainee-profile and specialty pair over the trainee's journey in that specialty. This is a database invariant, not only a user-interface rule.
@@ -575,8 +575,20 @@ L-35 is design-only. It does not authorize database migrations, schema changes, 
 - Repeated administrative assignment requests must be idempotent or return a clear already-assigned result. They must not create a duplicate instance. A different template version for the same specialty is an explicit, auditable administrative transition on the existing logbook; it is not a second logbook.
 - Existing records and historical activity must be preserved. Any migration from enrollment-owned instances must reconcile and retain entries, reviews, state revisions, audit history, and original template-version provenance. No silent deletion, overwriting, or automatic merging of ambiguous records is permitted.
 - The central template catalogue contains all approved specialty modules. A template's presence in the catalogue does not make it available to trainees. The trainee workspace exposes only the logbook(s) explicitly provisioned by administration.
-- This decision supersedes any prior interpretation that creates an independent logbook instance for every enrollment or mentor booking. It does not by itself change training-enrollment lifecycle rules or broaden mentor authorization; those remain governed by their own decisions and security contracts.
-- Implementation must enforce the trainee-specialty uniqueness and enrollment-to-logbook association transactionally in PostgreSQL/RLS/trusted workflows. Frontend checks alone are insufficient.
+- This decision was superseded by L-43 on 2026-11-02 after the project owner explicitly reconfirmed independent logbooks per enrollment. It is retained only as historical decision context and must not be used as the implementation target.
+
+### L-43 — Independent Logbook per Training Enrollment
+**Status: Accepted — explicitly confirmed by project owner on 2026-11-02; supersedes L-42.**
+
+- Every distinct training enrollment/booking between one trainee and one assigned mentor is an independent training record and owns exactly one separate logbook instance, including when the trainee repeats the same specialty with another mentor or in a later training period.
+- A logbook instance must be linked to exactly one enrollment. The same logbook instance must never be shared by two enrollments, even when both enrollments use the same specialty or template version.
+- A new enrollment starts with empty progress and no copied entries, submissions, mentor reviews, or state from earlier enrollments. Earlier logbooks remain in the trainee's training history and are not overwritten, merged, or reset.
+- An administrator may open a logbook directly for a trainee. That action must create or activate the corresponding enrollment and its logbook atomically; the logbook becomes visible in the trainee account immediately after the transaction commits. A direct-admin path must not create an orphan logbook with no enrollment.
+- Mentor access is scoped to the single enrollment assigned to that mentor. A mentor cannot read, edit, or review another enrollment's logbook. Administrators may oversee all enrollments and their logbooks, subject to audit.
+- Idempotency applies to retries of the same administrative operation/request, not to all enrollments for the same trainee-specialty pair. A genuinely new booking/enrollment creates a new logbook instance.
+- Specialty templates may be reused by many enrollments, but template reuse does not imply logbook-instance reuse. The template version selected for an enrollment must remain traceable in that enrollment's logbook history.
+- Database constraints, trusted transactional workflows, RLS, and audit records must enforce the enrollment-to-logbook ownership and access rules. Do not add a unique constraint on trainee plus specialty; enforce one logbook per enrollment instead.
+- Historical data must be preserved. Any migration or cleanup must identify orphan direct-admin instances, reconcile them to their intended enrollment without guessing, and retain entries, mentor reviews, state revisions, audit history, and template-version provenance. Do not merge separate enrollment histories.
 
 ## ADR-01 — Trusted Backend and Atomic Write Boundary (accepted)
 
