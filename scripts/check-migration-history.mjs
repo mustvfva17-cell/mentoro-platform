@@ -70,6 +70,19 @@ if (
   throw new Error('Medical Oncology seed contract failed: specialty must be resolved by slug, not a database-local UUID.');
 }
 
+const generalSurgerySeed = await readFile(
+  new URL('20261028175703_register_general_surgery_html_logbook.sql', migrationDirectory),
+  'utf8'
+);
+if (
+  !generalSurgerySeed.includes("WHERE slug = 'general-surgery'") ||
+  !generalSurgerySeed.includes('v_specialty_id') ||
+  !generalSurgerySeed.includes("WHERE slug = 'general-surgery-html'") ||
+  generalSurgerySeed.includes('d4921709-a57c-4a65-8e3c-34f38343ed1d')
+) {
+  throw new Error('General Surgery seed contract failed: specialty must be resolved by slug, not a database-local UUID.');
+}
+
 console.log(
   `Migration history contract passed: ${migrationFiles.length} SQL files; unique version prefixes, unique normalized contents, and fresh-project optional-helper guard.`
 );
