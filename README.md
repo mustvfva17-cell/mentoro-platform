@@ -24,8 +24,8 @@ The frontend work is still under review. Mentor/admin dashboards, complete templ
 - PR #21 — Anesthesia & Critical Care central HTML runtime — merged on 2026-11-02.
 - PR #22 and PR #23 — read-only browser harness fixes — merged on 2026-11-02.
 - The six specialty modules and six HTML runtime paths are registered in the central repository.
-- Current main commit: `daf555ae8b2ddb10fb5d50c844b5531c5348d427`. GitHub Actions run [41436124850](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/41436124850) passed migration-history checks, frontend/schema contracts, lifecycle-monitor checks, production build, and Chromium read-only smoke tests.
-- GitHub recorded a Vercel status of **success — “Deployment has completed”** for this commit. The connected Vercel API did not expose the deployment detail/alias, so this is not an assertion that a production domain is serving this build.
+- Last runtime/code commit verified by CI and Vercel: `daf555ae8b2ddb10fb5d50c844b5531c5348d427`. GitHub Actions run [41436124850](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/41436124850) passed migration-history checks, frontend/schema contracts, lifecycle-monitor checks, production build, and Chromium read-only smoke tests. GitHub recorded Vercel **success — “Deployment has completed”** for that code commit; its deployment detail/alias was not independently verified.
+- Latest main commit is `9433f2517156a8d4943ac73efa851ccdfb7a0a89`, merged through docs-only PR #24. GitHub Actions run [41437280857](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/41437280857) passed. Vercel reported **“Deployment rate limited — retry in 24 hours”** for this docs-only commit; this does not establish a new deployment. Do not infer that the latest main commit is live on a production domain.
 
 ### Migration and publication safety
 
@@ -69,7 +69,7 @@ Use a dedicated non-production Supabase project for local development and Previe
 
 The server-only environment template keeps `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and any separately reviewed `SUPABASE_SECRET_KEY` out of browser bundles. Never expose a secret/service-role key through a `VITE_*` variable or commit credentials to Git.
 
-The latest GitHub commit has a successful Vercel deployment status, but the deployment environment and production alias were not independently verified. The connected Supabase account currently exposes no accessible projects, so the database URL and migration target must be re-established before authenticated Preview end-to-end testing.
+The last runtime/code commit `daf555ae8b2ddb10fb5d50c844b5531c5348d427` has a successful Vercel completion status, but its deployment environment and alias were not independently verified. The later docs-only main commit `9433f2517156a8d4943ac73efa851ccdfb7a0a89` was rate-limited by Vercel; it has no new successful deployment status. The connected Supabase account currently exposes no accessible projects, so the database URL and migration target must be re-established before authenticated Preview end-to-end testing.
 
 ## Expected trainee flow
 
