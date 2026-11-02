@@ -1,5 +1,10 @@
 -- Seed Pediatrics as a private HTML template draft for the central admin review queue.
 -- This does not publish the clinical content or make the template assignable.
+-- Ensure the specialty exists on a clean project before attaching its template.
+INSERT INTO public.specialties (slug, name_en, name_ar, is_active)
+VALUES ('pediatrics', 'Pediatrics', 'طب الأطفال', true)
+ON CONFLICT (slug) DO NOTHING;
+
 -- The trusted HTML allowlist is registered in 20261102040000_register_pediatrics_html_logbook.sql.
 
 INSERT INTO public.logbook_templates (
