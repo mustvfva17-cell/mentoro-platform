@@ -9,7 +9,7 @@ MENTORO connects medical trainees with structured clinical training and mentorsh
 - Trainee profile provisioning through a current-user RPC.
 - Private university-ID uploads to the `trainee-verification` Storage bucket.
 - Published training discovery and trainee applications.
-- Separate enrollment and logbook instance for each confirmed training.
+- Current schema paths still include enrollment-owned and direct-admin-owned logbook instances. Accepted decision L-42 targets one persistent logbook per trainee-specialty; that transition is not yet implemented.
 - Draft logbook entries and submission to the assigned mentor for review.
 - Supabase RLS, scoped workflow RPCs, database-generated submission timestamps, and least-privilege browser grants.
 
@@ -17,14 +17,29 @@ The frontend work is still under review. Mentor/admin dashboards, complete templ
 
 ## Branch and migration safety
 
-The work is tracked across these pull requests:
+### Merged work on main
 
-- **PR #1 — trainee foundation:** merged into `main` on 2026-10-28. This does not constitute production-readiness approval.
-- **PR #2 — migration recovery/security:** open as a draft and targets `main`; it restores historical migration files and adds database hardening. The four later SQL migration sources have now been copied byte-for-byte from the stacked `feat/mentor-workspace-mvp` branch into the recovery branch. This makes the source files traceable, but the database ledger stores only version/name metadata and cannot independently prove the exact SQL bytes originally executed; clean-room replay is still required.
+- PR #1 — trainee workspace/auth foundation — merged on 2026-10-28.
+- PR #2 — migration-history recovery — merged on 2026-11-01. Its recovery note says the source migration files were restored byte-for-byte, while the database migration ledger stores version/name metadata and cannot prove the original SQL bodies; a clean-room replay remains required.
+- PR #21 — Anesthesia & Critical Care central HTML runtime — merged on 2026-11-02.
+- PR #22 and PR #23 — read-only browser harness fixes — merged on 2026-11-02.
+- The six specialty modules and six HTML runtime paths are registered in the central repository.
+- Current main commit: `daf555ae8b2ddb10fb5d50c844b5531c5348d427`. GitHub Actions run [41436124850](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/41436124850) passed migration-history checks, frontend/schema contracts, lifecycle-monitor checks, production build, and Chromium read-only smoke tests.
+- GitHub recorded a Vercel status of **success — “Deployment has completed”** for this commit. The connected Vercel API did not expose the deployment detail/alias, so this is not an assertion that a production domain is serving this build.
 
-**Do not merge PR #2 or deploy to production until it has been reviewed and the outstanding migration/security and end-to-end checks are complete.** The test-only PostgreSQL 17 `MAINTAIN` privilege fix is recorded in PR #2. No production database changes or production deployment were initiated by the work described in the recovery PR.
+### Migration and publication safety
 
-The test Supabase project is `mentoro-platform-test`. Do not replay migrations on that project because its ledger already records them as applied. All 20 recorded versions now have matching SQL source files on the PR #2 recovery branch, but the database ledger cannot confirm the original SQL bodies. Validate history with a clean-room replay on an isolated disposable database. Do not run development migrations against production.
+- The repository contains 59 SQL migration files. CI validates unique migration version prefixes and normalized contents; this does not prove that a remote database has applied them.
+- The six specialty seed migrations create template versions with status `DRAFT` and `is_assignable = false`. Technical registration does not establish clinical approval or make a template eligible for booking.
+- The latest specialty template versions must remain non-assignable until their specialty-specific clinical review and authorized publication are complete.
+- The repository's older migration-recovery note refers to a test project named `mentoro-platform-test` and a 20-version ledger. On 2026-11-02, the connected Supabase account tool returned no accessible projects, so the current existence of that project and its remote migration ledger could not be verified.
+- **Do not replay or apply the migration history to any database until the intended Supabase project is accessible and its actual migration ledger has been inspected.** Do not run development migrations against production.
+
+### Accepted logbook ownership decision (L-42)
+
+- L-42, accepted by the project owner and recorded on 2026-11-01, specifies one persistent logbook per trainee-specialty pair. Each enrollment remains a separate operational/mentor context and references that specialty logbook.
+- The current SQL/runtime still contains enrollment-owned logbook instances and a separate direct-admin assignment path. It does not yet enforce canonical trainee-specialty uniqueness or complete the required enrollment-to-logbook association. L-42 is therefore an accepted target, not an implemented production invariant.
+- See [the L-42 lifecycle and migration contract](docs/LOGBOOK_PER_SPECIALTY_LIFECYCLE.md).
 
 ## Requirements and local setup
 
@@ -47,38 +62,41 @@ The repository now contains an npm-generated `package-lock.json` (`lockfileVersi
 
 ## Preview environment
 
-Use only the test Supabase project for local development and Preview deployments. Configure these public browser variables in the **Preview** environment of an independently authorized Vercel Preview project:
+Use a dedicated non-production Supabase project for local development and Preview deployments. Configure the public browser variables only in the Vercel Preview environment:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-The publishable key is intended for browser use; database access must still be constrained by RLS and grants. Never expose a Supabase secret/service-role key through a `VITE_` variable or commit credentials to Git.
+The server-only environment template keeps `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and any separately reviewed `SUPABASE_SECRET_KEY` out of browser bundles. Never expose a secret/service-role key through a `VITE_*` variable or commit credentials to Git.
 
-The independent Preview project and environment configuration are not yet verified. Creating a separate Vercel project returned 403 in the available team context. A Vercel team owner must authorize or create the Preview project and connect this repository before browser-based end-to-end testing can be completed.
+The latest GitHub commit has a successful Vercel deployment status, but the deployment environment and production alias were not independently verified. The connected Supabase account currently exposes no accessible projects, so the database URL and migration target must be re-established before authenticated Preview end-to-end testing.
 
 ## Expected trainee flow
+
+The target flow after the accepted L-42 migration is:
 
 1. Sign up and confirm the email address.
 2. Sign in and upload a university ID (JPG, PNG, or PDF, maximum 8 MiB).
 3. Wait for an administrator to verify the trainee account.
 4. Browse published offerings with future open slots and submit an application.
 5. The assigned mentor reviews the application.
-6. An administrator confirms the booking.
-7. Confirmation creates an enrollment with its own independent logbook instance.
-8. The trainee saves draft entries and submits them for review by the assigned mentor.
+6. An administrator confirms the booking or directly provisions an approved specialty logbook.
+7. The administrator provisions at most one persistent logbook for the trainee-specialty pair; a confirmed training enrollment is linked to that logbook rather than creating a second one.
+8. Each enrollment and mentor relationship remains a distinct operational context. Mentor access remains limited to the assigned enrollment/context; the trainee's specialty logbook history is retained across enrollments.
 
-A trainee may have multiple enrollments in the same specialty; each enrollment must retain a separate logbook and history. Past training records must not be copied into a new enrollment. Mentors should access only their assigned enrollments, while administrators can oversee all enrollments.
+**Implementation note:** step 7 is the accepted L-42 target and is not yet implemented in the current schema/runtime. The existing enrollment-owned paths must be migrated and reconciled before this flow can be claimed as live.
 
 ## Current validation and outstanding checks
 
 GitHub Actions runs `npm run check:contracts` and `npm run build`. Database workflow checks have also been exercised in rollback-only transactions against the test project. These checks do **not** substitute for browser testing with separate trainee, mentor, and administrator identities.
 
-Outstanding before considering a merge:
+Outstanding before implementing L-42 or treating the platform as production-ready:
 
-- Clean-room migration replay on an isolated database.
-- Resolve/review broad default privileges owned by `supabase_admin` for future public objects.
-- Configure an independent Vercel Preview and test the full trainee-to-mentor/admin journey.
-- Add browser end-to-end tests and complete mentor/admin workspaces.
-- Review both stacked pull requests together; do not merge PR #1 alone.
+- Restore access to the intended non-production Supabase project and verify its migration ledger; the currently connected Supabase account exposes no projects.
+- Perform a clean-room replay/reconciliation on an isolated database. Resolve/review broad default privileges owned by `supabase_admin` for future public objects.
+- Implement L-42 across schema, enrollment confirmation, direct admin provisioning, trainee workspace, mentor inbox/review, HTML state access, audit and history provenance. Test repeat/concurrent assignments and multiple enrollments in one specialty.
+- Configure and verify the authorized Vercel Preview environment, then run authenticated end-to-end tests with separate trainee, mentor, and administrator identities.
+- Complete remaining mentor/admin workspace and specialty template workflows.
+- Obtain documented clinical review and authorized publication for each specialty before making any template assignable.
 
 Do not enter patient-identifying information into test environments.

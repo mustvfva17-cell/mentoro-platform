@@ -190,3 +190,14 @@ Added the initial app foundation directly on `main`: `package.json`, `.gitignore
 - Added `SUPABASE_PUBLISHABLE_KEY` to the server environment template. The endpoint does not use `SUPABASE_SECRET_KEY`; no secret values were committed.
 - This is not full login/session UI and does not implement platform roles, database access, RLS, RPCs, or migrations. ADR-02 remains a candidate pending isolated tests.
 - GitHub-side edits were not locally built or runtime-tested in this operation. Pull `main`, run `npm install` and `npm run build`, then test with Vercel local API runtime and test-project configuration before deployment.
+
+## Platform status update — 2026-11-02 (after six specialty integrations)
+
+- The central specialty registry contains six modules and six HTML runtime paths: General Surgery, Medical Oncology, Cardiology, Neurology, Pediatrics, and Anesthesia & Critical Care.
+- Anesthesia & Critical Care was merged through PR #21. PRs #22 and #23 fixed the Chromium read-only harness; both are merged.
+- Main commit `daf555ae8b2ddb10fb5d50c844b5531c5348d427` passed GitHub Actions run [41436124850](https://github.com/mustvfva17-cell/mentoro-platform/actions/runs/41436124850), including migration-file validation, specialty/runtime contracts, lifecycle-monitor tests, Vite build, and Chromium read-only smoke tests.
+- GitHub recorded a successful Vercel deployment status for that commit (“Deployment has completed”). The deployment environment/alias was not independently verified through the available Vercel API, so production-domain readiness is not claimed.
+- The latest specialty seed migrations create `DRAFT` template versions with `is_assignable = false`. Clinical review and an authorized publication transition remain required.
+- L-42 was accepted and recorded in the decision register on 2026-11-01: one persistent logbook per trainee-specialty pair, with separate enrollments linked to it. Current SQL/runtime paths still include enrollment-owned instances and direct-admin-owned instances and do not enforce the canonical trainee-specialty uniqueness/association invariant. L-42 remains unimplemented.
+- The connected Supabase account returned no accessible projects on 2026-11-02. The remote migration ledger, current project existence, and any live logbook-instance data could not be verified. Do not replay/apply migrations until the intended non-production project is accessible and its ledger has been inspected.
+- The six standalone ZIPs are retained as source/audit material; central runtimes must not be replaced wholesale by their localStorage-only implementations.

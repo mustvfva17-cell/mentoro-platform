@@ -1,6 +1,6 @@
 # Central Specialty Logbook Foundation
 
-**Status:** Six specialty IDs are centrally registered. The Anesthesia & Critical Care HTML runtime is being added on a Draft branch alongside the five existing HTML runtimes. Clinical modules remain non-assignable until specialty review and authorized publication. The proposed Anesthesia migrations have not been applied to Supabase.
+**Status (2026-11-02):** Six specialty IDs and six HTML runtime paths are centrally registered on `main`: General Surgery, Medical Oncology, Cardiology, Neurology, Pediatrics, and Anesthesia & Critical Care. Anesthesia was merged in PR #21. CI passes the registry and runtime contracts. Template versions remain Draft/non-assignable pending specialty-specific clinical review and authorized publication. The connected Supabase account currently exposes no accessible projects, so the remote migration state could not be verified.
 
 ## Confirmed product lifecycle
 
@@ -31,11 +31,11 @@ Therefore this integration registers the existing central General Surgery runtim
 
 The module registry contains six specialty IDs. General Surgery and Medical Oncology declare their existing HTML runtime paths. Their catalogue lifecycle remains `draft` pending the clinical/schema review gate; runtime registration is not the same thing as clinical approval or permission for trainees to self-select a template.
 
-Cardiology, Neurology, and Pediatrics have central HTML runtime pages. Anesthesia & Critical Care is now ported to a central HTML runtime on its integration branch, with 157 source roadmap items, 17 groups, nine Patient Journey prompts, five Clinical Interpretation prompts, and five emergency templates. Its clinical catalogue remains Draft pending anesthesiologist / intensivist review. Runtime registration and CI validation do not mean clinical approval or assignment eligibility.
+Cardiology, Neurology, and Pediatrics have central HTML runtime pages. Anesthesia & Critical Care is now merged into the central HTML runtime on `main`, with 157 source roadmap items, 17 groups, nine Patient Journey prompts, five Clinical Interpretation prompts, and five emergency templates. Its clinical catalogue remains Draft pending anesthesiologist / intensivist review. Runtime registration and CI validation do not mean clinical approval or assignment eligibility.
 
 ## Not included
 
-- No schema migration or Supabase project creation.
+- No live Supabase migration execution or Supabase project creation is claimed by this integration.
 - No change to current enrollment, mentor, RLS, or entry-write behavior.
 - No new admin UI or trainee provisioning UI.
 - No blanket import of standalone ZIPs.
@@ -46,4 +46,4 @@ Cardiology, Neurology, and Pediatrics have central HTML runtime pages. Anesthesi
 1. Compare the uploaded General Surgery ZIP against the central integrated runtime and port only missing, verified UI/content improvements without losing bridge behavior.
 2. Design and test the fresh database model: canonical trainee-specialty logbook, enrollment association, entry provenance, and mentor-scoped review access.
 3. Implement atomic admin provisioning and immediate trainee visibility through the trusted Vercel API and PostgreSQL transaction/RLS.
-4. Complete the Anesthesia & Critical Care central HTML port and CI regression checks, then validate through a Vercel Preview and an authorized clinical review before any publication.
+4. Keep all six template versions Draft/non-assignable until their specialty review is documented; validate the integrated runtimes through an authorized Preview environment before publication. Implement accepted L-42 only after the intended non-production database is accessible and its migration ledger/history has been inspected.
