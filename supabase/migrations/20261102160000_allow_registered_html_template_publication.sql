@@ -300,8 +300,7 @@ $$;
 
 REVOKE ALL ON FUNCTION app_private.admin_publish_logbook_template_version(uuid, text)
   FROM PUBLIC, anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION app_private.admin_publish_logbook_template_version(uuid, text)
-  TO authenticated;
+-- Browser callers use the existing owner-checked public wrapper; the private helper stays unexecutable by API roles.
 
 COMMENT ON FUNCTION app_private.admin_publish_logbook_template_version(uuid, text) IS
   'Admin-only publication of structured or registered HTML logbook template versions after source and clinical review notes are recorded.';
