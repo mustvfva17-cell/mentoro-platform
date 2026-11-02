@@ -120,4 +120,84 @@ input[type=checkbox],input[type=radio]{width:20px;height:20px;min-height:0;flex:
 .sidebar{width:248px!important;padding:22px 14px!important}
 .nav button{border-radius:var(--r-ctl)!important;min-height:44px;font-size:var(--fs-sm)!important;padding:0 12px!important}
 .nav button.active{background:var(--ink)!important;color:var(--surface)!important;font-weight:700!important}
-.nav button.active::before{display:none
+.nav button.active::before{display:none}
+.nav-title{font-size:var(--fs-xs)!important;font-weight:650;color:var(--muted-2)}
+
+@media(max-width:720px){
+  body{background:var(--bg)}
+  .content{padding:14px 14px calc(104px + env(safe-area-inset-bottom))!important}
+  .topbar{height:58px;padding:0 14px!important}
+  .hero{margin:0 -2px;border-radius:24px!important}
+  .hero-actions .btn{flex:1 1 100%}
+  .hero-actions .btn.primary{order:-1}
+  .cols4{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .cols4>.stat{padding:16px!important}
+  .cols4>.stat+.stat{border-left:0!important}
+  .cols4>.stat:nth-child(even){border-left:1px solid var(--line)!important}
+  .cols4>.stat:nth-child(n+3){border-top:1px solid var(--line)}
+  /* ledger rows instead of a pile of boxed cards */
+  .roadmap-table{border-spacing:0!important}
+  .roadmap-table tbody tr{border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;padding:16px 2px!important;background:transparent!important}
+  .roadmap-table td,.data-table td{font-size:var(--fs-sm)!important}
+  .roadmap-table td:first-child .item-title{font-size:16px!important;line-height:1.3;font-weight:650}
+  .data-table td::before{font-size:var(--fs-xs)!important;color:var(--muted)!important}
+  .roadmap-table .checkbtn{width:var(--tap)!important;height:var(--tap)!important;min-width:var(--tap)}
+  /* floating dock navigation */
+  .mobile-nav{left:10px!important;right:10px!important;bottom:calc(10px + env(safe-area-inset-bottom))!important;border:1px solid var(--line)!important;border-radius:24px;padding:6px 4px!important;gap:0!important;overflow:visible!important;box-shadow:0 10px 32px rgba(15,18,22,.16);background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(14px)}
+  .mobile-nav button{flex:1 1 0!important;min-width:0;font-size:9.4px!important;padding:8px 0 6px!important;letter-spacing:-.02em;gap:3px;border-radius:18px!important}
+  .mobile-nav button.active{background:var(--ink)!important;color:var(--surface)!important}
+  .mnav-ico{width:21px;height:21px}
+  .mobile-nav button span:last-child{white-space:nowrap}
+  /* entry forms: bottom sheet, sticky Save */
+  .modal{align-items:flex-end;padding:0!important}
+  .modal-card{width:100%;max-height:92dvh;border-radius:22px 22px 0 0!important;display:flex;flex-direction:column}
+  .modal-body{overflow-y:auto;flex:1}
+  .modal-actions{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:12px 0 calc(12px + env(safe-area-inset-bottom));margin-top:12px}
+  .modal-actions .btn{flex:1}
+}
+@media(min-width:721px){.checks label:hover{border-color:var(--accent-border-strong)}}
+
+/* ---------- legibility floor: nothing under 12px, anywhere ---------- */
+.lbl,small,.empty,.group-label,.tag,.mini-btn,.progress-note,.road-section-meta,.phase-tab,.filter,.status-filter,.footer-note,.subtab,.helper-save,th,td,.mnav-label{font-size:max(12px,1em)}
+.phase-tab,.filter,.status-filter,.subtab{font-size:var(--fs-sm)!important;min-height:36px;padding:0 14px!important;font-weight:600}
+.mini-btn{min-height:36px;padding:0 12px!important;border-radius:10px!important}
+.footer-note,.progress-note,.road-section-meta{font-size:var(--fs-xs)!important;line-height:1.5}
+.card :is(h2,h3){font-size:clamp(19px,4.6vw,24px)!important;line-height:1.2}
+/* Overview: the ink hero leads, stats follow */
+.view.active:has(>.hero-grid){display:flex;flex-direction:column;gap:16px}
+.view.active:has(>.hero-grid)>.hero-grid{order:-1}
+.view.active:has(>.hero-grid)>:is(.eyebrow,.title,.sub){order:-2}
+@media(max-width:720px){
+  .mobile-nav button{font-size:10px!important}
+  .table-wrap:has(tbody:empty),.data-table:has(tbody:empty){display:none}
+}
+
+/* dock: icons only, the active destination shows its name (7 labels cannot fit legibly) */
+@media(max-width:720px){
+  .mobile-nav button{font-size:12px!important;transition:flex .2s ease}
+  .mobile-nav button .mnav-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .mobile-nav button.active{flex:2.4 1 0!important;flex-direction:row;gap:6px;padding:10px 4px!important}
+  .mobile-nav button.active .mnav-label{position:static;width:auto;height:auto;clip:auto;font-size:12px;font-weight:700}
+  .table-wrap:not(:has(tbody tr)){display:none}
+}
+
+/* final floor: secondary text in cards, stats, next-focus rows, templates, progress tables */
+.card :is(p,small,b,th,td,.lbl,.group-label,.tag),.hero small,.view :is(.lbl,.template p,.empty-cta span,.next-meta *,.progress-copy p){font-size:max(var(--fs-xs),12px)!important}
+.card p:not(.progress-copy p),.stat .lbl{font-size:var(--fs-sm)!important}
+.next-row b,.card b{font-size:var(--fs-md)!important;font-weight:650}
+th{font-weight:650!important}
+.brand-sub,.journey-tag,.crumb,.crumb *{font-size:var(--fs-xs)!important}
+.view p,.section-head p{font-size:var(--fs-sm)!important}
+.journey-tag{line-height:1.6;color:var(--muted)}
+.hero small{color:var(--panel-muted)!important;text-transform:none!important;letter-spacing:0!important;font-weight:650!important;font-size:var(--fs-sm)!important}
+.view.active:has(>.hero-grid){gap:12px}
+.view.active:has(>.hero-grid)>.title{margin:0!important}
+/* the logo's dark wordmark disappears on dark surfaces: seat it on a light chip */
+:root[data-theme="dark"] :is(.topbar,.sidebar,.brand) img{background:#fff;border-radius:10px;padding:5px 9px;box-sizing:content-box}
+
+
+/* MENTORO central cloud bridge and mentor-review UI. */
+.sync-status{font-size:12px;color:var(--muted,#657080);padding:4px 2px 10px}.sync-status.error{color:#b42318}
+.readonly-banner{margin:0 0 12px;padding:10px 13px;border:1px solid var(--accent-border,#efcbd1);border-radius:10px;background:var(--accent-soft,#fff2f4);color:var(--ink);font-size:13px}
+.mentor-review-panel{margin-top:22px}.mentor-review-panel[hidden]{display:none}.mentor-review-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.mentor-review-card{border:1px solid var(--line,#d9dee7);border-radius:14px;padding:14px;background:var(--surface,#fff)}.mentor-review-card h3{margin:0 0 5px;font-size:15px}.mentor-review-card small,.mentor-review-card p{color:var(--muted,#657080)}.mentor-review-card label{display:block;margin:10px 0 5px;font-size:13px}.mentor-review-card select,.mentor-review-card textarea{width:100%;min-height:42px;border:1px solid var(--line,#d9dee7);border-radius:8px;padding:8px;background:var(--surface,#fff);color:inherit}.mentor-review-card textarea{min-height:76px}.review-prior{border-left:3px solid var(--line);padding:7px 10px;margin:8px 0;background:var(--surface-2)}.review-prior p{margin:5px 0 0}.review-note{color:var(--danger)}
+.html-logbook-readonly .quick-add{display:none!important}.html-logbook-readonly .modal{display:none!important}
