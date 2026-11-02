@@ -47,13 +47,13 @@ check(
 check(
   !main.includes('assignedLogbookCard') &&
   !main.includes('assignedLogbooksResult') &&
-  !main.includes(".eq('trainee_profile_id', user.id).order('created_at', { ascending: false })"),
+  !main.includes("supabase.from('logbook_instances').select("),
   'trainee workspace no longer loads direct-to-profile orphan logbooks'
 );
 
 check(
   main.includes('!isUuid(enrollmentId)') &&
-  main.includes('data-enrollment-id="\' + esc(enrollment.id)') &&
+  main.includes("data-enrollment-id=\\\"' + esc(enrollment.id) + '\\\" data-html-path") &&
   main.includes('enrollmentId: button.dataset.enrollmentId'),
   'HTML logbook windows require and propagate their enrollment context for trainees and mentors'
 );
