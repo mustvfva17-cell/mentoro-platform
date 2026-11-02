@@ -32,7 +32,7 @@ for (const module of htmlModules) {
     `${module.id} mentor review must remain read-only.`);
 }
 
-const anesthesia = modules.find((module) => module.id === 'anesthesia-icu');
+const anesthesia = modules.find((module) => module.id === 'anaesthesia-critical-care');
 assert.ok(anesthesia, 'Anesthesia & Critical Care must be registered.');
 assert.equal(anesthesia.lifecycle, 'draft',
   'Anesthesia & Critical Care must remain draft pending clinical review.');
