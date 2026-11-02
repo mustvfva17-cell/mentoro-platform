@@ -1,5 +1,5 @@
 export default Object.freeze({
-  id: "anesthesia-icu",
+  id: "anaesthesia-critical-care",
   name: "Anesthesia & Critical Care",
   sourceLabel: "Anaesthesia & Critical Care",
   lifecycle: "draft",
