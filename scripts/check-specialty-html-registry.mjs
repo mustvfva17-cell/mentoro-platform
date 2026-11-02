@@ -17,7 +17,8 @@ assert.deepEqual(
     '/logbooks/medical-oncology/index.html',
     '/logbooks/cardiology/index.html',
     '/logbooks/neurology/index.html',
-    '/logbooks/pediatrics/index.html'
+    '/logbooks/pediatrics/index.html',
+    '/logbooks/anesthesia-icu/index.html'
   ]),
   'Only the five currently integrated HTML runtime pages may be registered.'
 );
@@ -30,6 +31,13 @@ for (const module of htmlModules) {
   assert.equal(module.readOnlyMentorReview, true,
     `${module.id} mentor review must remain read-only.`);
 }
+
+const anesthesia = modules.find((module) => module.id === 'anesthesia-icu');
+assert.ok(anesthesia, 'Anesthesia & Critical Care must be registered.');
+assert.equal(anesthesia.lifecycle, 'draft',
+  'Anesthesia & Critical Care must remain draft pending clinical review.');
+assert.equal(anesthesia.renderer, 'HTML');
+assert.equal(anesthesia.htmlPath, '/logbooks/anesthesia-icu/index.html');
 
 for (const module of modules.filter((candidate) => candidate.renderer !== 'HTML')) {
   assert.equal(module.htmlPath, undefined,
