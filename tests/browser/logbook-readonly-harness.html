@@ -30,7 +30,7 @@
         type: 'MENTORO_LOGBOOK_LOAD_STATE',
         instanceId,
         hasCloudState: true,
-        readOnly: true,
+        readOnly: false,
         state: {
           sessions: [{ id: '333e4567-e89b-12d3-a456-426614174000', date: '2026-11-02', focus: 'Anesthesia bridge test session' }],
           cases: [], procedures: [], roadmap: {}, emergency: [], reflection: {}
@@ -74,7 +74,7 @@
     };
 
     document.getElementById('open-logbook').addEventListener('click', () => {
-      window.mentoroTestPopup = window.open(path + '?instance=' + instanceId + (anesthesia ? '&readonly=1' : ''), '_blank');
+      window.mentoroTestPopup = window.open(path + '?instance=' + instanceId + , '_blank');
       if (!window.mentoroTestPopup) throw new Error('The logbook popup was blocked');
       window.mentoroLifecycleMonitor = startEnrollmentLifecycleMonitor({
         supabase: mockSupabase,
