@@ -296,7 +296,7 @@ BEGIN
 
   RETURN jsonb_build_object('state', v_state, 'revision', v_revision, 'updated_at', v_updated_at);
 END;
-$;
+$$;
 REVOKE ALL ON FUNCTION app_private.get_my_logbook_html_state(uuid)
   FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION app_private.get_my_logbook_html_state(uuid)
@@ -308,7 +308,7 @@ SECURITY INVOKER
 SET search_path = ''
 AS $$
   SELECT app_private.get_my_logbook_html_state(p_instance_id);
-$;
+$$;
 REVOKE ALL ON FUNCTION public.get_my_logbook_html_state(uuid)
   FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_my_logbook_html_state(uuid)
