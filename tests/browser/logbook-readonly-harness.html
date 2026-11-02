@@ -74,7 +74,7 @@
     };
 
     document.getElementById('open-logbook').addEventListener('click', () => {
-      window.mentoroTestPopup = window.open(path + '?instance=' + instanceId + , '_blank');
+      window.mentoroTestPopup = window.open(path + '?instance=' + instanceId, '_blank');
       if (!window.mentoroTestPopup) throw new Error('The logbook popup was blocked');
       window.mentoroLifecycleMonitor = startEnrollmentLifecycleMonitor({
         supabase: mockSupabase,
