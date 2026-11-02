@@ -108,6 +108,7 @@ check(
   admin.includes('window.sessionStorage.setItem(requestStorageKey, requestId)') &&
   admin.includes('window.sessionStorage.removeItem(requestStorageKey)') &&
   admin.includes('assignableAdminSlots') &&
+  admin.includes('mentor.is_public === true') &&
   admin.includes("version.status === 'PUBLISHED'") &&
   admin.includes('version.is_assignable === true') &&
   admin.includes('offering.status !== \'PUBLISHED\'') &&
