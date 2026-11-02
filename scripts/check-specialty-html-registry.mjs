@@ -17,23 +17,32 @@ assert.deepEqual(
     '/logbooks/medical-oncology/index.html',
     '/logbooks/cardiology/index.html',
     '/logbooks/neurology/index.html',
-    '/logbooks/pediatrics/index.html'
+    '/logbooks/pediatrics/index.html',
+    '/logbooks/anesthesia-icu/index.html'
   ]),
-  'Only the five currently integrated HTML runtime pages may be registered.'
+  'Only currently integrated HTML runtime pages may be registered.'
 );
 
 for (const module of htmlModules) {
-  assert.ok(module.htmlPath.startsWith(`/logbooks/${module.id}/`),
-    `${module.id} HTML runtime must remain inside its own public logbook path.`);
+  const routeSlug = module.id === 'anaesthesia-critical-care' ? 'anesthesia-icu' : module.id;
+  assert.ok(module.htmlPath.startsWith(`/logbooks/${routeSlug}/`),
+    `${module.id} HTML runtime must remain inside its registered public logbook path.`);
   assert.equal(module.supportsMentorReview, true,
     `${module.id} must declare mentor review support explicitly.`);
   assert.equal(module.readOnlyMentorReview, true,
     `${module.id} mentor review must remain read-only.`);
 }
 
+const anesthesia = modules.find((module) => module.id === 'anaesthesia-critical-care');
+assert.ok(anesthesia, 'Anesthesia & Critical Care must be registered.');
+assert.equal(anesthesia.lifecycle, 'draft',
+  'Anesthesia & Critical Care must remain draft pending clinical review.');
+assert.equal(anesthesia.renderer, 'HTML');
+assert.equal(anesthesia.htmlPath, '/logbooks/anesthesia-icu/index.html');
+
 for (const module of modules.filter((candidate) => candidate.renderer !== 'HTML')) {
   assert.equal(module.htmlPath, undefined,
     `${module.id} must not claim an HTML runtime before one is ported.`);
 }
 
-console.log('Specialty registry contract passed: six modules, five registered HTML runtimes.');
+console.log('Specialty registry contract passed: six modules, six registered HTML runtimes.');
