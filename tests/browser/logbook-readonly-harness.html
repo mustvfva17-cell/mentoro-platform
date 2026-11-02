@@ -15,9 +15,33 @@
     const enrollmentId = '223e4567-e89b-12d3-a456-426614174000';
     const params = new URLSearchParams(window.location.search);
     const surgery = params.get('template') === 'general-surgery';
-    const path = surgery
-      ? '/logbooks/general-surgery/index.html'
-      : '/logbooks/medical-oncology/index.html';
+    const anesthesia = params.get('template') === 'anesthesia-icu';
+    const path = anesthesia
+      ? '/logbooks/anesthesia-icu/index.html'
+      : surgery
+        ? '/logbooks/general-surgery/index.html'
+        : '/logbooks/medical-oncology/index.html';
+
+    window.addEventListener('message', (event) => {
+      if (!anesthesia || event.origin !== window.location.origin ||
+          event.data?.type !== 'MENTORO_LOGBOOK_READY' ||
+          event.data.instanceId !== instanceId) return;
+      event.source.postMessage({
+        type: 'MENTORO_LOGBOOK_LOAD_STATE',
+        instanceId,
+        hasCloudState: true,
+        readOnly: true,
+        state: {
+          sessions: [{ id: '333e4567-e89b-12d3-a456-426614174000', date: '2026-11-02', focus: 'Anesthesia bridge test session' }],
+          cases: [], procedures: [], roadmap: {}, emergency: [], reflection: {}
+        }
+      }, window.location.origin);
+      event.source.postMessage({
+        type: 'MENTORO_LOGBOOK_LOAD_REVIEWS',
+        instanceId,
+        reviews: []
+      }, window.location.origin);
+    });
     let enrollmentStatus = 'ACTIVE';
 
     const mockSupabase = {
@@ -50,7 +74,7 @@
     };
 
     document.getElementById('open-logbook').addEventListener('click', () => {
-      window.mentoroTestPopup = window.open(path + '?instance=' + instanceId, '_blank');
+      window.mentoroTestPopup = window.open(path + '?instance=' + instanceId + (anesthesia ? '&readonly=1' : ''), '_blank');
       if (!window.mentoroTestPopup) throw new Error('The logbook popup was blocked');
       window.mentoroLifecycleMonitor = startEnrollmentLifecycleMonitor({
         supabase: mockSupabase,
