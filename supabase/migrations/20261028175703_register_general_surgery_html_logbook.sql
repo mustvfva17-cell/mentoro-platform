@@ -361,12 +361,21 @@ $function$;
 -- Seed the imported owner-provided General Surgery interface as a DRAFT only.
 DO $seed$
 DECLARE
+  v_specialty_id uuid;
   v_template_id uuid;
   v_version_id uuid;
 BEGIN
+  SELECT id INTO v_specialty_id
+  FROM public.specialties
+  WHERE slug = 'general-surgery';
+
+  IF v_specialty_id IS NULL THEN
+    RAISE EXCEPTION 'Could not resolve the General Surgery specialty; verify the specialty seed ran first';
+  END IF;
+
   INSERT INTO public.logbook_templates (specialty_id, slug, title, description, is_active)
   VALUES (
-    'd4921709-a57c-4a65-8e3c-34f38343ed1d'::uuid,
+    v_specialty_id,
     'general-surgery-html',
     'General Surgery Clinical Logbook',
     'Existing MENTORO General Surgery HTML logbook with Overview, Roadmap, Sessions, Clinical Cases, Procedures, Emergency, Progress, and Reflection views.',
@@ -376,10 +385,11 @@ BEGIN
 
   SELECT id INTO v_template_id
   FROM public.logbook_templates
-  WHERE slug = 'general-surgery-html';
+  WHERE slug = 'general-surgery-html'
+    AND specialty_id = v_specialty_id;
 
   IF v_template_id IS NULL THEN
-    RAISE EXCEPTION 'Could not resolve the General Surgery HTML template after seed';
+    RAISE EXCEPTION 'Could not resolve the General Surgery HTML template for the expected specialty after seed';
   END IF;
 
   SELECT id INTO v_version_id
