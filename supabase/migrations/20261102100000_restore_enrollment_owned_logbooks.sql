@@ -34,7 +34,10 @@ AS $$
     SELECT 1
     FROM public.logbook_instances i
     WHERE i.id = p_instance_id
-      AND app_private.can_access_enrollment(i.enrollment_id)
+      AND (
+        app_private.is_platform_admin()
+        OR app_private.can_access_enrollment(i.enrollment_id)
+      )
   );
 $$;
 REVOKE ALL ON FUNCTION app_private.can_access_instance(uuid)
@@ -124,7 +127,8 @@ BEGIN
     RAISE EXCEPTION 'This instance is not assigned to a registered HTML logbook' USING ERRCODE = '22023';
   END IF;
 
-  IF NOT app_private.can_access_enrollment(v_enrollment_id) THEN
+  IF NOT app_private.can_access_enrollment(v_enrollment_id)
+     AND NOT app_private.is_platform_admin() THEN
     RAISE EXCEPTION 'You cannot access this training logbook' USING ERRCODE = '42501';
   END IF;
 
