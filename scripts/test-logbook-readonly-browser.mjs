@@ -97,6 +97,7 @@ try {
       const result = await logbook.evaluate(() => {
         const controls = Array.from(document.querySelectorAll('input, textarea, select'))
           .filter((control) =>
+            control.type !== 'search' &&
             !['roadSearch', 'roadGroupSelect', 'sessionSearch', 'caseSearch', 'procSearch', 'discussionSearch', 'emergencySearch'].includes(control.id) &&
             !control.closest('#mentorReviewPanel'));
         const guardedButtons = Array.from(document.querySelectorAll('button[title="Read-only logbook"]'));
