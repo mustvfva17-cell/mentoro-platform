@@ -226,7 +226,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
 DECLARE
   v_actor_id uuid := auth.uid();
   v_trainee_id uuid;
@@ -300,7 +300,7 @@ RETURNS jsonb
 LANGUAGE sql
 SECURITY INVOKER
 SET search_path = ''
-AS $
+AS $$
   SELECT app_private.get_my_logbook_html_state(p_instance_id);
 $;
 REVOKE ALL ON FUNCTION public.get_my_logbook_html_state(uuid)
