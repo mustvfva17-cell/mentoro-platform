@@ -47,6 +47,17 @@ for (const filename of migrationFiles) {
   contents.set(digest, filename);
 }
 
+const freshProjectBootstrap = await readFile(
+  new URL('20261028060841_restrict_rls_auto_enable_function.sql', migrationDirectory),
+  'utf8'
+);
+if (
+  !freshProjectBootstrap.includes("to_regprocedure('public.rls_auto_enable()')") ||
+  !freshProjectBootstrap.includes('REVOKE EXECUTE ON FUNCTION public.rls_auto_enable()')
+) {
+  throw new Error('Fresh-project bootstrap contract failed: optional rls_auto_enable revoke must be guarded.');
+}
+
 console.log(
-  `Migration history contract passed: ${migrationFiles.length} SQL files; unique version prefixes and unique normalized contents.`
+  `Migration history contract passed: ${migrationFiles.length} SQL files; unique version prefixes, unique normalized contents, and fresh-project optional-helper guard.`
 );
