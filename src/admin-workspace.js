@@ -33,7 +33,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         .select('id,status,created_at,applicant_note,trainee_profiles(university_name,faculty_name,year_of_study,profiles(full_name,email)),training_offerings(title,delivery_mode,mentor_profiles(display_name,professional_title),specialties(name_en)),training_slots(starts_at,ends_at,capacity)')
         .eq('status', 'MENTOR_APPROVED').order('created_at', { ascending: true }).limit(100),
       supabase.from('training_offerings')
-        .select('id,title,status,delivery_mode,mentor_profile_id,mentor_profiles(display_name,professional_title),specialties(name_en),training_slots(id,starts_at,ends_at,status,capacity)')
+        .select('id,title,status,delivery_mode,mentor_profile_id,template_version_id,mentor_profiles(display_name,professional_title),specialties(name_en),training_slots(id,starts_at,ends_at,status,capacity)')
         .order('created_at', { ascending: false }).limit(100),
       supabase.from('training_enrollments')
         .select('id,status,starts_at,ends_at,completed_at,cancelled_at,training_offerings(title),trainee_profiles(university_name,faculty_name,profiles(full_name,email)),mentor_profiles(display_name,professional_title),specialties(name_en)')
@@ -96,9 +96,21 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
     const traineeProfiles = traineeProfileResult.data || [];
     const assignableHtmlTemplates = templateVersions.filter((version) =>
       version.template?.is_active &&
+      version.status === 'PUBLISHED' &&
+      version.is_assignable === true &&
       version.template_definition?.renderer === 'HTML' &&
       REGISTERED_HTML_LOGBOOK_PATHS.has(version.template_definition.html_path)
     );
+    const assignableTemplateIds = new Set(assignableHtmlTemplates.map((version) => version.id));
+    const activeApprovedMentorIds = new Set(mentors.map((mentor) => mentor.profile_id));
+    const assignableAdminSlots = offerings.flatMap((offering) => {
+      if (offering.status !== 'PUBLISHED' ||
+          !activeApprovedMentorIds.has(offering.mentor_profile_id) ||
+          !assignableTemplateIds.has(offering.template_version_id)) return [];
+      return (offering.training_slots || [])
+        .filter((slot) => slot.status === 'OPEN' && new Date(slot.starts_at).getTime() > Date.now())
+        .map((slot) => ({ slot, offering }));
+    });
     const pendingSlots = (offering) => (offering.training_slots || []).filter((slot) => slot.status === 'OPEN').length;
 
     shell(
@@ -297,21 +309,21 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
             }).join('') + '</div>'
             : '<div class="empty-state"><strong>No template drafts awaiting review</strong><p>New drafts will appear here for clinical review before they can be assigned to training.</p></div>') +
         '</section>' +
-        '<section class="section-block" id="admin-assign-logbook"><div class="section-heading"><div><p class="eyebrow">TRAINEE RECORDS</p><h2>Assign a personal logbook</h2></div><span class="status-chip status-chip--neutral">Admin only</span></div>' +
-          '<p class="workspace-note">Assign an active HTML logbook directly to any existing trainee profile. The assignment creates a private record for that trainee and does not publish the template as a general offering.</p>' +
-          (traineeProfiles.length && assignableHtmlTemplates.length
+        '<section class="section-block" id="admin-assign-logbook"><div class="section-heading"><div><p class="eyebrow">TRAINEE RECORDS</p><h2>Assign a training enrollment</h2></div><span class="status-chip status-chip--neutral">Admin only</span></div>' +
+          '<p class="workspace-note">Choose a trainee and an available published training slot. The system creates a new enrollment and its own empty logbook atomically; assigning the same specialty again later creates a separate record.</p>' +
+          (traineeProfiles.length && assignableAdminSlots.length
             ? '<form id="admin-assign-logbook-form" class="admin-form-card"><div class="admin-form-grid">' +
                 '<div class="field"><label for="admin-assignment-trainee">Trainee</label><select id="admin-assignment-trainee" name="traineeId" required><option value="">Select a trainee</option>' +
                   traineeProfiles.map((trainee) => { const p = trainee.profiles || {}; return '<option value="' + escape(trainee.profile_id) + '">' + escape(p.full_name || p.email || trainee.profile_id) + (p.email ? ' · ' + escape(p.email) : '') + '</option>'; }).join('') +
                 '</select></div>' +
-                '<div class="field"><label for="admin-assignment-template">Logbook</label><select id="admin-assignment-template" name="templateVersionId" required><option value="">Select a logbook</option>' +
-                  assignableHtmlTemplates.map((version) => '<option value="' + escape(version.id) + '">' + escape(version.template?.title || version.template?.slug || 'Logbook') + ' · v' + escape(version.version_number) + (version.status === 'PUBLISHED' ? '' : ' · private draft') + '</option>').join('') +
+                '<div class="field"><label for="admin-assignment-slot">Published training slot</label><select id="admin-assignment-slot" name="slotId" required><option value="">Select a training slot</option>' +
+                  assignableAdminSlots.map(({ slot, offering }) => { const mentor = offering.mentor_profiles || {}; const specialty = offering.specialties || {}; return '<option value="' + escape(slot.id) + '">' + escape(offering.title || 'Training') + ' · ' + escape(specialty.name_en || 'Specialty') + ' · ' + escape(mentor.display_name || mentor.professional_title || 'Mentor') + ' · ' + escape(formatDate(slot.starts_at)) + '</option>'; }).join('') +
                 '</select></div>' +
-                '<div class="field admin-form-wide"><label for="admin-assignment-reason">Assignment note (optional)</label><textarea id="admin-assignment-reason" name="reason" rows="2" maxlength="1000" placeholder="Optional context for this assignment"></textarea></div>' +
-              '</div><button class="button button--primary" type="submit">Assign personal logbook</button></form>'
-            : '<div class="empty-state"><strong>No personal logbook choices are available</strong><p>' +
+                '<div class="field admin-form-wide"><label for="admin-assignment-reason">Assignment note (optional)</label><textarea id="admin-assignment-reason" name="reason" rows="2" maxlength="1000" placeholder="Optional context for this training assignment"></textarea></div>' +
+              '</div><button class="button button--primary" type="submit">Create enrollment and logbook</button></form>'
+            : '<div class="empty-state"><strong>No eligible training slots are available</strong><p>' +
                 (!traineeProfiles.length ? 'Create a trainee profile first. ' : '') +
-                (!assignableHtmlTemplates.length ? 'An active HTML logbook template is required.' : '') +
+                (!assignableAdminSlots.length ? 'A future open slot with an approved mentor and a published, assignable HTML logbook is required.' : '') +
               '</p></div>') +
         '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">TRAINING SETUP</p><h2>Create training offering</h2></div><span class="status-chip status-chip--neutral">Admin only</span></div>' +
@@ -636,23 +648,35 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       if (!form.reportValidity()) return;
       const data = new FormData(form);
       const traineeId = String(data.get('traineeId') || '');
-      const templateVersionId = String(data.get('templateVersionId') || '');
-      if (!traineeId || !templateVersionId) return showMessage('Choose a trainee and a logbook.', 'error');
-      if (!window.confirm('Assign a private copy of this logbook to the selected trainee?')) return;
+      const slotId = String(data.get('slotId') || '');
+      if (!traineeId || !slotId) return showMessage('Choose a trainee and an available training slot.', 'error');
+      if (!window.confirm('Create a new enrollment and a separate empty logbook for this trainee?')) return;
+      if (!window.crypto?.randomUUID) {
+        showMessage('Secure request identifiers are unavailable in this browser. Please use a modern browser over HTTPS.', 'error');
+        return;
+      }
+      const requestId = form.dataset.requestId || (form.dataset.requestId = window.crypto.randomUUID());
       const button = form.querySelector('button[type="submit"]');
-      busy(button, true, 'Assigning…');
-      const { error } = await supabase.rpc('admin_assign_trainee_logbook', {
+      busy(button, true, 'Creating enrollment…');
+      const { error } = await supabase.rpc('admin_assign_trainee_enrollment_logbook', {
         p_trainee_profile_id: traineeId,
-        p_template_version_id: templateVersionId,
-        p_reason: String(data.get('reason') || '').trim() || null
+        p_slot_id: slotId,
+        p_reason: String(data.get('reason') || '').trim() || null,
+        p_request_id: requestId
       });
       if (error) {
-        showMessage((errorText || ((err) => err?.message || 'Could not assign this logbook.'))(error), 'error');
+        showMessage((errorText || ((err) => err?.message || 'Could not create this enrollment.'))(error), 'error');
         busy(button, false);
         return;
       }
       await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
-      showMessage('A personal logbook was assigned and is now available in the trainee’s workspace.', 'success');
+      showMessage('Enrollment created. Its independent logbook is now available in the trainee’s workspace.', 'success');
+    });
+    const assignmentForm = document.querySelector('#admin-assign-logbook-form');
+    assignmentForm?.querySelectorAll('[name="traineeId"], [name="slotId"]').forEach((field) => {
+      field.addEventListener('change', () => {
+        if (window.crypto?.randomUUID) assignmentForm.dataset.requestId = window.crypto.randomUUID();
+      });
     });
 
     document.querySelectorAll('[data-confirm-application]').forEach((button) => button.addEventListener('click', async () => {
