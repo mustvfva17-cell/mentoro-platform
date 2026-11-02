@@ -53,7 +53,7 @@ check(
 
 check(
   main.includes('!isUuid(enrollmentId)') &&
-  main.includes("data-enrollment-id=\\\"' + esc(enrollment.id) + '\\\" data-html-path") &&
+  main.includes('data-enrollment-id="\' + esc(enrollment.id) + \'" data-html-path') &&
   main.includes('enrollmentId: button.dataset.enrollmentId'),
   'HTML logbook windows require and propagate their enrollment context for trainees and mentors'
 );
