@@ -7,12 +7,12 @@ INSERT INTO public.logbook_templates (
 )
 SELECT
   s.id,
-  'anesthesia-icu-html',
+  'anaesthesia-critical-care-html',
   'Anesthesia & Critical Care Clinical Logbook',
   'MENTORO Anesthesia & Critical Care runtime with 157 roadmap items, 17 groups, perioperative and ICU learning prompts, five emergency templates, and mentor review.',
   false
 FROM public.specialties s
-WHERE s.slug = 'anesthesia-icu'
+WHERE s.slug = 'anaesthesia-critical-care'
 ON CONFLICT (slug) DO NOTHING;
 
 DO $seed$
@@ -22,12 +22,12 @@ BEGIN
   SELECT t.id INTO v_template_id
   FROM public.logbook_templates t
   JOIN public.specialties sp ON sp.id = t.specialty_id
-  WHERE t.slug = 'anesthesia-icu-html'
-    AND sp.slug = 'anesthesia-icu';
+  WHERE t.slug = 'anaesthesia-critical-care-html'
+    AND sp.slug = 'anaesthesia-critical-care';
 
   IF v_template_id IS NULL THEN
-    IF EXISTS (SELECT 1 FROM public.logbook_templates WHERE slug = 'anesthesia-icu-html') THEN
-      RAISE EXCEPTION 'The anesthesia-icu-html slug is already bound to a different specialty';
+    IF EXISTS (SELECT 1 FROM public.logbook_templates WHERE slug = 'anaesthesia-critical-care-html') THEN
+      RAISE EXCEPTION 'The anaesthesia-critical-care-html slug is already bound to a different specialty';
     END IF;
     RAISE EXCEPTION 'Could not resolve the Anesthesia & Critical Care HTML template after seed; verify the specialty row exists';
   END IF;
