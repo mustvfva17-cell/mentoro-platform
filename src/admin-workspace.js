@@ -102,7 +102,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       REGISTERED_HTML_LOGBOOK_PATHS.has(version.template_definition.html_path)
     );
     const assignableTemplateIds = new Set(assignableHtmlTemplates.map((version) => version.id));
-    const activeApprovedMentorIds = new Set(mentors.map((mentor) => mentor.profile_id));
+    const activeApprovedMentorIds = new Set(mentors.filter((mentor) => mentor.is_public === true).map((mentor) => mentor.profile_id));
     const assignableAdminSlots = offerings.flatMap((offering) => {
       if (offering.status !== 'PUBLISHED' ||
           !activeApprovedMentorIds.has(offering.mentor_profile_id) ||
