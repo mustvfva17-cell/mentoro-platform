@@ -24,8 +24,9 @@ assert.deepEqual(
 );
 
 for (const module of htmlModules) {
-  assert.ok(module.htmlPath.startsWith(`/logbooks/${module.id}/`),
-    `${module.id} HTML runtime must remain inside its own public logbook path.`);
+  const routeSlug = module.id === 'anaesthesia-critical-care' ? 'anesthesia-icu' : module.id;
+  assert.ok(module.htmlPath.startsWith(`/logbooks/${routeSlug}/`),
+    `${module.id} HTML runtime must remain inside its registered public logbook path.`);
   assert.equal(module.supportsMentorReview, true,
     `${module.id} must declare mentor review support explicitly.`);
   assert.equal(module.readOnlyMentorReview, true,
