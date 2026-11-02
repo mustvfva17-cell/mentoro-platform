@@ -150,7 +150,9 @@ check(
   schemaGuardMigration.includes("CREATE TRIGGER guard_logbook_template_version_schema") &&
   schemaGuardMigration.includes("Select options must be non-empty strings") &&
   schemaGuardMigration.includes("Logbook schema field keys must be unique") &&
-  schemaGuardMigration.includes("A published/assignable template requires structured fields") &&
+  schemaGuardMigration.includes("A published/assignable template requires structured fields or a registered HTML runtime") &&
+  schemaGuardMigration.includes("NEW.template_definition ->> 'renderer' = 'HTML'") &&
+  schemaGuardMigration.includes("v_is_registered_html") &&
   schemaGuardMigration.includes("A published/assignable template requires source and clinical review notes"),
   'database trigger validates schema fields and blocks publishing without structure and source notes'
 );
@@ -168,11 +170,35 @@ check(
   schemaGuardMigration.includes("CREATE TRIGGER guard_logbook_template_version_schema") &&
   schemaGuardMigration.includes("Select options must be non-empty strings") &&
   schemaGuardMigration.includes("Logbook schema field keys must be unique") &&
-  schemaGuardMigration.includes("A published/assignable template requires structured fields") &&
+  schemaGuardMigration.includes("A published/assignable template requires structured fields or a registered HTML runtime") &&
+  schemaGuardMigration.includes("NEW.template_definition ->> 'renderer' = 'HTML'") &&
+  schemaGuardMigration.includes("v_is_registered_html") &&
   schemaGuardMigration.includes("A published/assignable template requires source and clinical review notes"),
   'database trigger validates structured schemas and blocks publication without fields and review/source notes'
 );
 
+
+const htmlPublicationMigration = await read('../supabase/migrations/20261102160000_allow_registered_html_template_publication.sql');
+const htmlPublicationTest = await read('../supabase/tests/html_logbook_template_publication.sql');
+check(
+  htmlPublicationMigration.includes('CREATE OR REPLACE FUNCTION app_private.guard_logbook_template_version_schema()') &&
+  htmlPublicationMigration.includes('CREATE OR REPLACE FUNCTION app_private.admin_publish_logbook_template_version(') &&
+  htmlPublicationMigration.includes("v_renderer = 'HTML'") &&
+  htmlPublicationMigration.includes("v_html_path NOT IN (") &&
+  htmlPublicationMigration.includes("'/logbooks/cardiology/index.html'") &&
+  htmlPublicationMigration.includes("'/logbooks/neurology/index.html'") &&
+  htmlPublicationMigration.includes("'/logbooks/pediatrics/index.html'") &&
+  htmlPublicationMigration.includes("'/logbooks/anesthesia-icu/index.html'") &&
+  htmlPublicationMigration.includes('v_section_count < 1 OR v_section_count > 30') &&
+  htmlPublicationMigration.includes('SET is_assignable = false') &&
+  htmlPublicationMigration.includes('LOGBOOK_TEMPLATE_VERSION_PUBLISHED') &&
+  htmlPublicationTest.startsWith('-- Rollback-only integration test') &&
+  htmlPublicationTest.includes('FOREACH v_path IN ARRAY ARRAY[') &&
+  htmlPublicationTest.includes('An unregistered HTML path was incorrectly allowed to publish') &&
+  htmlPublicationTest.includes('An HTML runtime with invalid section metadata was incorrectly allowed to publish') &&
+  htmlPublicationTest.trimEnd().endsWith('ROLLBACK;'),
+  'registered HTML logbooks can be published without JSON fields while unregistered/malformed routes remain blocked and template versioning/audit behavior is preserved'
+);
 
 const publicationMigration = await read('../supabase/migrations/20261028151327_admin_publish_logbook_template_version.sql');
 const publicationVersioningMigration = await read('../supabase/migrations/20261028153201_keep_only_latest_assignable_template_version.sql');
