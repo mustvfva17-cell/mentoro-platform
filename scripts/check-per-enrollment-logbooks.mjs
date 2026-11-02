@@ -62,6 +62,10 @@ check(
   migration.includes('WHERE enrollment_id IS NULL') &&
   migration.includes('L-43 migration blocked') &&
   migration.includes('ALTER COLUMN enrollment_id SET NOT NULL') &&
+  migration.includes('v_missing_count') &&
+  migration.includes('v_template_mismatch_count') &&
+  migration.includes('enrollment(s) have no logbook instance') &&
+  migration.includes('enrollment/logbook template-version mismatch(es) require review') &&
   migration.includes('DROP COLUMN IF EXISTS trainee_profile_id') &&
   migration.includes('logbook_instances_exactly_one_owner'),
   'forward migration fails closed on legacy orphan rows and restores the NOT NULL enrollment owner'
@@ -69,6 +73,8 @@ check(
 
 check(
   migration.includes('app_private.can_access_enrollment(i.enrollment_id)') &&
+  migration.includes('app_private.is_platform_admin()') &&
+  migration.includes('IF NOT app_private.can_access_enrollment(v_enrollment_id)') &&
   migration.includes('e.trainee_profile_id = auth.uid()') &&
   migration.includes('app_private.can_access_enrollment(li.enrollment_id)') &&
   !migration.includes('li.enrollment_id IS NULL'),
