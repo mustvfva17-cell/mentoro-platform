@@ -77,7 +77,7 @@ assert.ok(html.includes('/logbooks/anesthesia-icu/mentoro_logo.svg'));
 assert.ok(html.includes('id="syncStatus"'));
 assert.ok(html.includes('id="readonlyBanner"'));
 assert.ok(html.includes('id="mentorReviewPanel"'));
-assert.ok(html.includes('Do not enter patient-identifying information'));
+assert.ok(runtime.includes('Do not enter patient-identifying information'), 'Clinical entry forms must show the patient-privacy warning.');
 
 const requiredMessages = [
   'MENTORO_LOGBOOK_READY',
