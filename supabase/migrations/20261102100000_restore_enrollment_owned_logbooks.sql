@@ -5,6 +5,9 @@
 DO $$
 DECLARE
   v_orphan_count bigint;
+  v_missing_count bigint;
+  v_template_mismatch_count bigint;
+  v_duplicate_request_count bigint;
 BEGIN
   SELECT count(*) INTO v_orphan_count
   FROM public.logbook_instances
@@ -14,6 +17,47 @@ BEGIN
     RAISE EXCEPTION
       'L-43 migration blocked: % logbook instance(s) have no enrollment. Inventory and reconcile them before retrying; no rows were changed.',
       v_orphan_count
+      USING ERRCODE = '55000';
+  END IF;
+
+  SELECT count(*) INTO v_missing_count
+  FROM public.training_enrollments e
+  LEFT JOIN public.logbook_instances li ON li.enrollment_id = e.id
+  WHERE li.id IS NULL;
+
+  IF v_missing_count > 0 THEN
+    RAISE EXCEPTION
+      'L-43 migration blocked: % enrollment(s) have no logbook instance. Inventory and reconcile them before retrying; no rows were changed.',
+      v_missing_count
+      USING ERRCODE = '55000';
+  END IF;
+
+  SELECT count(*) INTO v_template_mismatch_count
+  FROM public.training_enrollments e
+  JOIN public.logbook_instances li ON li.enrollment_id = e.id
+  WHERE li.template_version_id IS DISTINCT FROM e.template_version_id;
+
+  IF v_template_mismatch_count > 0 THEN
+    RAISE EXCEPTION
+      'L-43 migration blocked: % enrollment/logbook template-version mismatch(es) require review; no rows were changed.',
+      v_template_mismatch_count
+      USING ERRCODE = '55000';
+  END IF;
+
+  SELECT count(*) INTO v_duplicate_request_count
+  FROM (
+    SELECT request_id
+    FROM public.audit_logs
+    WHERE action = 'ADMIN_ASSIGNED_TRAINEE_LOGBOOK'
+      AND request_id IS NOT NULL
+    GROUP BY request_id
+    HAVING count(*) > 1
+  ) duplicate_requests;
+
+  IF v_duplicate_request_count > 0 THEN
+    RAISE EXCEPTION
+      'L-43 migration blocked: % duplicate administrator request identifier(s) require review; no rows were changed.',
+      v_duplicate_request_count
       USING ERRCODE = '55000';
   END IF;
 END;
