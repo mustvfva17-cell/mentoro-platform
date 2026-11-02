@@ -131,7 +131,7 @@ assert.match(runtime, /function recordIntimateExamEvidence[\s\S]*data\.governanc
 assert.match(runtime, /o\.id=existing\?\.id\|\|makeId\(\);delete o\.mentorVerified/,
   "Emergency template entries must receive stable IDs and remove obsolete self-verification fields.");
 assert.match(runtime, /base\.id=makeId\(\)/,
-  "Quick exposure entries must receive stable IDs before entering their collection.");
+assert.match(runtime, /const base=\{id:makeId\(\)/,
 assert.match(runtime, /function renderMentorReviewPanel[\s\S]*data-review-submit/,
   "Saved entries must be reviewable through the parent MENTORO mentor-review bridge.");
 assert.match(runtime, /button\.hasAttribute\('data-review-submit'\)/,
