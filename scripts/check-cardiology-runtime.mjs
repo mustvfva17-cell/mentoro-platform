@@ -71,7 +71,7 @@ assert.ok(seedMigration.includes("sp.slug = 'cardiology'"));
 assert.ok(seedMigration.includes('bound to a different specialty'));
 assert.ok(seedMigration.includes("'/logbooks/cardiology/index.html'"),
   'The seeded draft must point to the central Cardiology runtime.');
-assert.ok(seedMigration.includes('cardiologist review of Tier, Depth, and Frequency'),
+assert.ok(seedMigration.includes('DRAFT: cardiologist review of Tier, Depth, Frequency'),
   'The draft seed must preserve the clinical review requirement.');
 
 assert.match(manifest, /lifecycle: "draft"/,

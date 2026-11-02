@@ -116,7 +116,9 @@ assert.ok(seedMigration.includes("false,"));
 assert.ok(seedMigration.includes("sp.slug = 'neurology'"));
 assert.ok(seedMigration.includes("bound to a different specialty"));
 assert.ok(seedMigration.includes("'/logbooks/neurology/index.html'"));
-assert.ok(seedMigration.includes("neurologist review of Tier, Depth, and Frequency"));
+assert.ok(seedMigration.includes("DRAFT: neurologist review of Tier, Depth, Frequency"));
+assert.ok(seedMigration.includes("review of Tier, Depth, and Frequency by a neurologist"),
+  "The Neurology source note must preserve the README's clinical review requirement.");
 assert.ok(!seedMigration.includes("consent/chaperone"),
   "Do not carry Cardiology-only clinical review wording into Neurology.");
 
