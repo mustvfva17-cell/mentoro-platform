@@ -655,7 +655,23 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         showMessage('Secure request identifiers are unavailable in this browser. Please use a modern browser over HTTPS.', 'error');
         return;
       }
-      const requestId = form.dataset.requestId || (form.dataset.requestId = window.crypto.randomUUID());
+      const requestStorageKey = 'mentoro:admin-logbook-assignment:' + traineeId + ':' + slotId;
+      let storedRequestId = null;
+      try {
+        storedRequestId = window.sessionStorage.getItem(requestStorageKey);
+      } catch {
+        // The in-form key remains available when session storage is restricted.
+      }
+      const requestId = form.dataset.requestStorageKey === requestStorageKey && form.dataset.requestId
+        ? form.dataset.requestId
+        : (storedRequestId || window.crypto.randomUUID());
+      form.dataset.requestStorageKey = requestStorageKey;
+      form.dataset.requestId = requestId;
+      try {
+        window.sessionStorage.setItem(requestStorageKey, requestId);
+      } catch {
+        // RPC-level idempotency remains active for retries in the current form.
+      }
       const button = form.querySelector('button[type="submit"]');
       busy(button, true, 'Creating enrollment…');
       const { error } = await supabase.rpc('admin_assign_trainee_enrollment_logbook', {
@@ -669,14 +685,13 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         busy(button, false);
         return;
       }
+      try {
+        window.sessionStorage.removeItem(requestStorageKey);
+      } catch {
+        // A stale session key is harmless; the database remains authoritative.
+      }
       await renderAdminWorkspace({ user, supabase, shell, esc: escape, dateTime: formatDate, setBusy: busy, message: showMessage, errorText });
       showMessage('Enrollment created. Its independent logbook is now available in the trainee’s workspace.', 'success');
-    });
-    const assignmentForm = document.querySelector('#admin-assign-logbook-form');
-    assignmentForm?.querySelectorAll('[name="traineeId"], [name="slotId"]').forEach((field) => {
-      field.addEventListener('change', () => {
-        if (window.crypto?.randomUUID) assignmentForm.dataset.requestId = window.crypto.randomUUID();
-      });
     });
 
     document.querySelectorAll('[data-confirm-application]').forEach((button) => button.addEventListener('click', async () => {
