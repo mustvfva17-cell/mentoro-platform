@@ -191,6 +191,9 @@ check(
   htmlPublicationMigration.includes("'/logbooks/anesthesia-icu/index.html'") &&
   htmlPublicationMigration.includes('v_section_count < 1 OR v_section_count > 30') &&
   htmlPublicationMigration.includes('SET is_assignable = false') &&
+  htmlPublicationMigration.includes('REVOKE ALL ON FUNCTION app_private.admin_publish_logbook_template_version(uuid, text)') &&
+  htmlPublicationMigration.includes('FROM PUBLIC, anon, authenticated, service_role') &&
+  !htmlPublicationMigration.includes('GRANT EXECUTE ON FUNCTION app_private.admin_publish_logbook_template_version') &&
   htmlPublicationMigration.includes('LOGBOOK_TEMPLATE_VERSION_PUBLISHED') &&
   htmlPublicationTest.startsWith('-- Rollback-only integration test') &&
   htmlPublicationTest.includes('FOREACH v_path IN ARRAY ARRAY[') &&
