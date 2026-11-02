@@ -113,7 +113,7 @@ check(
 
 
 const templateMigration = await read('../supabase/migrations/20261028143433_admin_create_logbook_template_draft.sql');
-const schemaGuardMigration = await read('../supabase/migrations/20261028145034_guard_logbook_template_schema.sql');
+const schemaGuardMigration = await read('../supabase/migrations/20261102160000_allow_registered_html_template_publication.sql');
 check(
   admin.includes('id="admin-template-form"') &&
   admin.includes("supabase.rpc('admin_create_logbook_template_draft'") &&
