@@ -33,6 +33,12 @@ assert.ok(app.includes('let activeGroup = "vision"'));
 assert.ok(app.includes('group: "patientJourney"'));
 assert.ok(app.includes('group: "interpretation"'));
 assert.equal(new Set(content.roadmap.map((row) => row[0])).size, 32);
+const roadmapTitles = content.roadmap.map((row) => row[0]);
+assert.ok(roadmapTitles.indexOf("External eye inspection & examination") < roadmapTitles.indexOf("Visual acuity assessment"));
+assert.ok(roadmapTitles.indexOf("Corneal case") < roadmapTitles.indexOf("Corneal fluorescein staining"));
+assert.ok(roadmapTitles.indexOf("Corneal fluorescein staining") < roadmapTitles.indexOf("Corneal sensation / reflex"));
+assert.ok(roadmapTitles.indexOf("Lacrimal sac case") < roadmapTitles.indexOf("Lacrimal gland palpation"));
+assert.ok(roadmapTitles.indexOf("Lacrimal gland palpation") < roadmapTitles.indexOf("Regurgitation test"));
 assert.deepEqual(Object.keys(content.emergencyTemplates), []);
 for (const row of content.roadmap) {
   assert.equal(row.length, 4);
