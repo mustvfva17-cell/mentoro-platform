@@ -16,6 +16,9 @@ assert.match(html, /obtain consent first/i);
 
 assert.equal(content.specialty, "ophthalmology");
 assert.equal(content.roadmap.length, 18);
+assert.ok(app.includes('let activeGroup = "vision"'));
+assert.ok(app.includes('group: "patientJourney"'));
+assert.ok(app.includes('group: "interpretation"'));
 assert.equal(new Set(content.roadmap.map((row) => row[0])).size, 18);
 assert.deepEqual(Object.keys(content.emergencyTemplates), []);
 for (const row of content.roadmap) {
