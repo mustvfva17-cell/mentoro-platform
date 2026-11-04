@@ -64,6 +64,7 @@ try {
     { template: 'cardiology', path: '/logbooks/cardiology/index.html' },
     { template: 'neurology', path: '/logbooks/neurology/index.html' },
     { template: 'pediatrics', path: '/logbooks/pediatrics/index.html' },
+    { template: 'ophthalmology', path: '/logbooks/ophthalmology/index.html' },
     { template: 'anesthesia-icu', path: '/logbooks/anesthesia-icu/index.html' }
   ];
 
@@ -97,7 +98,7 @@ try {
         throw new Error(`Lifecycle monitor did not close enrollment on ${closureStatus}: ${JSON.stringify(lifecycleResult)}`);
       }
       await sleep(500);
-      const guardedButtonSelector = ['cardiology', 'neurology'].includes(testCase.template)
+      const guardedButtonSelector = ['cardiology', 'neurology', 'ophthalmology'].includes(testCase.template)
         ? '[data-road-toggle], [data-edit], [data-remove], [data-emergency-template], [data-add]'
         : 'button[title="Read-only logbook"]';
       const result = await logbook.evaluate((selector) => {
