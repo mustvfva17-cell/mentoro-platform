@@ -63,6 +63,7 @@ try {
     { template: 'general-surgery', path: '/logbooks/general-surgery/index.html' },
     { template: 'cardiology', path: '/logbooks/cardiology/index.html' },
     { template: 'neurology', path: '/logbooks/neurology/index.html' },
+    { template: 'pediatrics', path: '/logbooks/pediatrics/index.html' },
     { template: 'anesthesia-icu', path: '/logbooks/anesthesia-icu/index.html' }
   ];
 
