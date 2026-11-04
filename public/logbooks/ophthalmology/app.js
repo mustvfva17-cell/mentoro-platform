@@ -157,6 +157,7 @@ function buildRoadmap() {
     }
 
   });
+  journeyItems.forEach((item, index) => items.push({ id: "journey_" + index, item: item, tier: "—", depth: "—", frequency: "—", group: "patientJourney", groupLabel: "Ophthalmology Patient Journey" }));
   interpretationItems.forEach((item, index) => items.push({ id: "interp_" + index, item: item, tier: "—", depth: "—", frequency: "—", group: "interpretation", groupLabel: "Clinical Interpretation & Decision-making" }));
   return items;
 }
