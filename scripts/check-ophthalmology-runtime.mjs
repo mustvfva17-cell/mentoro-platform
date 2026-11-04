@@ -16,6 +16,9 @@ assert.match(html, /obtain consent first/i);
 
 assert.equal(content.specialty, "ophthalmology");
 assert.equal(content.roadmap.length, 29);
+assert.ok(app.includes('end: "IOP assessment by digital palpation"'));
+assert.ok(app.includes('start: "IOP assessment by digital palpation", end: "Cataract case"'));
+for (const item of ["Lid elevation test","Lid closure test","Regurgitation test","Schiotz indentation tonometry","Indirect ophthalmoscopy","Corneal light reflection test"]) assert.ok(content.roadmap.some((row) => row[0] === item), "Missing official clinical item: " + item);
 assert.ok(app.includes('let activeGroup = "vision"'));
 assert.ok(app.includes('group: "patientJourney"'));
 assert.ok(app.includes('group: "interpretation"'));
