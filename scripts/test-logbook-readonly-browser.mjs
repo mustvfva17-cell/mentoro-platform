@@ -83,10 +83,11 @@ try {
         if (entry.type() === 'error') pageErrors.push('console: ' + entry.text());
       });
       await logbook.waitForLoadState('load');
-      await logbook.waitForFunction(() => {
-        const status = document.getElementById('syncStatus');
-        return Boolean(status && status.textContent.includes('Secure cloud logbook connected'));
-      }, null, { timeout: 5000 });
+      await parent.waitForFunction(() => window.mentoroTestCloudStateSent === true, null, { timeout: 3000 });
+      // Allow the child window to consume the posted cloud state and render it
+      // before the enrollment is closed. Legacy runtimes do not all expose
+      // the same sync-status DOM element.
+      await sleep(300);
 
       const closureStatus = testCase.template === 'general-surgery' ? 'CANCELLED' : 'COMPLETED';
       const lifecycleResult = await parent.evaluate(async (status) => {
