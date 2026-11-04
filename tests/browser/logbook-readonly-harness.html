@@ -32,7 +32,7 @@
               : '/logbooks/medical-oncology/index.html';
 
     window.addEventListener('message', (event) => {
-      const usesCentralStateBridge = anesthesia || cardiology || neurology || pediatrics;
+      const usesCentralStateBridge = true;
       if (!usesCentralStateBridge || event.origin !== window.location.origin ||
           event.data?.type !== 'MENTORO_LOGBOOK_READY' ||
           event.data.instanceId !== instanceId) return;
@@ -46,7 +46,7 @@
           cases: [], procedures: [], roadmap: {}, emergency: [], reflection: {}
         }
       }, window.location.origin);
-      if (anesthesia || pediatrics) {
+      if (usesCentralStateBridge) {
         event.source.postMessage({
           type: 'MENTORO_LOGBOOK_LOAD_REVIEWS',
           instanceId,
