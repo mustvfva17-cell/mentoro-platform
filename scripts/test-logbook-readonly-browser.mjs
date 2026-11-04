@@ -99,7 +99,7 @@ try {
       }
       await sleep(500);
       const guardedButtonSelector = ['cardiology', 'neurology', 'ophthalmology'].includes(testCase.template)
-        ? '[data-road-toggle], [data-edit], [data-remove], [data-emergency-template], [data-add]'
+        ? '[data-road-toggle], [data-lecture-toggle], [data-edit], [data-remove], [data-emergency-template], [data-add]'
         : 'button[title="Read-only logbook"]';
       const result = await logbook.evaluate((selector) => {
         const controls = Array.from(document.querySelectorAll('input, textarea, select'))
