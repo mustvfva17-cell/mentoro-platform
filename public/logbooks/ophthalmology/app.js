@@ -122,7 +122,7 @@ function save(options) {
 }
 
 const groupDefs = [
-  { id: "vision", label: "Vision & Visual Fields", start: "Visual acuity assessment", end: "Pupillary light reflex" },
+  { id: "vision", label: "Vision & Visual Fields", start: "External eye inspection & examination", end: "Pupillary light reflex" },
   { id: "pupils", label: "Pupils, Lids & Eye Movements", start: "Pupillary light reflex", end: "Human eye working model" },
   { id: "anterior", label: "Anterior Segment & Lacrimal", start: "Human eye working model", end: "IOP assessment by digital palpation" },
   { id: "fundus", label: "Intraocular Pressure & Fundus", start: "IOP assessment by digital palpation", end: "Cataract case" },
@@ -659,7 +659,7 @@ async function initialize() {
     const response = await fetch("./content.json", { cache: "no-store" });
     if (!response.ok) throw new Error("Ophthalmology clinical catalogue could not be loaded.");
     content = await response.json();
-    if (!Array.isArray(content.roadmap) || content.roadmap.length !== 29) throw new Error("Ophthalmology roadmap catalogue is incomplete.");
+    if (!Array.isArray(content.roadmap) || content.roadmap.length !== 32) throw new Error("Ophthalmology roadmap catalogue is incomplete.");
     if (!Array.isArray(content.lectures) || content.lectures.length !== 18) throw new Error("Ophthalmology lecture catalogue is incomplete.");
     roadmapItems = buildRoadmap();
     fillRoadGroups();
