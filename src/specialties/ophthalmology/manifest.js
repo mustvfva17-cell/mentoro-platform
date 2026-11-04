@@ -1,0 +1,17 @@
+export default Object.freeze({
+  id: "ophthalmology",
+  name: "Ophthalmology",
+  sourceLabel: "Ophthalmology",
+  lifecycle: "draft",
+  runtimeStatus: "central-html-bridge-present",
+  renderer: "HTML",
+  htmlPath: "/logbooks/ophthalmology/index.html",
+  statePersistence: "get_my_logbook_html_state/save_my_logbook_html_state",
+  supportsMentorReview: true,
+  readOnlyMentorReview: true,
+  templateStatus: "official-course-source-imported; ophthalmologist-review-pending",
+  schemaStatus: "native-html-state; RPC-validated",
+  sourceProject: "public/logbooks/ophthalmology/",
+  sourceArchive: "Ophthalmology LOGBOOK 26-27.pdf",
+  sourceArchiveStatus: "official Level 5 Semester 9 course objectives, clinical training schedule, examination checklist and OSCE structure transcribed; clinical technique review pending",
+});
