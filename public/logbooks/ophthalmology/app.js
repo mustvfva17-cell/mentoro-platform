@@ -248,13 +248,6 @@ function renderCourseGuide() {
   if (objectives) {
     objectives.innerHTML = (content.courseObjectives || []).map((item) => "<li>" + esc(item) + "</li>").join("");
   }
-  if (schedule) {
-    schedule.innerHTML = (content.weeklySchedule || []).map((block) =>
-      "<article class=\"course-week\"><h3>Weeks " + esc(block.weeks) + "</h3><ul>" +
-      block.activities.map((activity) => "<li>" + esc(activity) + "</li>").join("") +
-      "</ul></article>"
-    ).join("");
-  }
   const theoryTopics = Array.isArray(content.personalTheoryTopics) ? content.personalTheoryTopics : [];
   const theoryRoot = document.getElementById("personalTheoryRows");
   const theoryProgress = document.getElementById("personalTheoryProgress");
@@ -263,8 +256,18 @@ function renderCourseGuide() {
     theoryProgress.textContent = completed + " of " + theoryTopics.length + " topics completed";
     theoryRoot.innerHTML = theoryTopics.map((topic) => {
       const done = data.roadmap["theory:" + topic.id] === "done";
-      return "<article class=\\\"record-card\\\"><div class=\\\"record-main\\\"><strong>" + esc(topic.title) + "</strong><small>" + esc(topic.id) + " · Personal study tracker</small></div><div class=\\\"record-actions\\\"><button class=\\\"status-toggle " + (done ? "done" : "") + "\\\" data-theory-toggle=\\\"" + esc(topic.id) + "\\\" " + (readOnlyMode ? "disabled" : "") + ">" + (done ? "✓ Completed" : "○ Mark completed") + "</button></div></article>";
+      return '<article class="record-card"><div class="record-main"><strong>' + esc(topic.title) +
+        '</strong><small>' + esc(topic.id) + ' · Personal study tracker</small></div><div class="record-actions">' +
+        '<button class="status-toggle ' + (done ? 'done' : '') + '" data-theory-toggle="' + esc(topic.id) + '" ' +
+        (readOnlyMode ? 'disabled' : '') + '>' + (done ? '✓ Completed' : '○ Mark completed') + '</button></div></article>';
     }).join("");
+  }
+  if (schedule) {
+    schedule.innerHTML = (content.weeklySchedule || []).map((block) =>
+      "<article class=\"course-week\"><h3>Weeks " + esc(block.weeks) + "</h3><ul>" +
+      block.activities.map((activity) => "<li>" + esc(activity) + "</li>").join("") +
+      "</ul></article>"
+    ).join("");
   }
   if (assessment) {
     const a = content.assessment || {};
