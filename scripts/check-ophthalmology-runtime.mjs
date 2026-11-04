@@ -75,7 +75,7 @@ for (const message of [
 assert.match(app, /event\.origin !== window\.location\.origin/);
 assert.match(app, /event\.source !== window\.opener/);
 assert.match(app, /function currentCloudState\(\)/);
-assert.match(app, /function applyReadOnlyMode\(\)/);
+assert.match(app, /function applyReadOnly\(\)/);
 assert.match(app, /data-review-submit/);
 assert.match(app, /mentoro_training_.*_ophthalmology_/);
 assert.match(manifest, /id: "ophthalmology"/);
