@@ -13,10 +13,19 @@ assert.match(html, /<script src="\.\/app\.js" defer><\/script>/);
 assert.match(html, /id="mentorReviewPanel"/);
 assert.match(html, /patient-identifying information/i);
 assert.match(html, /obtain consent first/i);
+assert.match(html, /data-view="lectures"/);
+assert.match(html, /id="view-lectures"/);
+assert.ok(app.includes("function renderLectures()"));
+assert.ok(app.includes('data.roadmap["lecture:" + lecture.id]'));
+assert.ok(app.includes("data-lecture-toggle"));
 assert.doesNotMatch(html, /id="ophthalmology-exam-safety-note" hidden/);
 
 assert.equal(content.specialty, "ophthalmology");
 assert.equal(content.roadmap.length, 29);
+assert.equal(content.lectures.length, 18);
+assert.equal(new Set(content.lectures.map((lecture) => lecture.id)).size, 18);
+assert.equal(content.courseAims.length, 9);
+assert.equal(content.clinicalSchedule.length, 4);
 assert.ok(app.includes('end: "IOP assessment by digital palpation"'));
 assert.ok(app.includes('start: "IOP assessment by digital palpation", end: "Cataract case"'));
 for (const item of ["Lid elevation test","Lid closure test","Regurgitation test","Schiotz indentation tonometry","Indirect ophthalmoscopy","Corneal light reflection test"]) assert.ok(content.roadmap.some((row) => row[0] === item), "Missing official clinical item: " + item);
@@ -65,4 +74,4 @@ assert.match(manifest, /lifecycle: "draft"/);
 assert.match(manifest, /htmlPath: "\/logbooks\/ophthalmology\/index\.html"/);
 assert.match(manifest, /readOnlyMentorReview: true/);
 
-console.log("Ophthalmology runtime contract passed: 29 official-course roadmap items, official source, central cloud bridge, read-only mentor review, and Draft-only registration.");
+console.log("Ophthalmology runtime contract passed: 18 lectures, 29 clinical training items, course aims, weekly schedule, central cloud bridge, read-only mentor review, and Draft-only registration.");
