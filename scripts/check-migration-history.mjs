@@ -87,7 +87,7 @@ if (
 const htmlReviewAccessFix = (await readFile(
   new URL('20261104185409_enforce_active_mentor_role_for_html_review_reads.sql', migrationDirectory),
   'utf8'
-)).replace(/\\s+/g, ' ');
+)).replace(/\s+/g, ' ');
 if (
   !htmlReviewAccessFix.includes('CREATE OR REPLACE FUNCTION app_private.get_my_logbook_html_item_reviews') ||
   !htmlReviewAccessFix.includes('(v_actor_id <> v_mentor_id OR NOT app_private.is_mentor())') ||
