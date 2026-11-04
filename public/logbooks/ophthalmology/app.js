@@ -634,7 +634,7 @@ async function initialize() {
     const response = await fetch("./content.json", { cache: "no-store" });
     if (!response.ok) throw new Error("Ophthalmology clinical catalogue could not be loaded.");
     content = await response.json();
-    if (!Array.isArray(content.roadmap) || content.roadmap.length !== 18) throw new Error("Ophthalmology roadmap catalogue is incomplete.");
+    if (!Array.isArray(content.roadmap) || content.roadmap.length !== 29) throw new Error("Ophthalmology roadmap catalogue is incomplete.");
     roadmapItems = buildRoadmap();
     fillRoadGroups();
     bindEvents();
