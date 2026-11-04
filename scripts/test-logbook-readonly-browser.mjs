@@ -97,7 +97,11 @@ try {
           !lifecycleResult.stopped) {
         throw new Error(`Lifecycle monitor did not close enrollment on ${closureStatus}: ${JSON.stringify(lifecycleResult)}`);
       }
-      await sleep(500);
+      await logbook.waitForFunction(() => {
+        const banner = document.getElementById('readonlyBanner');
+        const mentorPanel = document.getElementById('mentorReviewPanel');
+        return Boolean(banner && !banner.hidden && mentorPanel && !mentorPanel.hidden);
+      }, null, { timeout: 3000 });
       const guardedButtonSelector = ['cardiology', 'neurology', 'ophthalmology'].includes(testCase.template)
         ? '[data-road-toggle], [data-edit], [data-remove], [data-emergency-template], [data-add]'
         : 'button[title="Read-only logbook"]';
