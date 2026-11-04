@@ -5,8 +5,8 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const html = read("../public/logbooks/ophthalmology/index.html");
 const app = read("../public/logbooks/ophthalmology/app.js");
 const content = JSON.parse(read("../public/logbooks/ophthalmology/content.json"));
-const migration = read("../supabase/migrations/20261104210000_register_ophthalmology_html_logbook.sql");
-const seed = read("../supabase/migrations/20261104211000_seed_ophthalmology_html_logbook_draft.sql");
+const migration = read("../supabase/migrations/20261104220000_register_ophthalmology_html_logbook.sql");
+const seed = read("../supabase/migrations/20261104221000_seed_ophthalmology_html_logbook_draft.sql");
 const manifest = read("../src/specialties/ophthalmology/manifest.js");
 
 assert.match(html, /<script src="\.\/app\.js" defer><\/script>/);
