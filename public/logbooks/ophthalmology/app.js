@@ -248,6 +248,20 @@ function renderCourseGuide() {
   if (objectives) {
     objectives.innerHTML = (content.courseObjectives || []).map((item) => "<li>" + esc(item) + "</li>").join("");
   }
+  const theoryTopics = Array.isArray(content.personalTheoryTopics) ? content.personalTheoryTopics : [];
+  const theoryRoot = document.getElementById("personalTheoryRows");
+  const theoryProgress = document.getElementById("personalTheoryProgress");
+  if (theoryRoot && theoryProgress) {
+    const completed = theoryTopics.filter((topic) => data.roadmap["theory:" + topic.id] === "done").length;
+    theoryProgress.textContent = completed + " of " + theoryTopics.length + " topics completed";
+    theoryRoot.innerHTML = theoryTopics.map((topic) => {
+      const done = data.roadmap["theory:" + topic.id] === "done";
+      return '<article class="record-card"><div class="record-main"><strong>' + esc(topic.title) +
+        '</strong><small>' + esc(topic.id) + ' · Personal study tracker</small></div><div class="record-actions">' +
+        '<button class="status-toggle ' + (done ? 'done' : '') + '" data-theory-toggle="' + esc(topic.id) + '" ' +
+        (readOnlyMode ? 'disabled' : '') + '>' + (done ? '✓ Completed' : '○ Mark completed') + '</button></div></article>';
+    }).join("");
+  }
   if (schedule) {
     schedule.innerHTML = (content.weeklySchedule || []).map((block) =>
       "<article class=\"course-week\"><h3>Weeks " + esc(block.weeks) + "</h3><ul>" +
@@ -499,6 +513,15 @@ function bindEvents() {
   });
   document.getElementById("roadSearch").addEventListener("input", renderRoadmap);
   ["roadTier", "roadStatus", "roadGroup"].forEach((id) => document.getElementById(id).addEventListener("change", renderRoadmap));
+  document.getElementById("personalTheoryRows").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-theory-toggle]");
+    if (!button || readOnlyMode) return;
+    const key = "theory:" + button.dataset.theoryToggle;
+    if (data.roadmap[key] === "done") delete data.roadmap[key];
+    else data.roadmap[key] = "done";
+    save();
+    renderCourseGuide();
+  });
   document.getElementById("roadRows").addEventListener("click", (event) => {
     const button = event.target.closest("[data-road-toggle]");
     if (!button || readOnlyMode) return;

@@ -31,6 +31,9 @@ for (const group of content.groups) {
   }
 }
 assert.equal(covered.size, 49, "Ophthalmology roadmap groups must cover every row exactly once.");
+assert.equal(content.personalTheoryTopics.length, 18);
+assert.equal(new Set(content.personalTheoryTopics.map((topic) => topic.id)).size, 18);
+assert.deepEqual(content.personalTheoryTopics.map((topic) => topic.id), Array.from({length:18}, (_, i) => "OPH-" + String(i + 1).padStart(2, "0")));
 assert.equal(content.courseObjectives.length, 8);
 assert.equal(content.weeklySchedule.length, 4);
 assert.equal(content.weeklySchedule.map((block) => block.weeks).join(","), "1–3,4–6,7–9,12–14");
@@ -48,6 +51,12 @@ assert.equal(content.clinicalGovernance.emergencyProtocolsIncluded, false);
 
 assert.match(html, /id="view-course"/);
 assert.match(html, /id="courseObjectives"/);
+assert.match(html, /id="personalTheoryRows"/);
+assert.match(html, /id="personalTheoryProgress"/);
+assert.match(html, /not an official course requirement/i);
+assert.match(app, /function renderCourseGuide\(\)/);
+assert.match(app, /data-theory-toggle/);
+assert.match(app, /"theory:" \+ topic\.id/);
 assert.match(html, /id="weeklySchedule"/);
 assert.match(html, /id="osceAssessment"/);
 assert.match(html, /id="ophthalmology-exam-safety-note"/);

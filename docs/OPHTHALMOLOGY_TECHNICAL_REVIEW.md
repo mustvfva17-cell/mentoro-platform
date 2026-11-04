@@ -34,6 +34,10 @@ The companion Semester 9 standalone tracker includes optional Tier, Depth and Fr
 - The imported source checklist includes techniques that require explicit ophthalmologist and local-policy review before hands-on use, including digital palpation of intraocular pressure, corneal fluorescein staining, Schiotz indentation tonometry, lacrimal tests, pupil tests and ophthalmoscopy.
 - No treatment algorithms, medication instructions, diagnostic drop protocols or emergency-management checklists have been invented for this draft.
 
+## 4. Optional personal theory tracker
+
+The companion Semester 9 tracker lists 18 theory topics (OPH-01 through OPH-18). The HTML course guide may expose these as a separate **personal study tracker** only. They are not represented as Faculty sign-off requirements, are not mixed into the official 49-row clinical roadmap, and do not establish clinical competence. Completion flags use the existing enrollment-scoped roadmap JSON state with a `theory:` key prefix; no database schema change or additional RPC permission is required. Mentor review remains read-only.
+
 ## 4. Required ophthalmologist review before publication
 
 A named ophthalmologist should review and document:
