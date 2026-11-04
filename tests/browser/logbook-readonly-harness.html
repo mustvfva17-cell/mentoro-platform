@@ -101,7 +101,13 @@
 
     window.mentoroTransitionEnrollment = async (status) => {
       enrollmentStatus = status;
-      return await window.mentoroLifecycleMonitor.refresh();
+      const result = await window.mentoroLifecycleMonitor.refresh();
+      if (result.status === 'closed') {
+        // Re-send the idempotent lifecycle signal after the monitor transition,
+        // so the browser assertion does not race the popup message event queue.
+        notifyPopupClosed();
+      }
+      return result;
     };
   </script>
 </body>
