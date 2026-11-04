@@ -11,7 +11,7 @@ SELECT
   s.id,
   'ophthalmology-html',
   'Ophthalmology Clinical Logbook',
-  'MENTORO Ophthalmology runtime with the official course checklist, 18 roadmap items, patient journey, clinical interpretation, case/session/procedure records, and mentor review.',
+  'MENTORO Ophthalmology runtime with the official course checklist, 29 official-course roadmap items, patient journey, clinical interpretation, case/session/procedure records, and mentor review.',
   false
 FROM public.specialties s
 WHERE s.slug = 'ophthalmology'
