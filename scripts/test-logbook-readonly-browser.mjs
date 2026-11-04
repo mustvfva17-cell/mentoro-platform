@@ -119,6 +119,16 @@ try {
           mentorReviewCards: document.querySelectorAll('#mentorReviewPanel .mentor-review-card').length,
           controlCount: controls.length,
           enabledControls: controls.filter((control) => !control.disabled).length,
+          enabledControlDetails: controls.filter((control) => !control.disabled).map((control) => ({
+            tag: control.tagName,
+            type: control.type || null,
+            id: control.id || null,
+            name: control.name || null,
+            hidden: control.hidden,
+            ariaHidden: control.getAttribute('aria-hidden'),
+            parentId: control.parentElement?.id || null,
+            parentClass: control.parentElement?.className || null
+          })),
           guardedButtonCount: guardedButtons.length,
           enabledGuardedButtons: guardedButtons.filter((button) => !button.disabled).length
         };
