@@ -29,7 +29,8 @@
             : '/logbooks/medical-oncology/index.html';
 
     window.addEventListener('message', (event) => {
-      if (!anesthesia || event.origin !== window.location.origin ||
+      const usesCentralStateBridge = anesthesia || cardiology || neurology;
+      if (!usesCentralStateBridge || event.origin !== window.location.origin ||
           event.data?.type !== 'MENTORO_LOGBOOK_READY' ||
           event.data.instanceId !== instanceId) return;
       event.source.postMessage({
@@ -38,15 +39,17 @@
         hasCloudState: true,
         readOnly: false,
         state: {
-          sessions: [{ id: '333e4567-e89b-12d3-a456-426614174000', date: '2026-11-02', focus: 'Anesthesia bridge test session' }],
+          sessions: [{ id: '333e4567-e89b-12d3-a456-426614174000', date: '2026-11-02', focus: 'Specialty bridge test session' }],
           cases: [], procedures: [], roadmap: {}, emergency: [], reflection: {}
         }
       }, window.location.origin);
-      event.source.postMessage({
-        type: 'MENTORO_LOGBOOK_LOAD_REVIEWS',
-        instanceId,
-        reviews: []
-      }, window.location.origin);
+      if (anesthesia) {
+        event.source.postMessage({
+          type: 'MENTORO_LOGBOOK_LOAD_REVIEWS',
+          instanceId,
+          reviews: []
+        }, window.location.origin);
+      }
     });
     let enrollmentStatus = 'ACTIVE';
 
