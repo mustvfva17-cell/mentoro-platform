@@ -13,6 +13,7 @@ assert.match(html, /<script src="\.\/app\.js" defer><\/script>/);
 assert.match(html, /id="mentorReviewPanel"/);
 assert.match(html, /patient-identifying information/i);
 assert.match(html, /obtain consent first/i);
+assert.doesNotMatch(html, /id="ophthalmology-exam-safety-note" hidden/);
 
 assert.equal(content.specialty, "ophthalmology");
 assert.equal(content.roadmap.length, 29);
