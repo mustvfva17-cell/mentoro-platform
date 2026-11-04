@@ -12,5 +12,5 @@ export default Object.freeze({
   templateStatus: "source-content-imported; ophthalmologist-review-pending",
   schemaStatus: "native-html-state; RPC-validated",
   sourceProject: "Ophthalmology LOGBOOK 26-27.pdf and MENTORO Semester 9 tracker",
-  sourceArchiveStatus: "official clinical checklist and existing roadmap adapted to the central HTML state/review bridge; no emergency templates published pending specialist review",
+  sourceArchiveStatus: "18 theory topics and clinical checklist integrated with the central HTML state/review bridge; no emergency templates published pending specialist review",
 });
