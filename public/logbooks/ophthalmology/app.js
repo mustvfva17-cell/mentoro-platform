@@ -124,8 +124,8 @@ function save(options) {
 const groupDefs = [
   { id: "vision", label: "Vision & Visual Fields", start: "Visual acuity assessment", end: "Pupillary light reflex" },
   { id: "pupils", label: "Pupils, Lids & Eye Movements", start: "Pupillary light reflex", end: "Human eye working model" },
-  { id: "anterior", label: "Anterior Segment & Lacrimal", start: "Human eye working model", end: "IOP assessment" },
-  { id: "fundus", label: "Intraocular Pressure & Fundus", start: "IOP assessment", end: "Cataract case" },
+  { id: "anterior", label: "Anterior Segment & Lacrimal", start: "Human eye working model", end: "IOP assessment by digital palpation" },
+  { id: "fundus", label: "Intraocular Pressure & Fundus", start: "IOP assessment by digital palpation", end: "Cataract case" },
   { id: "cases", label: "Clinical Cases & Refraction", start: "Cataract case", end: null }
 ];
 const journeyItems = [
