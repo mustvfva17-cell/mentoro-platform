@@ -183,6 +183,8 @@ function renderRoadmap() {
   const status = document.getElementById("roadStatus").value;
   const group = document.getElementById("roadGroup").value || activeGroup;
   activeGroup = group;
+  const examSafetyNote = document.getElementById("cardiology-exam-safety-note");
+  if (examSafetyNote) examSafetyNote.hidden = group !== "exam";
   const groupItems = roadmapItems.filter((item) => item.group === group);
   const visible = groupItems.filter((item) =>
     (!query || (item.item + " " + item.depth + " " + item.frequency).toLowerCase().includes(query)) &&
