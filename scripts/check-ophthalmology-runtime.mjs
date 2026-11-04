@@ -65,4 +65,4 @@ assert.match(manifest, /lifecycle: "draft"/);
 assert.match(manifest, /htmlPath: "\/logbooks\/ophthalmology\/index\.html"/);
 assert.match(manifest, /readOnlyMentorReview: true/);
 
-console.log("Ophthalmology runtime contract passed: 18 roadmap items, official source, central cloud bridge, read-only mentor review, and Draft-only registration.");
+console.log("Ophthalmology runtime contract passed: 29 official-course roadmap items, official source, central cloud bridge, read-only mentor review, and Draft-only registration.");
