@@ -34,6 +34,7 @@
               ? '/logbooks/general-surgery/index.html'
               : '/logbooks/medical-oncology/index.html';
 
+    window.mentoroTestCloudStateSent = false;
     window.addEventListener('message', (event) => {
       const usesCentralStateBridge = true;
       if (!usesCentralStateBridge || event.origin !== window.location.origin ||
@@ -56,6 +57,7 @@
           reviews: []
         }, window.location.origin);
       }
+      window.mentoroTestCloudStateSent = true;
     });
     let enrollmentStatus = 'ACTIVE';
 
