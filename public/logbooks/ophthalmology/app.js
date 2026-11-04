@@ -329,19 +329,20 @@ function openEntryDialog(type, existing) {
   }
   let html = '<div class="privacy-banner">Do not enter patient-identifying information.</div>';
   if (type === "session") {
-    html += '<div class="field-grid">' + input("Date", "date", existing && existing.date || today, "date") + input("Duration", "duration", existing && existing.duration || "") +
-      input("Mentor", "mentor", existing && existing.mentor || "") + select("Setting", "setting", ["OPD", "Ward", "ER", "CCU", "Cath lab", "Clinic", "Teaching"], existing && existing.setting || "Ward") + '</div>' +
+    html += '<div class="field-grid">' + select("Course week", "courseWeek", ["Weeks 1–3", "Weeks 4–6", "Weeks 7–9", "Weeks 12–14", "Other / supplementary"], existing && existing.courseWeek || "Weeks 1–3") +
+      input("Date", "date", existing && existing.date || today, "date") + input("Duration", "duration", existing && existing.duration || "") +
+      input("Mentor / supervisor", "mentor", existing && existing.mentor || "") + select("Clinical setting", "setting", ["Ophthalmology OPD", "Eye ward", "Operating theatre", "Emergency department", "Laser / procedure room", "Teaching / simulation", "Community screening"], existing && existing.setting || "Ophthalmology OPD") + '</div>' +
       input("Main focus", "focus", existing && existing.focus || "") + textarea("Cases encountered (de-identified)", "cases", existing && existing.cases || "") +
       textarea("Procedures / exposure", "exposure", existing && existing.exposure || "") + textarea("Key teaching point", "teaching", existing && existing.teaching || "");
   } else if (type === "case") {
-    html += '<div class="field-grid">' + input("Date", "date", existing && existing.date || today, "date") + input("Setting", "setting", existing && existing.setting || "Ward") + '</div>' +
+    html += '<div class="field-grid">' + input("Date", "date", existing && existing.date || today, "date") + input("Setting", "setting", existing && existing.setting || "Ophthalmology OPD") + '</div>' +
       input("Clinical presentation", "presentation", existing && existing.presentation || "") + input("Working diagnosis", "dx", existing && existing.dx || "") +
       textarea("Key clinical findings", "findings", existing && existing.findings || "") + textarea("Clinical reasoning / plan discussed", "decision", existing && existing.decision || "") +
       textarea("Learning points", "learning", existing && existing.learning || "") + input("Mentor", "mentor", existing && existing.mentor || "");
   } else if (type === "procedure") {
-    html += '<div class="field-grid">' + input("Date", "date", existing && existing.date || today, "date") + input("Procedure", "procedure", existing && existing.procedure || "") +
-      input("Mentor", "mentor", existing && existing.mentor || "") + select("My role", "role", ["Observed", "Assisted", "Performed under supervision", "Discussion"], existing && existing.role || "Observed") + '</div>' +
-      textarea("Indication / key steps", "indication", existing && existing.indication || "") + textarea("Learning / reflection", "learning", existing && existing.learning || "");
+    html += '<div class="field-grid">' + input("Date", "date", existing && existing.date || today, "date") + input("Examination / test / procedure", "procedure", existing && existing.procedure || "") +
+      input("Mentor", "mentor", existing && existing.mentor || "") + select("My role", "role", ["Observed", "Discussed", "Assisted", "Performed under supervision", "Simulation"], existing && existing.role || "Observed") + '</div>' +
+      textarea("Purpose / steps observed (de-identified)", "indication", existing && existing.indication || "") + textarea("Learning / reflection", "learning", existing && existing.learning || "");
   } else if (type === "discussion") {
     html += '<div class="field-grid">' + input("Date", "date", existing && existing.date || today, "date") + input("Mentor", "mentor", existing && existing.mentor || "") + '</div>' +
       input("Topic", "topic", existing && existing.topic || "") + textarea("Why was it discussed?", "why", existing && existing.why || "") +
