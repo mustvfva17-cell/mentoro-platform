@@ -11,7 +11,7 @@ SELECT
   s.id,
   'ophthalmology-html',
   'Ophthalmology Clinical Logbook',
-  'MENTORO Ophthalmology runtime with the official course checklist, 29 official-course roadmap items, patient journey, clinical interpretation, case/session/procedure records, and mentor review.',
+  'MENTORO Ophthalmology runtime with the 18 official lecture topics, 29 clinical training items adapted from the official schedule, course aims, weekly clinical schedule, patient journey, clinical interpretation, case/session/procedure records, and mentor review.',
   false
 FROM public.specialties s
 WHERE s.slug = 'ophthalmology'
@@ -52,7 +52,7 @@ BEGIN
         'html_path', '/logbooks/ophthalmology/index.html',
         'source', 'Ophthalmology LOGBOOK 26-27.pdf and MENTORO Semester 9 tracker',
         'sections', jsonb_build_array(
-          'Overview','Clinical Roadmap','Patient Journey','Clinical Interpretation',
+          'Overview','Lectures & Theory','Course Learning Aims','Weekly Clinical Training Schedule','Clinical Roadmap','Patient Journey','Clinical Interpretation',
           'Sessions','Clinical Cases','Procedures & Discussions','Emergency',
           'Reflection','Mentor Review'
         ),
@@ -60,7 +60,7 @@ BEGIN
         'readiness', 'DRAFT: ophthalmologist review of all clinical content, procedural depth, consent/chaperone wording, referral criteria, and any emergency content is required before assignment. All practical examination skills remain supervised.',
         'versionLabel', 'HTML-v1'
       ),
-      'Source: Mansoura Faculty of Medicine Ophthalmology Clinical Logbook 2026-2027 (course aims, clinical training schedule, and examination checklists) and the user''s MENTORO Semester 9 tracker roadmap. Tier, depth, and frequency labels are provisional curriculum-organizing choices, not official competency requirements. The runtime deliberately contains no emergency management templates until reviewed and approved by an ophthalmologist. Clinical examinations require patient explanation and consent, privacy, appropriate chaperoning under local policy, and direct supervision within the trainee''s scope.'
+      'Source: Mansoura Faculty of Medicine Ophthalmology Clinical Logbook 2026-2027 (18 lecture topics, course aims, clinical training schedule, and examination checklists) and the user''s MENTORO Semester 9 tracker roadmap. Lecture completion is tracked in the existing roadmap state object using stable OPH-01–OPH-18 identifiers; no database schema change is required. Tier, depth, and frequency labels are provisional curriculum-organizing choices, not official competency requirements. The runtime deliberately contains no emergency management templates until reviewed and approved by an ophthalmologist. Clinical examinations require patient explanation and consent, privacy, appropriate chaperoning under local policy, and direct supervision within the trainee''s scope.'
     );
   END IF;
 END
