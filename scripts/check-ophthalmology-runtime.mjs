@@ -15,11 +15,11 @@ assert.match(html, /patient-identifying information/i);
 assert.match(html, /obtain consent first/i);
 
 assert.equal(content.specialty, "ophthalmology");
-assert.equal(content.roadmap.length, 18);
+assert.equal(content.roadmap.length, 29);
 assert.ok(app.includes('let activeGroup = "vision"'));
 assert.ok(app.includes('group: "patientJourney"'));
 assert.ok(app.includes('group: "interpretation"'));
-assert.equal(new Set(content.roadmap.map((row) => row[0])).size, 18);
+assert.equal(new Set(content.roadmap.map((row) => row[0])).size, 29);
 assert.deepEqual(Object.keys(content.emergencyTemplates), []);
 for (const row of content.roadmap) {
   assert.equal(row.length, 4);
