@@ -19,7 +19,10 @@
     const cardiology = params.get('template') === 'cardiology';
     const neurology = params.get('template') === 'neurology';
     const pediatrics = params.get('template') === 'pediatrics';
-    const path = anesthesia
+    const ophthalmology = params.get('template') === 'ophthalmology';
+    const path = ophthalmology
+      ? '/logbooks/ophthalmology/index.html'
+      : anesthesia
       ? '/logbooks/anesthesia-icu/index.html'
       : cardiology
         ? '/logbooks/cardiology/index.html'
