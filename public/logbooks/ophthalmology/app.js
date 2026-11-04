@@ -155,16 +155,14 @@ function buildRoadmap() {
       const row = content.roadmap[index];
       items.push({ id: "r_" + index, item: row[0], tier: row[1], depth: row[2], frequency: row[3], group: group.id, groupLabel: group.label });
     }
-    if (group.id === "cardem") {
-      journeyItems.forEach((item, index) => items.push({ id: "journey_" + index, item: item, tier: "—", depth: "—", frequency: "—", group: "patientJourney", groupLabel: "Ophthalmology Patient Journey" }));
-    }
+
   });
   interpretationItems.forEach((item, index) => items.push({ id: "interp_" + index, item: item, tier: "—", depth: "—", frequency: "—", group: "interpretation", groupLabel: "Clinical Interpretation & Decision-making" }));
   return items;
 }
 function roadmapStatus(id) { return data.roadmap[id] === "done"; }
 let activeView = "dashboard";
-let activeGroup = "presentations";
+let activeGroup = "vision";
 
 function setView(view) {
   activeView = view;
