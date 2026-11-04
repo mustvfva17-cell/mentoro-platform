@@ -643,6 +643,9 @@ async function initialize() {
     if (!response.ok) throw new Error("Ophthalmology clinical catalogue could not be loaded.");
     content = await response.json();
     if (!Array.isArray(content.roadmap) || content.roadmap.length !== 49) throw new Error("Ophthalmology roadmap catalogue is incomplete.");
+    if (!Array.isArray(content.groups) || content.groups.length !== 5) throw new Error("Ophthalmology roadmap groups are incomplete.");
+    groupDefs = content.groups;
+    activeGroup = groupDefs[0]?.id || "weeks1_3";
     roadmapItems = buildRoadmap();
     fillRoadGroups();
     bindEvents();
