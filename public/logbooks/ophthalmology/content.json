@@ -3,18 +3,6 @@
   "source": "Mansoura Faculty of Medicine · Ophthalmology Clinical Logbook 2026–2027, supplemented by the user's Semester 9 tracker roadmap",
   "roadmap": [
     [
-      "Lacrimal gland palpation",
-      "Expanded",
-      "Performed under supervision",
-      "Single"
-    ],
-    [
-      "Corneal fluorescein staining",
-      "Core",
-      "Performed under supervision",
-      "Single"
-    ],
-    [
       "External eye inspection & examination",
       "Core",
       "Performed under supervision",
@@ -111,6 +99,12 @@
       "Repeated"
     ],
     [
+      "Corneal fluorescein staining",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
       "Corneal sensation / reflex",
       "Core",
       "Performed under supervision",
@@ -126,6 +120,12 @@
       "Lacrimal sac case",
       "Core",
       "Observed",
+      "Single"
+    ],
+    [
+      "Lacrimal gland palpation",
+      "Expanded",
+      "Performed under supervision",
       "Single"
     ],
     [
