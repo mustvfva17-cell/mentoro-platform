@@ -18,18 +18,21 @@
     const anesthesia = params.get('template') === 'anesthesia-icu';
     const cardiology = params.get('template') === 'cardiology';
     const neurology = params.get('template') === 'neurology';
+    const pediatrics = params.get('template') === 'pediatrics';
     const path = anesthesia
       ? '/logbooks/anesthesia-icu/index.html'
       : cardiology
         ? '/logbooks/cardiology/index.html'
         : neurology
           ? '/logbooks/neurology/index.html'
-          : surgery
-            ? '/logbooks/general-surgery/index.html'
-            : '/logbooks/medical-oncology/index.html';
+          : pediatrics
+            ? '/logbooks/pediatrics/index.html'
+            : surgery
+              ? '/logbooks/general-surgery/index.html'
+              : '/logbooks/medical-oncology/index.html';
 
     window.addEventListener('message', (event) => {
-      const usesCentralStateBridge = anesthesia || cardiology || neurology;
+      const usesCentralStateBridge = true;
       if (!usesCentralStateBridge || event.origin !== window.location.origin ||
           event.data?.type !== 'MENTORO_LOGBOOK_READY' ||
           event.data.instanceId !== instanceId) return;
@@ -43,7 +46,7 @@
           cases: [], procedures: [], roadmap: {}, emergency: [], reflection: {}
         }
       }, window.location.origin);
-      if (anesthesia) {
+      if (usesCentralStateBridge) {
         event.source.postMessage({
           type: 'MENTORO_LOGBOOK_LOAD_REVIEWS',
           instanceId,
