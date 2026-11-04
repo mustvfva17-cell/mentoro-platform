@@ -83,6 +83,20 @@ if (
   throw new Error('General Surgery seed contract failed: specialty must be resolved by slug, not a database-local UUID.');
 }
 
+
+const htmlReviewAccessFix = (await readFile(
+  new URL('20261104185409_enforce_active_mentor_role_for_html_review_reads.sql', migrationDirectory),
+  'utf8'
+)).replace(/\\s+/g, ' ');
+if (
+  !htmlReviewAccessFix.includes('CREATE OR REPLACE FUNCTION app_private.get_my_logbook_html_item_reviews') ||
+  !htmlReviewAccessFix.includes('(v_actor_id <> v_mentor_id OR NOT app_private.is_mentor())') ||
+  !htmlReviewAccessFix.includes('REVOKE ALL ON FUNCTION app_private.get_my_logbook_html_item_reviews(uuid)') ||
+  !htmlReviewAccessFix.includes('GRANT EXECUTE ON FUNCTION app_private.get_my_logbook_html_item_reviews(uuid) TO authenticated')
+) {
+  throw new Error('HTML logbook review access contract failed: review reads must require the assigned mentor role to remain active.');
+}
+
 console.log(
   `Migration history contract passed: ${migrationFiles.length} SQL files; unique version prefixes, unique normalized contents, and fresh-project optional-helper guard.`
 );
