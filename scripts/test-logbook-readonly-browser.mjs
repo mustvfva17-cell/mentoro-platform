@@ -61,6 +61,8 @@ try {
   const cases = [
     { template: 'medical-oncology', path: '/logbooks/medical-oncology/index.html' },
     { template: 'general-surgery', path: '/logbooks/general-surgery/index.html' },
+    { template: 'cardiology', path: '/logbooks/cardiology/index.html' },
+    { template: 'neurology', path: '/logbooks/neurology/index.html' },
     { template: 'anesthesia-icu', path: '/logbooks/anesthesia-icu/index.html' }
   ];
 
@@ -94,18 +96,24 @@ try {
         throw new Error(`Lifecycle monitor did not close enrollment on ${closureStatus}: ${JSON.stringify(lifecycleResult)}`);
       }
       await sleep(500);
-      const result = await logbook.evaluate(() => {
+      const guardedButtonSelector = ['cardiology', 'neurology'].includes(testCase.template)
+        ? '[data-road-toggle], [data-edit], [data-remove], [data-emergency-template], [data-add]'
+        : 'button[title="Read-only logbook"]';
+      const result = await logbook.evaluate((selector) => {
         const controls = Array.from(document.querySelectorAll('input, textarea, select'))
           .filter((control) =>
             control.type !== 'search' &&
-            !['roadSearch', 'roadGroupSelect', 'sessionSearch', 'caseSearch', 'procSearch', 'discussionSearch', 'emergencySearch'].includes(control.id) &&
+            !['roadSearch', 'roadGroupSelect', 'roadGroup', 'roadTier', 'roadStatus',
+              'sessionSearch', 'caseSearch', 'procSearch', 'discussionSearch', 'emergencySearch'].includes(control.id) &&
             !control.closest('#mentorReviewPanel'));
-        const guardedButtons = Array.from(document.querySelectorAll('button[title="Read-only logbook"]'));
+        const guardedButtons = Array.from(document.querySelectorAll(selector));
+        const readOnlyBanner = document.getElementById('readonlyBanner');
+        const bannerVisible = Boolean(readOnlyBanner && !readOnlyBanner.hidden);
         return {
-          hasReadOnlyClass: document.body.classList.contains('html-logbook-readonly'),
+          hasReadOnlyClass: document.body.classList.contains('html-logbook-readonly') || bannerVisible,
           closedNoticeVisible: document.body.innerText.includes('This training is closed. The logbook is read-only.') ||
-            (document.body.innerText.includes('Read-only mentor review:') &&
-              !document.getElementById('readonlyBanner')?.hidden),
+            (document.body.innerText.includes('Read-only mentor review:') && bannerVisible) ||
+            (bannerVisible && /read-only/i.test(readOnlyBanner.textContent || '')),
           mentorReviewVisible: !document.getElementById('mentorReviewPanel')?.hidden,
           mentorReviewCards: document.querySelectorAll('#mentorReviewPanel .mentor-review-card').length,
           controlCount: controls.length,
@@ -113,7 +121,7 @@ try {
           guardedButtonCount: guardedButtons.length,
           enabledGuardedButtons: guardedButtons.filter((button) => !button.disabled).length
         };
-      });
+      }, guardedButtonSelector);
 
       if (!result.hasReadOnlyClass || !result.closedNoticeVisible ||
           result.controlCount === 0 || result.enabledControls !== 0 ||
