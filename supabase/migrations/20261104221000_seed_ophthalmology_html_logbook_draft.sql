@@ -11,7 +11,7 @@ SELECT
   s.id,
   'ophthalmology-html',
   'Ophthalmology Clinical Logbook',
-  'MENTORO Ophthalmology runtime with the 18 official lecture topics, 29 clinical training items adapted from the official schedule, course aims, weekly clinical schedule, patient journey, clinical interpretation, case/session/procedure records, and mentor review.',
+  'MENTORO Ophthalmology runtime with the 18 official lecture topics, 32 clinical training items adapted from the official schedule, course aims, weekly clinical schedule, patient journey, clinical interpretation, case/session/procedure records, and mentor review.',
   false
 FROM public.specialties s
 WHERE s.slug = 'ophthalmology'
