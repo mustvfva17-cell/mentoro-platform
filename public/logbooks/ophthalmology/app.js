@@ -162,7 +162,7 @@ function renderRoadmap() {
   const group = document.getElementById("roadGroup").value || activeGroup;
   activeGroup = group;
   const examSafetyNote = document.getElementById("ophthalmology-exam-safety-note");
-  if (examSafetyNote) examSafetyNote.hidden = group !== "exam";
+  if (examSafetyNote) examSafetyNote.hidden = group !== "checklist";
   const groupItems = roadmapItems.filter((item) => item.group === group);
   const visible = groupItems.filter((item) =>
     (!query || (item.item + " " + item.depth + " " + item.frequency).toLowerCase().includes(query)) &&
