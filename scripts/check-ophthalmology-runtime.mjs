@@ -21,18 +21,18 @@ assert.ok(app.includes("data-lecture-toggle"));
 assert.doesNotMatch(html, /id="ophthalmology-exam-safety-note" hidden/);
 
 assert.equal(content.specialty, "ophthalmology");
-assert.equal(content.roadmap.length, 29);
+assert.equal(content.roadmap.length, 32);
 assert.equal(content.lectures.length, 18);
 assert.equal(new Set(content.lectures.map((lecture) => lecture.id)).size, 18);
 assert.equal(content.courseAims.length, 9);
 assert.equal(content.clinicalSchedule.length, 4);
 assert.ok(app.includes('end: "IOP assessment by digital palpation"'));
 assert.ok(app.includes('start: "IOP assessment by digital palpation", end: "Cataract case"'));
-for (const item of ["Lid elevation test","Lid closure test","Regurgitation test","Schiotz indentation tonometry","Indirect ophthalmoscopy","Corneal light reflection test"]) assert.ok(content.roadmap.some((row) => row[0] === item), "Missing official clinical item: " + item);
+for (const item of ["External eye inspection & examination","Corneal fluorescein staining","Lacrimal gland palpation","Lid elevation test","Lid closure test","Regurgitation test","Schiotz indentation tonometry","Indirect ophthalmoscopy","Corneal light reflection test"]) assert.ok(content.roadmap.some((row) => row[0] === item), "Missing official clinical item: " + item);
 assert.ok(app.includes('let activeGroup = "vision"'));
 assert.ok(app.includes('group: "patientJourney"'));
 assert.ok(app.includes('group: "interpretation"'));
-assert.equal(new Set(content.roadmap.map((row) => row[0])).size, 29);
+assert.equal(new Set(content.roadmap.map((row) => row[0])).size, 32);
 assert.deepEqual(Object.keys(content.emergencyTemplates), []);
 for (const row of content.roadmap) {
   assert.equal(row.length, 4);
@@ -74,4 +74,4 @@ assert.match(manifest, /lifecycle: "draft"/);
 assert.match(manifest, /htmlPath: "\/logbooks\/ophthalmology\/index\.html"/);
 assert.match(manifest, /readOnlyMentorReview: true/);
 
-console.log("Ophthalmology runtime contract passed: 18 lectures, 29 clinical training items, course aims, weekly schedule, central cloud bridge, read-only mentor review, and Draft-only registration.");
+console.log("Ophthalmology runtime contract passed: 18 lectures, 32 clinical training items, course aims, weekly schedule, central cloud bridge, read-only mentor review, and Draft-only registration.");
