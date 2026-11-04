@@ -64,6 +64,7 @@ try {
     { template: 'cardiology', path: '/logbooks/cardiology/index.html' },
     { template: 'neurology', path: '/logbooks/neurology/index.html' },
     { template: 'pediatrics', path: '/logbooks/pediatrics/index.html' },
+    { template: 'ophthalmology', path: '/logbooks/ophthalmology/index.html' },
     { template: 'anesthesia-icu', path: '/logbooks/anesthesia-icu/index.html' }
   ];
 
@@ -82,6 +83,11 @@ try {
         if (entry.type() === 'error') pageErrors.push('console: ' + entry.text());
       });
       await logbook.waitForLoadState('load');
+      await parent.waitForFunction(() => window.mentoroTestCloudStateSent === true, null, { timeout: 3000 });
+      // Allow the child window to consume the posted cloud state and render it
+      // before the enrollment is closed. Legacy runtimes do not all expose
+      // the same sync-status DOM element.
+      await sleep(300);
 
       const closureStatus = testCase.template === 'general-surgery' ? 'CANCELLED' : 'COMPLETED';
       const lifecycleResult = await parent.evaluate(async (status) => {
@@ -96,8 +102,15 @@ try {
           !lifecycleResult.stopped) {
         throw new Error(`Lifecycle monitor did not close enrollment on ${closureStatus}: ${JSON.stringify(lifecycleResult)}`);
       }
-      await sleep(500);
-      const guardedButtonSelector = ['cardiology', 'neurology'].includes(testCase.template)
+      await logbook.waitForFunction(() => {
+        const banner = document.getElementById('readonlyBanner');
+        const mentorPanel = document.getElementById('mentorReviewPanel') ||
+          document.getElementById('mentor-html-mentor-reviews');
+        const readOnly = document.body.classList.contains('html-logbook-readonly') ||
+          Boolean(banner && !banner.hidden);
+        return Boolean(readOnly && mentorPanel && !mentorPanel.hidden);
+      }, null, { timeout: 3000 });
+      const guardedButtonSelector = ['cardiology', 'neurology', 'ophthalmology'].includes(testCase.template)
         ? '[data-road-toggle], [data-edit], [data-remove], [data-emergency-template], [data-add]'
         : 'button[title="Read-only logbook"]';
       const result = await logbook.evaluate((selector) => {
@@ -112,14 +125,15 @@ try {
         const guardedButtons = Array.from(document.querySelectorAll(selector));
         const readOnlyBanner = document.getElementById('readonlyBanner');
         const bannerVisible = Boolean(readOnlyBanner && !readOnlyBanner.hidden);
+        const hasReadOnlyClass = document.body.classList.contains('html-logbook-readonly') || bannerVisible;
+        const mentorPanel = document.getElementById('mentorReviewPanel') ||
+          document.getElementById('mentor-html-mentor-reviews');
         const mentorReviewCards = Array.from(document.querySelectorAll('[data-review-card]'));
         const mentorReviewControls = Array.from(document.querySelectorAll('[data-review-decision], [data-review-feedback]'));
         return {
-          hasReadOnlyClass: document.body.classList.contains('html-logbook-readonly') || bannerVisible,
-          closedNoticeVisible: document.body.innerText.includes('This training is closed. The logbook is read-only.') ||
-            (document.body.innerText.includes('Read-only mentor review:') && bannerVisible) ||
-            (bannerVisible && /read-only/i.test(readOnlyBanner.textContent || '')),
-          mentorReviewVisible: mentorReviewCards.length > 0,
+          hasReadOnlyClass,
+          closedNoticeVisible: hasReadOnlyClass && /read-only/i.test(document.body.innerText),
+          mentorReviewVisible: Boolean(mentorPanel && !mentorPanel.hidden) && mentorReviewCards.length > 0,
           mentorReviewCards: mentorReviewCards.length,
           mentorReviewControlCount: mentorReviewControls.length,
           enabledMentorReviewControls: mentorReviewControls.filter((control) => !control.disabled).length,

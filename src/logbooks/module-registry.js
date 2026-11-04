@@ -9,6 +9,7 @@ import cardiology from "../specialties/cardiology/manifest.js";
 import neurology from "../specialties/neurology/manifest.js";
 import pediatrics from "../specialties/pediatrics/manifest.js";
 import anesthesiaIcu from "../specialties/anesthesia-icu/manifest.js";
+import ophthalmology from "../specialties/ophthalmology/manifest.js";
 
 const modules = [
   generalSurgery,
@@ -17,6 +18,7 @@ const modules = [
   neurology,
   pediatrics,
   anesthesiaIcu,
+  ophthalmology,
 ];
 
 const byId = new Map(modules.map((module) => [module.id, module]));

@@ -19,6 +19,7 @@
     const cardiology = params.get('template') === 'cardiology';
     const neurology = params.get('template') === 'neurology';
     const pediatrics = params.get('template') === 'pediatrics';
+    const ophthalmology = params.get('template') === 'ophthalmology';
     const path = anesthesia
       ? '/logbooks/anesthesia-icu/index.html'
       : cardiology
@@ -27,10 +28,13 @@
           ? '/logbooks/neurology/index.html'
           : pediatrics
             ? '/logbooks/pediatrics/index.html'
-            : surgery
+            : ophthalmology
+              ? '/logbooks/ophthalmology/index.html'
+              : surgery
               ? '/logbooks/general-surgery/index.html'
               : '/logbooks/medical-oncology/index.html';
 
+    window.mentoroTestCloudStateSent = false;
     window.addEventListener('message', (event) => {
       const usesCentralStateBridge = true;
       if (!usesCentralStateBridge || event.origin !== window.location.origin ||
@@ -53,6 +57,7 @@
           reviews: []
         }, window.location.origin);
       }
+      window.mentoroTestCloudStateSent = true;
     });
     let enrollmentStatus = 'ACTIVE';
 
@@ -98,7 +103,13 @@
 
     window.mentoroTransitionEnrollment = async (status) => {
       enrollmentStatus = status;
-      return await window.mentoroLifecycleMonitor.refresh();
+      const result = await window.mentoroLifecycleMonitor.refresh();
+      if (result.status === 'closed') {
+        // Re-send the idempotent lifecycle signal after the monitor transition,
+        // so the browser assertion does not race the popup message event queue.
+        notifyPopupClosed();
+      }
+      return result;
     };
   </script>
 </body>
