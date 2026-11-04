@@ -1,0 +1,16 @@
+export default Object.freeze({
+  id: "ophthalmology",
+  name: "Ophthalmology",
+  sourceLabel: "Ophthalmology",
+  lifecycle: "draft",
+  runtimeStatus: "central-html-bridge-present",
+  renderer: "HTML",
+  htmlPath: "/logbooks/ophthalmology/index.html",
+  statePersistence: "get_my_logbook_html_state/save_my_logbook_html_state",
+  supportsMentorReview: true,
+  readOnlyMentorReview: true,
+  templateStatus: "source-content-imported; ophthalmologist-review-pending",
+  schemaStatus: "native-html-state; RPC-validated",
+  sourceProject: "Ophthalmology LOGBOOK 26-27.pdf and MENTORO Semester 9 tracker",
+  sourceArchiveStatus: "official clinical checklist and existing roadmap adapted to the central HTML state/review bridge; no emergency templates published pending specialist review",
+});
