@@ -1,0 +1,115 @@
+{
+  "specialty": "ophthalmology",
+  "source": "Mansoura Faculty of Medicine · Ophthalmology Clinical Logbook 2026–2027, supplemented by the user's Semester 9 tracker roadmap",
+  "roadmap": [
+    [
+      "Visual acuity assessment",
+      "Core",
+      "Performed under supervision",
+      "Repeated"
+    ],
+    [
+      "Confrontation visual field",
+      "Core",
+      "Performed under supervision",
+      "Repeated"
+    ],
+    [
+      "Colour vision assessment",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
+      "Pupillary light reflex",
+      "Core",
+      "Performed under supervision",
+      "Repeated"
+    ],
+    [
+      "Lid eversion",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
+      "Cover-uncover test",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
+      "Exophthalmometry",
+      "Expanded",
+      "Observed",
+      "Single"
+    ],
+    [
+      "Human eye working model",
+      "Core",
+      "Discussion",
+      "Single"
+    ],
+    [
+      "Corneal examination",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
+      "Lacrimal sac examination",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
+      "Slit-lamp examination",
+      "Core",
+      "Observed",
+      "Repeated"
+    ],
+    [
+      "IOP assessment",
+      "Core",
+      "Observed",
+      "Single"
+    ],
+    [
+      "Direct ophthalmoscopy",
+      "Core",
+      "Observed",
+      "Repeated"
+    ],
+    [
+      "Cataract case",
+      "Core",
+      "Observed",
+      "Repeated"
+    ],
+    [
+      "Red eye case",
+      "Core",
+      "Observed",
+      "Repeated"
+    ],
+    [
+      "Diabetic retinopathy / retinitis pigmentosa case",
+      "Expanded",
+      "Observed",
+      "Single"
+    ],
+    [
+      "Ocular trauma case",
+      "Expanded",
+      "Observed",
+      "Single"
+    ],
+    [
+      "Glasses and refraction basics",
+      "Expanded",
+      "Observed",
+      "Single"
+    ]
+  ],
+  "emergencyTemplates": {}
+}
