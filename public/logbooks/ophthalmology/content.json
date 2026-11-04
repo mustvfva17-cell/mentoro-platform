@@ -9,6 +9,12 @@
       "Repeated"
     ],
     [
+      "Light perception and projection",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
       "Confrontation visual field",
       "Core",
       "Performed under supervision",
@@ -27,7 +33,31 @@
       "Repeated"
     ],
     [
-      "Lid eversion",
+      "Lid eversion test",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
+      "Lid elevation test",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
+      "Lid closure test",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
+      "Corneal light reflection test",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
+      "Ocular motility assessment",
       "Core",
       "Performed under supervision",
       "Single"
@@ -51,13 +81,19 @@
       "Single"
     ],
     [
-      "Corneal examination",
+      "Conjunctival case",
       "Core",
-      "Performed under supervision",
-      "Single"
+      "Observed",
+      "Repeated"
     ],
     [
-      "Lacrimal sac examination",
+      "Corneal case",
+      "Core",
+      "Observed",
+      "Repeated"
+    ],
+    [
+      "Corneal sensation / reflex",
       "Core",
       "Performed under supervision",
       "Single"
@@ -69,8 +105,26 @@
       "Repeated"
     ],
     [
-      "IOP assessment",
+      "Lacrimal sac case",
       "Core",
+      "Observed",
+      "Single"
+    ],
+    [
+      "Regurgitation test",
+      "Core",
+      "Performed under supervision",
+      "Single"
+    ],
+    [
+      "IOP assessment by digital palpation",
+      "Core",
+      "Observed",
+      "Single"
+    ],
+    [
+      "Schiotz indentation tonometry",
+      "Expanded",
       "Observed",
       "Single"
     ],
@@ -79,6 +133,12 @@
       "Core",
       "Observed",
       "Repeated"
+    ],
+    [
+      "Indirect ophthalmoscopy",
+      "Expanded",
+      "Observed",
+      "Single"
     ],
     [
       "Cataract case",
@@ -93,7 +153,13 @@
       "Repeated"
     ],
     [
-      "Diabetic retinopathy / retinitis pigmentosa case",
+      "Diabetic retinopathy case",
+      "Expanded",
+      "Observed",
+      "Single"
+    ],
+    [
+      "Retinitis pigmentosa case",
       "Expanded",
       "Observed",
       "Single"
