@@ -172,6 +172,21 @@ function setView(view) {
   window.scrollTo({ top: 0, behavior: "instant" });
   render();
 }
+function renderLectures() {
+  const lectures = Array.isArray(content.lectures) ? content.lectures : [];
+  const completed = lectures.filter((lecture) => data.roadmap["lecture:" + lecture.id] === "done").length;
+  document.getElementById("lectureProgress").textContent = completed + " of " + lectures.length + " topics completed";
+  document.getElementById("lectureRows").innerHTML = lectures.map((lecture) => {
+    const done = data.roadmap["lecture:" + lecture.id] === "done";
+    return "<article class=\"record-card\"><div class=\"record-main\"><strong>" + esc(lecture.title) + "</strong><div class=\"record-meta\"><small>" + esc(lecture.id) + "</small></div></div><div class=\"record-actions\"><button class=\"status-toggle " + (done ? "done" : "") + "\" data-lecture-toggle=\"" + esc(lecture.id) + "\" " + (readOnlyMode ? "disabled" : "") + ">" + (done ? "✓ Completed" : "○ Mark completed") + "</button></div></article>";
+  }).join("");
+  document.getElementById("courseAims").innerHTML = (content.courseAims || []).map((aim, index) =>
+    "<article class=\"record-card\"><div class=\"record-main\"><strong>" + (index + 1) + ". " + esc(aim) + "</strong></div></article>"
+  ).join("");
+  document.getElementById("clinicalSchedule").innerHTML = (content.clinicalSchedule || []).map((week) =>
+    "<article class=\"record-card\"><div class=\"record-main\"><strong>" + esc(week.weeks) + "</strong><small>" + week.activities.length + " listed activities</small><p>" + week.activities.map(esc).join(" · ") + "</p></div></article>"
+  ).join("");
+}
 function renderRoadmap() {
   const query = (document.getElementById("roadSearch").value || "").toLowerCase().trim();
   const tier = document.getElementById("roadTier").value;
@@ -276,6 +291,7 @@ function renderEmergencyRows() {
 }
 function render() {
   renderDashboard();
+  renderLectures();
   renderRoadmap();
   renderRecordList("sessionRows", "session");
   renderRecordList("caseRows", "case");
@@ -490,6 +506,15 @@ function bindEvents() {
   });
   document.getElementById("roadSearch").addEventListener("input", renderRoadmap);
   ["roadTier", "roadStatus", "roadGroup"].forEach((id) => document.getElementById(id).addEventListener("change", renderRoadmap));
+  document.getElementById("lectureRows").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-lecture-toggle]");
+    if (!button || readOnlyMode) return;
+    const key = "lecture:" + button.dataset.lectureToggle;
+    if (data.roadmap[key] === "done") delete data.roadmap[key];
+    else data.roadmap[key] = "done";
+    save();
+    renderLectures();
+  });
   document.getElementById("roadRows").addEventListener("click", (event) => {
     const button = event.target.closest("[data-road-toggle]");
     if (!button || readOnlyMode) return;
@@ -635,6 +660,7 @@ async function initialize() {
     if (!response.ok) throw new Error("Ophthalmology clinical catalogue could not be loaded.");
     content = await response.json();
     if (!Array.isArray(content.roadmap) || content.roadmap.length !== 29) throw new Error("Ophthalmology roadmap catalogue is incomplete.");
+    if (!Array.isArray(content.lectures) || content.lectures.length !== 18) throw new Error("Ophthalmology lecture catalogue is incomplete.");
     roadmapItems = buildRoadmap();
     fillRoadGroups();
     bindEvents();
