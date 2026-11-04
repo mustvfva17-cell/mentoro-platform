@@ -23,6 +23,7 @@
     <div class="nav-label">Workspace</div>
     <nav class="navigation">
       <button class="nav-item active" data-view="dashboard">Overview</button>
+      <button class="nav-item" data-view="lectures">Lectures & theory</button>
       <button class="nav-item" data-view="roadmap">Clinical roadmap</button>
       <button class="nav-item" data-view="sessions">Sessions</button>
       <button class="nav-item" data-view="cases">Clinical cases</button>
@@ -60,6 +61,23 @@
         <article class="panel"><div class="panel-heading"><div><h2>Recent activity</h2><p>Latest saved records</p></div></div><div id="recentActivity" class="activity-list"><p class="muted">Nothing logged yet.</p></div></article>
       </div>
       <article class="panel"><div class="panel-heading"><div><h2>Next focus</h2><p>Open Core items in your clinical roadmap</p></div><button class="button secondary" data-go="roadmap">View roadmap</button></div><div id="nextFocus" class="focus-list"></div></article>
+    </section>
+
+    <section class="view" id="view-lectures">
+      <div class="eyebrow">Academic curriculum</div><h1>Lectures & theory</h1>
+      <p class="intro">Track the 18 Ophthalmology lecture topics separately from clinical exposure and supervised skills.</p>
+      <article class="panel">
+        <div class="panel-heading"><div><h2>Lecture progress</h2><p id="lectureProgress">0 of 18 topics completed</p></div></div>
+        <div id="lectureRows" class="record-list"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-heading"><div><h2>Course learning aims</h2><p>Outcomes summarized from the official 2026–2027 course specifications.</p></div></div>
+        <div id="courseAims" class="record-list"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-heading"><div><h2>Clinical training schedule</h2><p>Weekly exposure themes as listed in the official logbook. Repeated activities are retained.</p></div></div>
+        <div id="clinicalSchedule" class="record-list"></div>
+      </article>
     </section>
 
     <section class="view" id="view-roadmap">
