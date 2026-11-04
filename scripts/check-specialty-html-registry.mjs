@@ -3,7 +3,7 @@ import { listSpecialtyModules } from '../src/logbooks/module-registry.js';
 
 const modules = listSpecialtyModules();
 const ids = modules.map((module) => module.id);
-assert.equal(modules.length, 6, 'The central registry must contain six specialty modules.');
+assert.equal(modules.length, 7, 'The central registry must contain seven specialty modules.');
 assert.equal(new Set(ids).size, ids.length, 'Specialty IDs must be unique.');
 
 const htmlModules = modules.filter((module) => module.renderer === 'HTML');
@@ -18,7 +18,8 @@ assert.deepEqual(
     '/logbooks/cardiology/index.html',
     '/logbooks/neurology/index.html',
     '/logbooks/pediatrics/index.html',
-    '/logbooks/anesthesia-icu/index.html'
+    '/logbooks/anesthesia-icu/index.html',
+    '/logbooks/ophthalmology/index.html'
   ]),
   'Only currently integrated HTML runtime pages may be registered.'
 );
@@ -33,6 +34,12 @@ for (const module of htmlModules) {
     `${module.id} mentor review must remain read-only.`);
 }
 
+const ophthalmology = modules.find((module) => module.id === 'ophthalmology');
+assert.ok(ophthalmology, 'Ophthalmology must be registered.');
+assert.equal(ophthalmology.lifecycle, 'draft', 'Ophthalmology must remain draft pending clinical review.');
+assert.equal(ophthalmology.renderer, 'HTML');
+assert.equal(ophthalmology.htmlPath, '/logbooks/ophthalmology/index.html');
+
 const anesthesia = modules.find((module) => module.id === 'anaesthesia-critical-care');
 assert.ok(anesthesia, 'Anesthesia & Critical Care must be registered.');
 assert.equal(anesthesia.lifecycle, 'draft',
@@ -45,4 +52,4 @@ for (const module of modules.filter((candidate) => candidate.renderer !== 'HTML'
     `${module.id} must not claim an HTML runtime before one is ported.`);
 }
 
-console.log('Specialty registry contract passed: six modules, six registered HTML runtimes.');
+console.log('Specialty registry contract passed: seven modules, seven registered HTML runtimes.');
