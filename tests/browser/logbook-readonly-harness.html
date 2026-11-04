@@ -16,11 +16,17 @@
     const params = new URLSearchParams(window.location.search);
     const surgery = params.get('template') === 'general-surgery';
     const anesthesia = params.get('template') === 'anesthesia-icu';
+    const cardiology = params.get('template') === 'cardiology';
+    const neurology = params.get('template') === 'neurology';
     const path = anesthesia
       ? '/logbooks/anesthesia-icu/index.html'
-      : surgery
-        ? '/logbooks/general-surgery/index.html'
-        : '/logbooks/medical-oncology/index.html';
+      : cardiology
+        ? '/logbooks/cardiology/index.html'
+        : neurology
+          ? '/logbooks/neurology/index.html'
+          : surgery
+            ? '/logbooks/general-surgery/index.html'
+            : '/logbooks/medical-oncology/index.html';
 
     window.addEventListener('message', (event) => {
       if (!anesthesia || event.origin !== window.location.origin ||
