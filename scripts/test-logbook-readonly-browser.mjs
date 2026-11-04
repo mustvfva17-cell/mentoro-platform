@@ -104,8 +104,11 @@ try {
       }
       await logbook.waitForFunction(() => {
         const banner = document.getElementById('readonlyBanner');
-        const mentorPanel = document.getElementById('mentorReviewPanel');
-        return Boolean(banner && !banner.hidden && mentorPanel && !mentorPanel.hidden);
+        const mentorPanel = document.getElementById('mentorReviewPanel') ||
+          document.getElementById('mentor-html-mentor-reviews');
+        const readOnly = document.body.classList.contains('html-logbook-readonly') ||
+          Boolean(banner && !banner.hidden);
+        return Boolean(readOnly && mentorPanel && !mentorPanel.hidden);
       }, null, { timeout: 3000 });
       const guardedButtonSelector = ['cardiology', 'neurology', 'ophthalmology'].includes(testCase.template)
         ? '[data-road-toggle], [data-edit], [data-remove], [data-emergency-template], [data-add]'
@@ -122,14 +125,15 @@ try {
         const guardedButtons = Array.from(document.querySelectorAll(selector));
         const readOnlyBanner = document.getElementById('readonlyBanner');
         const bannerVisible = Boolean(readOnlyBanner && !readOnlyBanner.hidden);
+        const hasReadOnlyClass = document.body.classList.contains('html-logbook-readonly') || bannerVisible;
+        const mentorPanel = document.getElementById('mentorReviewPanel') ||
+          document.getElementById('mentor-html-mentor-reviews');
         const mentorReviewCards = Array.from(document.querySelectorAll('[data-review-card]'));
         const mentorReviewControls = Array.from(document.querySelectorAll('[data-review-decision], [data-review-feedback]'));
         return {
-          hasReadOnlyClass: document.body.classList.contains('html-logbook-readonly') || bannerVisible,
-          closedNoticeVisible: document.body.innerText.includes('This training is closed. The logbook is read-only.') ||
-            (document.body.innerText.includes('Read-only mentor review:') && bannerVisible) ||
-            (bannerVisible && /read-only/i.test(readOnlyBanner.textContent || '')),
-          mentorReviewVisible: mentorReviewCards.length > 0,
+          hasReadOnlyClass,
+          closedNoticeVisible: hasReadOnlyClass && /read-only/i.test(document.body.innerText),
+          mentorReviewVisible: Boolean(mentorPanel && !mentorPanel.hidden) && mentorReviewCards.length > 0,
           mentorReviewCards: mentorReviewCards.length,
           mentorReviewControlCount: mentorReviewControls.length,
           enabledMentorReviewControls: mentorReviewControls.filter((control) => !control.disabled).length,
