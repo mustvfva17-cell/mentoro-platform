@@ -23,14 +23,14 @@ BEGIN
   LOOP
     v_definition := pg_catalog.pg_get_functiondef(v_function);
 
-    IF pg_catalog.position(v_old_path IN v_definition) = 0 THEN
+    IF pg_catalog.strpos(v_definition, v_old_path) = 0 THEN
       RAISE EXCEPTION 'Ophthalmology registration expected the Pediatrics route in %', v_function;
     END IF;
 
     v_updated_definition := pg_catalog.replace(v_definition, v_old_path, v_new_path);
 
     IF v_updated_definition = v_definition
-       OR pg_catalog.position(quote_literal('/logbooks/ophthalmology/index.html') IN v_updated_definition) = 0 THEN
+       OR pg_catalog.strpos(v_updated_definition, quote_literal('/logbooks/ophthalmology/index.html')) = 0 THEN
       RAISE EXCEPTION 'Could not extend the HTML route allowlist in %', v_function;
     END IF;
 
