@@ -70,12 +70,14 @@ The product owner wants each trainee to receive a direct specialty logbook URL, 
 - Preserve the current production platform and data. No destructive migration or Auth shutdown.
 
 ### Phase 1 — Licensing foundation
+- Use the existing `mentoro-dev` Supabase project for the initial backend trial; keep Production untouched.
 - Implement license issuance, activation, periodic validation, revocation, rate limiting, and audit records in the development environment.
 - Keep signing and database secrets server-side.
 - Add tests for invalid, expired, revoked, wrong-specialty, over-device-limit, and offline-grace scenarios.
 
 ### Phase 2 — Standalone pilot
-- Add a dedicated standalone licensed runtime mode to one technically suitable specialty module.
+- Use **Anesthesia & Critical Care** as the first technical pilot because its existing standalone route has the richest logbook runtime/local-state baseline. This is a technical pilot only, not authorization to distribute the current clinical content.
+- Add a dedicated standalone licensed runtime mode to this specialty module.
 - Remove the requirement for a parent window only in that mode; retain the existing cloud bridge until the pilot is verified.
 - Add IndexedDB persistence and tested JSON export/import.
 - Do not distribute the pilot to trainees until the specialty's clinical content has passed its separate clinical review.
@@ -116,5 +118,3 @@ The product owner wants each trainee to receive a direct specialty logbook URL, 
 
 These must be finalized before the production pilot:
 - Whether licenses are perpetual or have an explicit expiry by product.
-- **First technical pilot: Anesthesia & Critical Care**, using the existing standalone route and local-state runtime as the baseline. This is a technical pilot only; it must not be distributed to trainees until separate anesthesiologist clinical sign-off.
-- The initial backend trial uses the existing `mentoro-dev` Supabase project only. Production remains untouched until the development and Preview workflows pass review.
