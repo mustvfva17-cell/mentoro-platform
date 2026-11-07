@@ -32,7 +32,8 @@ The product owner wants each trainee to receive a direct specialty logbook URL, 
    - The logbook revalidates the grant periodically. Target policy: online validation at activation and at least once every 7 days, with a bounded offline grace period after a successful validation.
    - Revocation blocks new activations immediately and blocks an existing installation after its cached grant/grace period expires.
    - Device identifiers are best-effort browser installation identifiers, not hardware-bound identity. Clearing browser data, copying a browser profile, or modifying client code can bypass simplistic device limits; the system is an access-control deterrent, not DRM.
-   - Exact device limit and offline grace duration remain configurable product settings to be finalized before production rollout.
+   - **Device limit: two active device activations per license** (owner decision, 2026-11-07). The administrator can reset/revoke a device activation to allow a replacement device. Device activations do not synchronize local logbook data between devices.
+- Offline grace duration remains a configurable product setting to be finalized before production rollout.
 
 4. **Local-first trainee data**
    - The trainee's logbook state is stored on that device in IndexedDB (preferred) or a well-defined local storage adapter.
@@ -114,7 +115,7 @@ The product owner wants each trainee to receive a direct specialty logbook URL, 
 ## Open implementation choices
 
 These must be finalized before the production pilot:
-- Device limit per license (recommended starting point: configurable, initially 1 or 2).
+- Offline grace duration after last successful validation.
 - Offline grace period after last successful validation.
 - Whether licenses are perpetual or have an explicit expiry by product.
 - Which technically suitable, clinically reviewed specialty is the first trainee-facing pilot.
