@@ -29,11 +29,11 @@ The product owner wants each trainee to receive a direct specialty logbook URL, 
    - On first activation, the browser creates a random installation identifier and sends it with the license secret over HTTPS.
    - The trusted API validates the license, applies a configurable device limit, and returns a short-lived signed activation grant.
    - The browser stores only the opaque activation grant and installation identifier; it must not contain a Supabase service-role/secret key.
-   - The logbook revalidates the grant periodically. Target policy: online validation at activation and at least once every 7 days, with a bounded offline grace period after a successful validation.
+   - The logbook revalidates the grant periodically. Target policy: online validation at activation and at least once every 7 days. The maximum offline grace period is 7 days from the last successful server validation.
    - Revocation blocks new activations immediately and blocks an existing installation after its cached grant/grace period expires.
    - Device identifiers are best-effort browser installation identifiers, not hardware-bound identity. Clearing browser data, copying a browser profile, or modifying client code can bypass simplistic device limits; the system is an access-control deterrent, not DRM.
    - **Device limit: two active device activations per license** (owner decision, 2026-11-07). The administrator can reset/revoke a device activation to allow a replacement device. Device activations do not synchronize local logbook data between devices.
-- Offline grace duration remains a configurable product setting to be finalized before production rollout.
+- **Offline grace: 7 days maximum** after the last successful server validation. If the app remains offline beyond that window, editing is paused until it reconnects and revalidates.
 
 4. **Local-first trainee data**
    - The trainee's logbook state is stored on that device in IndexedDB (preferred) or a well-defined local storage adapter.
@@ -115,8 +115,6 @@ The product owner wants each trainee to receive a direct specialty logbook URL, 
 ## Open implementation choices
 
 These must be finalized before the production pilot:
-- Offline grace duration after last successful validation.
-- Offline grace period after last successful validation.
 - Whether licenses are perpetual or have an explicit expiry by product.
-- Which technically suitable, clinically reviewed specialty is the first trainee-facing pilot.
-- Whether the existing Supabase project can host the license backend safely or a separate project is warranted.
+- **First technical pilot: Anesthesia & Critical Care**, using the existing standalone route and local-state runtime as the baseline. This is a technical pilot only; it must not be distributed to trainees until separate anesthesiologist clinical sign-off.
+- The initial backend trial uses the existing `mentoro-dev` Supabase project only. Production remains untouched until the development and Preview workflows pass review.
