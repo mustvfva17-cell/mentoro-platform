@@ -212,7 +212,7 @@ const instanceId = /^[0-9a-f-]{36}$/i.test(requestedInstance) ? requestedInstanc
 const previewMode = pageParams.get('mode') === 'preview';
 const licensedMode = !previewMode && !window.opener;
 let readOnlyMode = pageParams.get('readonly') === '1';
-let cloudReady = previewMode || licensedMode;
+let cloudReady = previewMode;
 let cloudDirty = false;
 let saveTimer = null;
 let mentorReviews = [];
