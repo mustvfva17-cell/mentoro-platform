@@ -1299,7 +1299,7 @@ openModal=function(kind,idx=null){_om(kind,idx);const form=$('modalForm');if(!fo
   if(date&&t&&entries().some(en=>en.k===kind&&en.date===date&&en.title.trim().toLowerCase()===t&&!(idx!==null&&en.i===idx))&&!confirm('An entry with the same date and title already exists. Save another one anyway?')){e.preventDefault();e.stopImmediatePropagation()}},true);
  add('submit',()=>store.set(DK(kind),''))};
 window.discardDraft=k=>{store.set(DK(k),'');openModal(k)};
-const _save=save;save=function(){_save();let ok=false;try{ok=store.get('mentoro_v4_sessions')===JSON.stringify(data.sessions)&&store.get('mentoro_v4_cases')===JSON.stringify(data.cases)&&store.get('mentoro_v4_procedures')===JSON.stringify(data.procedures)}catch(e){}
+const _save=save;save=function(){_save();if(licensedMode){const b=$('saveWarn');if(b)b.remove();return;}let ok=false;try{ok=store.get('mentoro_v4_sessions')===JSON.stringify(data.sessions)&&store.get('mentoro_v4_cases')===JSON.stringify(data.cases)&&store.get('mentoro_v4_procedures')===JSON.stringify(data.procedures)}catch(e){}
  let b=$('saveWarn');if(!ok){if(!b){b=document.createElement('div');b.id='saveWarn';b.className='save-warn';b.innerHTML='Could not save to this device (storage full or blocked). Your latest changes exist only in this tab — <button type="button">Export a backup now</button>';b.querySelector('button').onclick=()=>{const x=document.querySelector('button[onclick*="xport"]');if(x)x.click()};document.body.prepend(b)}}else if(b)b.remove()};
 const _lv=labelView;labelView=v=>v==='logbook'?'Logbook':_lv(v);
 
