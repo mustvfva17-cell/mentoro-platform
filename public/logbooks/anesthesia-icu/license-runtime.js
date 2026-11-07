@@ -231,7 +231,7 @@
 
   async function persistLocalState(state) {
     if (!licenseRecord || !stateKey) throw new Error("No active license is available for local saving.");
-    stateSaveQueue = stateSaveQueue.then(() => putRecord(stateKey, state));
+    stateSaveQueue = stateSaveQueue.catch(() => {}).then(() => putRecord(stateKey, state));
     await stateSaveQueue;
   }
 
@@ -389,10 +389,58 @@
     }
   }
 
+  let validationTimer = null;
+  let validationBusy = false;
+
+  async function revalidateActiveLicense(specialtySlug) {
+    if (!licenseRecord || validationBusy) return;
+    validationBusy = true;
+    try {
+      const result = await invokeLicense("validate", {
+        specialtySlug,
+        installationId: licenseRecord.installationId,
+        deviceToken: licenseRecord.deviceToken
+      });
+      if (result.ok !== true) throw Object.assign(new Error("license_invalid"), { status: 403 });
+      licenseRecord = toContext(result, licenseRecord.installationId, false);
+      licenseRecord.specialtySlug = specialtySlug;
+      await putRecord("license:" + specialtySlug, licenseRecord);
+      addWatermark(licenseRecord.traineeLabel, licenseRecord.licenseHint, licenseRecord.validUntil, false);
+      updateStatus("Active license · saved on this device");
+    } catch (error) {
+      const deadline = Date.parse(licenseRecord.validUntil || "");
+      const temporary = error.status === undefined || error.status >= 500 || error.status === 429;
+      if (temporary && Number.isFinite(deadline) && Date.now() < deadline) {
+        licenseRecord.offline = true;
+        addWatermark(licenseRecord.traineeLabel, licenseRecord.licenseHint, licenseRecord.validUntil, true);
+        updateStatus("Offline access · reconnect before " + new Date(licenseRecord.validUntil).toLocaleString());
+        return;
+      }
+      const main = document.querySelector("main.content");
+      if (main) main.inert = true;
+      if (validationTimer) window.clearInterval(validationTimer);
+      const gate = showGate({
+        specialtyName: "Anesthesia & Critical Care",
+        reason: error.status === 403
+          ? "This license or device activation is no longer valid. Enter a current license key or contact MENTORO."
+          : "Your offline access period has ended. Reconnect to verify your license."
+      });
+      attachActivation(gate, () => window.location.reload(), specialtySlug,
+        licenseRecord.installationId, "license:" + specialtySlug, (value) => ({ state: value }), () => ({}));
+    } finally {
+      validationBusy = false;
+    }
+  }
+
   async function start(options) {
     const result = await begin(options);
     licenseRecord = { ...result.context, specialtySlug: options.specialtySlug };
     stateKey = localStateKey(licenseRecord.licenseId, options.specialtySlug);
+    if (validationTimer) window.clearInterval(validationTimer);
+    validationTimer = window.setInterval(() => void revalidateActiveLicense(options.specialtySlug), 6 * 60 * 60 * 1000);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") void revalidateActiveLicense(options.specialtySlug);
+    });
     return result;
   }
 
