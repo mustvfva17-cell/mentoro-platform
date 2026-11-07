@@ -28,7 +28,7 @@ The product owner wants each trainee to receive a direct specialty logbook URL, 
 3. **Device activation and revocation**
    - On first activation, the browser creates a random installation identifier and sends it with the license secret over HTTPS.
    - The trusted API validates the license, applies a configurable device limit, and returns a short-lived signed activation grant.
-   - The browser stores only the opaque activation grant and installation identifier; it must not contain a Supabase service-role/secret key.
+   - The browser stores only the opaque random device token and installation identifier; the server stores only a SHA-256 hash of the device token. The browser must not contain a Supabase service-role/secret key.
    - The logbook revalidates the grant periodically. Target policy: online validation at activation and at least once every 7 days. The maximum offline grace period is 7 days from the last successful server validation.
    - Revocation blocks new activations immediately and blocks an existing installation after its cached grant/grace period expires.
    - Device identifiers are best-effort browser installation identifiers, not hardware-bound identity. Clearing browser data, copying a browser profile, or modifying client code can bypass simplistic device limits; the system is an access-control deterrent, not DRM.
@@ -55,7 +55,7 @@ The product owner wants each trainee to receive a direct specialty logbook URL, 
 - Persist only a strong hash of the license secret. Compare hashes in a trusted backend using constant-time comparison where applicable.
 - Apply rate limits and generic failure messages to activation/check endpoints; never reveal whether a particular license exists.
 - Validate license state, specialty/product scope, expiry, device limit, and revocation on every server-side check.
-- Signed activation grants must be integrity-protected, scoped to one license, specialty, and installation, and have bounded expiry. Signing secrets remain server-side.
+- Device tokens are high-entropy opaque bearer credentials scoped server-side to one license, specialty, and installation. The browser's seven-day offline deadline is a best-effort client-side lock, not a tamper-proof DRM control; a technically determined user can modify local code/storage. Server-side revocation and expiry take effect on the next successful validation.
 - Admin-only license management must verify the authenticated actor and admin role server-side. Never trust client-supplied role labels or owner IDs.
 - Supabase RLS, explicit grants, and database constraints remain required for license tables. No privileged key may be exposed to browser code.
 - Local data is user-controlled and can be edited by the device owner. It must not be treated as a verified competency record, clinical sign-off, or tamper-proof audit trail.
@@ -103,7 +103,7 @@ The product owner wants each trainee to receive a direct specialty logbook URL, 
 **Trade-offs**
 - Local-only data is not automatically synchronized across devices.
 - The trainee is responsible for backups and device/browser continuity.
-- Revocation is not instantaneous while a device is offline; it takes effect at the next successful validation or grant expiry.
+- Revocation is not instantaneous while a device is offline; it takes effect at the next successful validation. The seven-day client deadline is a convenience deterrent, not a security boundary.
 - Client-side applications can be copied or modified by determined users; license checks deter casual sharing but cannot guarantee prevention.
 
 ## Explicit non-goals for the first release
