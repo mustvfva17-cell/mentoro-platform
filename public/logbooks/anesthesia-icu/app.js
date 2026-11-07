@@ -209,7 +209,8 @@ const roadmapItems=makeRoadmapItems();
 const pageParams = new URLSearchParams(window.location.search);
 const requestedInstance = pageParams.get('instance') || '';
 const instanceId = /^[0-9a-f-]{36}$/i.test(requestedInstance) ? requestedInstance : '';
-const previewMode = !instanceId || !window.opener || pageParams.get('mode') === 'preview';
+const previewMode = pageParams.get('mode') === 'preview';
+const licensedMode = !previewMode && !window.opener;
 let readOnlyMode = pageParams.get('readonly') === '1';
 let cloudReady = previewMode;
 let cloudDirty = false;
@@ -259,6 +260,13 @@ function postCloudState(flushNow=false){
 function save(options={}){
  if(readOnlyMode)return;
  if(previewMode){store.set('state',JSON.stringify(currentCloudState()));syncStatus('Saved in standalone preview');return;}
+ if(licensedMode){
+  if(!cloudReady){syncStatus('Activate your MENTORO license before editing.',true);return;}
+  window.MentoroLicenseRuntime.saveState(currentCloudState())
+   .then(()=>syncStatus('Saved on this device'))
+   .catch(error=>syncStatus(error?.message||'Local save failed. Export a backup and retry.',true));
+  return;
+ }
  if(!cloudReady){syncStatus('Waiting for the MENTORO cloud state to load. No changes were saved.',true);return;}
  if(saveTimer)clearTimeout(saveTimer);
  if(options.flushNow)postCloudState(true);else saveTimer=setTimeout(()=>postCloudState(false),500);
@@ -432,7 +440,27 @@ function openExposureModal(){
  draw(); search.addEventListener('input',draw); document.querySelectorAll('#exposureTypes .type-choice').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#exposureTypes .type-choice').forEach(x=>x.classList.remove('active'));b.classList.add('active');selectedType=b.dataset.type;}));
  form.onsubmit=e=>{e.preventDefault();if(readOnlyMode||(!previewMode&&!cloudReady))return; const fd=new FormData(form); const ids=selected.slice(); ids.forEach(id=>{data.roadmap[id]='done'}); const base={id:makeId(),date:fd.get('date'),mentor:fd.get('mentor'),note:fd.get('note'),linkedRoadmap:ids,source:'quick-exposure'}; if(selectedType==='Procedure / OR'){data.procedures.push({id:base.id,kind:'procedure',date:base.date,procedure:base.note||'Procedure / OR exposure',setting:fd.get('setting')||'',role:'Observed',mentor:base.mentor,linkedRoadmap:ids,quick:true});} else if(selectedType==='Teaching / discussion'){data.procedures.push({id:base.id,kind:'discussion',date:base.date,topic:base.note||'Teaching / discussion',why:'',points:base.note||'',takeaways:'',reflection:'',mentor:base.mentor,linkedRoadmap:ids,quick:true});} else if(selectedType==='Emergency case'){data.emergency.push({id:base.id,template:'Emergency case',date:base.date,complaint:base.note||'',mentor:base.mentor,linkedRoadmap:ids,quick:true});} else {data.sessions.push({id:base.id,date:base.date,duration:'',mentor:base.mentor,types:fd.get('setting')?[fd.get('setting')]:[],focus:base.note||'Clinical encounter',cases:'',exposure:'',confidenceAreas:[],confidence:'',teaching:'',confirmed:'',initials:'',linkedRoadmap:ids,quick:true});} save();render();closeModal();};
 }
-function exportLogbook(){if(readOnlyMode||(!previewMode&&!cloudReady)){syncStatus('Backup is unavailable until the cloud state has loaded, or in read-only review mode.',true);return;}const payload={version:4,exportedAt:new Date().toISOString(),data};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`mentoro-anesthesia-critical-care-logbook-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function exportLogbook(){
+ if(readOnlyMode||(!previewMode&&!cloudReady)){syncStatus('Backup is unavailable until the logbook is ready.',true);return;}
+ const license=licensedMode?window.MentoroLicenseRuntime.license:null;
+ const payload={format:'mentoro-logbook-backup',version:4,specialty:'anaesthesia-critical-care',licenseHint:license?.licenseHint||null,exportedAt:new Date().toISOString(),data:currentCloudState()};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+ a.download=`mentoro-anesthesia-critical-care-backup-${new Date().toISOString().slice(0,10)}.json`;
+ a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+async function importLogbookBackup(file){
+ if(readOnlyMode||(!previewMode&&!cloudReady)){syncStatus('Import is unavailable until the logbook is ready.',true);return;}
+ try{
+  if(!file||file.size>5*1024*1024)throw new Error('Choose a backup file smaller than 5 MB.');
+  const payload=JSON.parse(await file.text());
+  if(!payload||typeof payload!=='object'||!payload.data||typeof payload.data!=='object')throw new Error('This file is not a valid MENTORO backup.');
+  if(payload.specialty&&payload.specialty!=='anaesthesia-critical-care')throw new Error('This backup belongs to a different specialty.');
+  if(!window.confirm('Import this backup and replace the data currently stored on this device?'))return;
+  data=normalizeState(payload.data).state;
+  save();render();syncStatus('Backup imported on this device');
+ }catch(error){syncStatus(error.message||'Could not import this backup.',true);}
+}
 
 function openModal(kind,editIndex=null){if(readOnlyMode||(!previewMode&&!cloudReady))return;const modal=document.getElementById('modal'),form=document.getElementById('modalForm'),title=document.getElementById('modalTitle');modal.classList.add('open');const today=new Date().toISOString().slice(0,10);const existing=editIndex===null?null:(kind==='session'?data.sessions[editIndex]:kind==='case'?data.cases[editIndex]:kind==='procedure'||kind==='discussion'?data.procedures[editIndex]:null);let html='';
  if(kind==='session'){title.textContent=existing?'Edit session':'Log session';html=`<div class="form-grid"><div class="privacy-note full"><strong>Privacy:</strong> Do not enter patient-identifying information (names, IDs, phone numbers, addresses, etc.).</div><div class="modal-section" style="grid-column:1/-1">Session details</div><div class="field"><label>Date</label><input name="date" type="date" value="${today}" required></div><div class="field"><label>Duration</label><input name="duration"></div><div class="field full"><label>Mentor</label><input name="mentor"></div><div class="field full"><label>Session Type</label><div class="checks"><label><input type="checkbox" name="types" value="OPD">OPD</label><label><input type="checkbox" name="types" value="Ward">Ward</label><label><input type="checkbox" name="types" value="ER">ER</label><label><input type="checkbox" name="types" value="OR">OR</label><label><input type="checkbox" name="types" value="Procedure">Procedure</label><label><input type="checkbox" name="types" value="Case Discussion">Case Discussion</label><label><input type="checkbox" name="types" value="Mixed">Mixed</label></div></div><div class="field full"><label>Main Focus</label><input name="focus"></div><div class="field full"><label>Cases Encountered</label><textarea name="cases"></textarea></div><div class="field full"><label>Procedures / OR Exposure</label><textarea name="exposure"></textarea></div><div class="field full"><label>Today I became more confident in</label><div class="checks"><label><input type="checkbox" name="confidenceAreas" value="Recognizing presentations">Recognizing presentations</label><label><input type="checkbox" name="confidenceAreas" value="History taking">History taking</label><label><input type="checkbox" name="confidenceAreas" value="Examination">Examination</label><label><input type="checkbox" name="confidenceAreas" value="Differential diagnosis">Differential diagnosis</label><label><input type="checkbox" name="confidenceAreas" value="Investigations">Investigations</label><label><input type="checkbox" name="confidenceAreas" value="Management">Management</label><label><input type="checkbox" name="confidenceAreas" value="Clinical reasoning">Clinical reasoning</label></div></div><div class="field"><label>Confidence 1–5</label><select name="confidence"><option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div><div class="field"><label>Mentor teaching point</label><input name="teaching" placeholder="Teaching point from today"></div><div class="field full"><label>If a supervised activity occurred</label><div class="checks"><label><input type="checkbox" name="confirmed" value="Confirmed">Confirmed</label></div></div></div>`;
@@ -449,6 +477,36 @@ function saveReflection(){if(readOnlyMode||(!previewMode&&!cloudReady))return;da
 document.getElementById('roadSearch').addEventListener('input',renderRoad);document.querySelectorAll('#tierFilters .filter').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#tierFilters .filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');activeTier=b.dataset.tier;renderRoad()}));document.querySelectorAll('#statusFilters .status-filter').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#statusFilters .status-filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');activeStatus=b.dataset.status;renderRoad()}));document.getElementById('roadGroupSelect')?.addEventListener('change',e=>setRoadGroup(e.target.value));
 [['sessionSearch','session'],['caseSearch','case'],['procSearch','proc'],['discussionSearch','disc'],['emergencySearch','emergency']].forEach(([id,type])=>document.getElementById(id)?.addEventListener('input',e=>{const v=e.target.value.toLowerCase().trim();if(type==='session')sessionQuery=v;if(type==='case')caseQuery=v;if(type==='proc')procQuery=v;if(type==='disc')discQuery=v;if(type==='emergency')emergencyQuery=v;renderRows()}));
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});document.querySelectorAll('#progress textarea,#progress input').forEach(el=>el.addEventListener('input',()=>{clearTimeout(window._refTimer);window._refTimer=setTimeout(saveReflection,500)}));document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeQuickAdd();closeModal()}});document.addEventListener('click',e=>{const qa=document.querySelector('.quick-add');if(qa&&!qa.contains(e.target))closeQuickAdd()});
-startCloudBridge();
-render();
+async function bootLogbook(){
+ if(licensedMode){
+  setCloudLoading(true);
+  try{
+   const result=await window.MentoroLicenseRuntime.start({
+    specialtySlug:'anaesthesia-critical-care',
+    specialtyName:'Anesthesia & Critical Care',
+    normalizeState,
+    emptyState
+   });
+   data=result.state;
+   cloudReady=true;
+   setCloudLoading(false);
+   render();
+   return;
+  }catch(error){
+   setCloudLoading(false);
+   syncStatus(error?.message||'Could not initialize local logbook storage.',true);
+   document.querySelector('main.content')?.setAttribute('aria-busy','false');
+   return;
+  }
+ }
+ startCloudBridge();
+ render();
+}
+document.getElementById('importBackupButton')?.addEventListener('click',()=>document.getElementById('importBackupInput')?.click());
+document.getElementById('importBackupInput')?.addEventListener('change',event=>{
+ const file=event.currentTarget.files?.[0];
+ if(file)void importLogbookBackup(file);
+ event.currentTarget.value='';
+});
+bootLogbook();
 
