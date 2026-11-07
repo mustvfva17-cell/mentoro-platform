@@ -247,6 +247,7 @@ th{font-weight:650!important}
 .today-row .num,.today-row span{font-size:12px!important}
 
 </style>
+<link rel="stylesheet" href="../shared/license.css">
 </head>
 <body>
 
@@ -369,6 +370,7 @@ th{font-weight:650!important}
 <div class="modal" id="modal"><div class="modal-card"><div class="modal-top"><h3 id="modalTitle">Add</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><form id="modalForm"></form></div></div></div>
 
 
+<script src="../shared/license-runtime.js"></script>
 <script>
 
 const roadmap = [
@@ -549,7 +551,9 @@ function makeRoadmapItems(){
 const roadmapItems=makeRoadmapItems();
 
 const pageParams=new URLSearchParams(window.location.search);
-const previewMode=pageParams.get('mode')==='preview';
+const licensedMode=pageParams.get('mode')==='licensed'&&!window.opener;
+let licenseStarted=false;
+const previewMode=!licensedMode&&pageParams.get('mode')==='preview';
 let readonlyMode=pageParams.get('readonly')==='1';
 const instanceParam=pageParams.get('instance')||'';
 const instanceId=/^[0-9a-f-]{36}$/i.test(instanceParam)?instanceParam:'';
@@ -564,7 +568,34 @@ if(previewMode){
  const note=document.getElementById('legacy-preview-banner');
  if(note){note.hidden=false;note.style.display='block';}
 }
-var data={
+
+function licensedLogbookEmptyState(){
+  return { sessions: [], cases: [], procedures: [], roadmap: {}, emergency: [], reflection: {} };
+}
+function licensedLogbookNormalizeState(value){
+  const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const state = {
+    sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
+    cases: Array.isArray(raw.cases) ? raw.cases : [],
+    procedures: Array.isArray(raw.procedures) ? raw.procedures : [],
+    roadmap: raw.roadmap && typeof raw.roadmap === "object" && !Array.isArray(raw.roadmap) ? raw.roadmap : {},
+    emergency: Array.isArray(raw.emergency) ? raw.emergency : [],
+    reflection: raw.reflection && typeof raw.reflection === "object" && !Array.isArray(raw.reflection) ? raw.reflection : {}
+  };
+  let changed = false;
+  ["sessions", "cases", "procedures", "emergency"].forEach((key) => {
+    state[key] = state[key].map((entry) => {
+      const row = entry && typeof entry === "object" && !Array.isArray(entry) ? { ...entry } : {};
+      if (typeof row.id !== "string" || !row.id.trim()) {
+        row.id = window.crypto?.randomUUID ? window.crypto.randomUUID() : "mtr-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+        changed = true;
+      }
+      return row;
+    });
+  });
+  return { state, changed };
+}
+var data=licensedMode?licensedLogbookEmptyState():{
  sessions:JSON.parse(store.get('mentoro_v4_sessions')||store.get('mentoro_v3_sessions')||'[]'),
  cases:JSON.parse(store.get('mentoro_v4_cases')||store.get('mentoro_v3_cases')||'[]'),
  procedures:JSON.parse(store.get('mentoro_v4_procedures')||store.get('mentoro_v3_procedures')||'[]'),
@@ -605,6 +636,11 @@ function notifyCloudStateChanged(options={}){
 window.addEventListener('pagehide',()=>notifyCloudStateChanged({flushNow:true}));
 function save(){
  if(readonlyMode)return;
+ if(licensedMode){
+  if(!licenseStarted)return;
+  void window.MentoroLicenseRuntime.saveState(currentCloudState()).then(()=>setCloudNotice('Saved on this device')).catch(error=>setCloudNotice(error?.message||'Local save failed. Export a backup and retry.','error'));
+  return;
+ }
  store.set('mentoro_v4_sessions',JSON.stringify(data.sessions));store.set('mentoro_v4_cases',JSON.stringify(data.cases));store.set('mentoro_v4_procedures',JSON.stringify(data.procedures));store.set('mentoro_v4_roadmap',JSON.stringify(data.roadmap));store.set('mentoro_v4_emergency',JSON.stringify(data.emergency));store.set('mentoro_v4_reflection',JSON.stringify(data.reflection));
  notifyCloudStateChanged();
 }
@@ -1041,7 +1077,12 @@ if(instanceId&&window.opener){
   : 'Connecting to the assigned MENTORO training logbook… Do not enter patient-identifying information.';}
  window.opener.postMessage({type:'MENTORO_LOGBOOK_READY',instanceId},window.location.origin);
 }
-render();
+if(licensedMode){
+ const root=document.querySelector('main.content');if(root){root.inert=true;root.setAttribute('aria-busy','true');}
+ window.MentoroLicenseRuntime.start({specialtySlug:'medical-oncology',specialtyName:'Medical Oncology',normalizeState:licensedLogbookNormalizeState,emptyState:licensedLogbookEmptyState})
+  .then(licensed=>{data=licensed.state;licenseStarted=true;migrateRoadmap();Object.keys(data.roadmap||{}).forEach(k=>{if(data.roadmap[k]==='started')data.roadmap[k]='done'});htmlCloudReady=true;if(root){root.inert=false;root.removeAttribute('aria-busy');}save();render();})
+  .catch(error=>setCloudNotice(error?.message||'Could not initialize licensed local storage.','error'));
+}else{render();}
 })();
 
 </script>
