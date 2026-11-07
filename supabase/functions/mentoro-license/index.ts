@@ -95,9 +95,9 @@ async function checkRateLimit(adminClient: ReturnType<typeof createClient>, inst
     "";
   const identifiers = [{ hash: await sha256Hex("device:" + installationHash), maxAttempts: 10 }];
   if (forwarded && forwarded.length <= 128) {
-    // Shared networks can legitimately activate many trainees; keep a higher
-    // aggregate IP ceiling while retaining the stricter per-installation limit.
-    identifiers.push({ hash: await sha256Hex("ip:" + forwarded), maxAttempts: 50 });
+    // Shared networks can legitimately activate many trainees. The database
+    // rate-limit RPC deliberately caps a window at 30 attempts.
+    identifiers.push({ hash: await sha256Hex("ip:" + forwarded), maxAttempts: 30 });
   }
 
   for (const identifier of identifiers) {
