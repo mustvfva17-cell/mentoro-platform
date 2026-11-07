@@ -363,3 +363,12 @@ h1,h2,h3,p { margin-top: 0; }
 .password-input-wrap input { padding-right: 62px; }
 .password-toggle { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); padding: 5px 4px; border: 0; background: transparent; color: #53617a; font-size: 11px; font-weight: 700; cursor: pointer; }
 .password-toggle:hover { color: var(--red); }
+
+/* Standalone license administration */
+.license-device-list{display:grid;gap:8px;margin:12px 0;padding-top:10px;border-top:1px solid var(--border,#e4e7ec)}
+.license-device-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--border,#e4e7ec);border-radius:9px;font-size:12px}
+.license-device-row small{color:var(--muted,#667085)}
+#admin-license-issued{display:grid;gap:10px;margin-top:14px;text-align:left}
+#admin-license-issued code{display:block;padding:13px;border:1px dashed var(--border,#c7ced9);border-radius:10px;background:var(--surface-muted,#f7f8fa);font-size:14px;font-weight:800;letter-spacing:.05em;overflow-wrap:anywhere}
+#admin-license-issued[hidden]{display:none}
+#admin-license-list{margin-top:12px}
