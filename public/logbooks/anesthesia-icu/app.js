@@ -209,8 +209,12 @@ const roadmapItems=makeRoadmapItems();
 const pageParams = new URLSearchParams(window.location.search);
 const requestedInstance = pageParams.get('instance') || '';
 const instanceId = /^[0-9a-f-]{36}$/i.test(requestedInstance) ? requestedInstance : '';
-const previewMode = pageParams.get('mode') === 'preview';
-const licensedMode = !previewMode && !window.opener;
+const licensedMode = pageParams.get('mode') === 'licensed' && !window.opener;
+// Until Production has its own license backend and rollout approval, existing
+// direct logbook links remain in the legacy standalone mode. The new licensing
+// path is opt-in via ?mode=licensed and can be exercised on the Development Preview.
+const previewMode = pageParams.get('mode') === 'preview' ||
+ (!instanceId && !window.opener && !licensedMode);
 let readOnlyMode = pageParams.get('readonly') === '1';
 let cloudReady = previewMode;
 let cloudDirty = false;
