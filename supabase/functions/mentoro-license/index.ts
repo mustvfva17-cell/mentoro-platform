@@ -93,13 +93,17 @@ async function checkRateLimit(adminClient: ReturnType<typeof createClient>, inst
     request.headers.get("x-real-ip") ||
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     "";
-  const identifiers = [await sha256Hex("device:" + installationHash)];
-  if (forwarded && forwarded.length <= 128) identifiers.push(await sha256Hex("ip:" + forwarded));
+  const identifiers = [{ hash: await sha256Hex("device:" + installationHash), maxAttempts: 10 }];
+  if (forwarded && forwarded.length <= 128) {
+    // Shared networks can legitimately activate many trainees; keep a higher
+    // aggregate IP ceiling while retaining the stricter per-installation limit.
+    identifiers.push({ hash: await sha256Hex("ip:" + forwarded), maxAttempts: 50 });
+  }
 
   for (const identifier of identifiers) {
     const { data, error } = await adminClient.rpc("consume_mentoro_license_attempt", {
-      p_identifier_hash: identifier,
-      p_max_attempts: 10,
+      p_identifier_hash: identifier.hash,
+      p_max_attempts: identifier.maxAttempts,
       p_window_seconds: 900,
     });
     if (error || data?.allowed !== true) return false;
