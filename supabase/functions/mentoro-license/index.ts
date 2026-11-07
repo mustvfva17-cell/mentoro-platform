@@ -232,6 +232,14 @@ async function handleActivation(action: string, body: JsonRecord, request: Reque
         error: data?.error === "device_limit_reached" ? "device_limit_reached" : "license_unavailable",
       });
     }
+    const { data: licenseDetails, error: detailsError } = await adminClient.rpc("validate_mentoro_license", {
+      p_device_token_hash: deviceTokenHash,
+      p_installation_hash: installationHash,
+      p_specialty_slug: specialtySlug,
+    });
+    if (detailsError || licenseDetails?.ok !== true) {
+      return response(503, { error: "license_service_unavailable" });
+    }
     return response(200, {
       ok: true,
       deviceToken,
@@ -239,8 +247,10 @@ async function handleActivation(action: string, body: JsonRecord, request: Reque
       deviceId: data.device_id,
       deviceLimit: data.device_limit,
       deviceCount: data.device_count,
-      validUntil: data.valid_until,
-      expiresAt: data.expires_at,
+      validUntil: licenseDetails.valid_until,
+      expiresAt: licenseDetails.expires_at,
+      traineeLabel: licenseDetails.trainee_label,
+      licenseHint: licenseDetails.license_hint,
     });
   }
 
