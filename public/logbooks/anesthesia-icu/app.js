@@ -502,5 +502,11 @@ async function bootLogbook(){
  startCloudBridge();
  render();
 }
+document.getElementById('importBackupButton')?.addEventListener('click',()=>document.getElementById('importBackupInput')?.click());
+document.getElementById('importBackupInput')?.addEventListener('change',event=>{
+ const file=event.currentTarget.files?.[0];
+ if(file)void importLogbookBackup(file);
+ event.currentTarget.value='';
+});
 bootLogbook();
 
