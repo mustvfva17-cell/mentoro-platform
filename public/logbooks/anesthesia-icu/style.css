@@ -201,3 +201,8 @@ th{font-weight:650!important}
 .readonly-banner{margin:0 0 12px;padding:10px 13px;border:1px solid var(--accent-border,#efcbd1);border-radius:10px;background:var(--accent-soft,#fff2f4);color:var(--ink);font-size:13px}
 .mentor-review-panel{margin-top:22px}.mentor-review-panel[hidden]{display:none}.mentor-review-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.mentor-review-card{border:1px solid var(--line,#d9dee7);border-radius:14px;padding:14px;background:var(--surface,#fff)}.mentor-review-card h3{margin:0 0 5px;font-size:15px}.mentor-review-card small,.mentor-review-card p{color:var(--muted,#657080)}.mentor-review-card label{display:block;margin:10px 0 5px;font-size:13px}.mentor-review-card select,.mentor-review-card textarea{width:100%;min-height:42px;border:1px solid var(--line,#d9dee7);border-radius:8px;padding:8px;background:var(--surface,#fff);color:inherit}.mentor-review-card textarea{min-height:76px}.review-prior{border-left:3px solid var(--line);padding:7px 10px;margin:8px 0;background:var(--surface-2)}.review-prior p{margin:5px 0 0}.review-note{color:var(--danger)}
 .html-logbook-readonly .quick-add{display:none!important}.html-logbook-readonly .modal{display:none!important}
+
+
+/* Keep standalone logbook views mutually exclusive on mobile and desktop. */
+.content > section.view:not(.active){display:none!important}
+.content > section.view.active{display:block!important}
