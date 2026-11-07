@@ -1,0 +1,21 @@
+
+/* MENTORO standalone license activation and local-first status */
+.license-gate{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:20px;background:rgba(12,18,31,.76);backdrop-filter:blur(8px)}
+.license-gate[hidden]{display:none!important}
+.license-card{width:min(100%,460px);padding:30px;border:1px solid rgba(255,255,255,.12);border-radius:22px;background:#fff;color:#182235;box-shadow:0 26px 90px rgba(0,0,0,.35)}
+.license-brand{display:flex;align-items:center;gap:10px;color:#c91f33;font-size:15px;font-weight:900;letter-spacing:.12em}
+.license-brand span{padding-left:10px;border-left:1px solid #d8dde6;color:#657080;font-size:10px;letter-spacing:.08em}
+.license-card h1{margin:22px 0 6px;font-size:27px;line-height:1.15;letter-spacing:-.03em}
+.license-specialty{margin:0;color:#c91f33;font-weight:700}
+.license-intro{margin:16px 0 20px;color:#596579;font-size:14px;line-height:1.6}
+.license-label{display:block;margin-bottom:7px;font-size:13px;font-weight:750}
+.license-input{width:100%;min-height:50px;padding:0 13px;border:1px solid #cfd5df;border-radius:10px;background:#fff;color:#172235;font:600 15px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;text-transform:uppercase;outline:none}
+.license-input:focus{border-color:#c91f33;box-shadow:0 0 0 3px rgba(201,31,51,.12)}
+.license-error{min-height:20px;margin:8px 0;color:#b42318;font-size:12px;line-height:1.4}
+.license-submit{width:100%;min-height:48px;border:0;border-radius:10px;background:#c91f33;color:#fff;font-size:14px;font-weight:800;cursor:pointer}
+.license-submit:disabled{opacity:.6;cursor:wait}
+.license-foot{margin:18px 0 0;color:#566175;font-size:12px;line-height:1.5}
+.license-support{margin:10px 0 0;color:#8a5360;font-size:11px;line-height:1.5}
+.license-watermark{display:inline-flex;max-width:100%;margin:0 0 10px;padding:7px 10px;border:1px solid rgba(201,31,51,.18);border-radius:8px;background:rgba(201,31,51,.055);color:var(--muted,#657080);font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+@media(max-width:540px){.license-card{padding:23px 19px;border-radius:17px}.license-card h1{font-size:24px}.license-watermark{font-size:10px}}
+@media print{.license-gate,.license-watermark{display:none!important}}
