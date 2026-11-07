@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en" data-specialty="anesthesia-critical-care">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#c91f33">
+<title>MENTORO · Anesthesia &amp; Critical Care Logbook</title>
+<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./shared/license.css">
+</head>
+<body>
+
+<div class="app">
+
+<aside class="sidebar">
+  <div class="brand"><img class="brand-logo" src="./mentoro_logo.svg" alt="MENTORO logo"><div class="brand-sub">Anesthesia & Critical Care Logbook</div></div>
+  <nav class="nav">
+    <div class="nav-title">Workspace</div>
+    <button class="active" data-view="dashboard" title="Overview"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg></span><span class="nav-label">Overview</span></button>
+    <button data-view="roadmap" title="Roadmap"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/></svg></span><span class="nav-label">Roadmap</span></button>
+    <div class="nav-title">Log</div>
+    <button data-view="sessions" title="Sessions"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span><span class="nav-label">Sessions</span></button>
+    <button data-view="cases" title="Clinical Cases"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M8.5 13l2 2 4-4.5"/></svg></span><span class="nav-label">Clinical Cases</span></button>
+    <button data-view="procedures" title="Procedures"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 7 4-14 2 7h6"/></svg></span><span class="nav-label">Procedures</span></button>
+    <div class="nav-title">Tools</div>
+    <button data-view="emergency" title="Emergency"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 20h20L12 4Z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg></span><span class="nav-label">Emergency</span></button>
+    <button data-view="progress" title="Progress"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-5 4 4 7-8"/><path d="M15 7h5v5"/></svg></span><span class="nav-label">Progress</span></button>
+  </nav>
+  <div class="side-bottom"><div class="journey"><p class="journey-tag">Observe · Discuss · Participate · Reflect · Improve</p></div><button class="btn print-btn" onclick="exportLogbook()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="13" width="12" height="7" rx="1"/><path d="M6 13H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2"/></svg></span>Export backup</button><button class="btn print-btn" id="importBackupButton" type="button">Import backup</button><input id="importBackupInput" type="file" accept="application/json,.json" hidden><button class="btn print-btn" onclick="window.print()">Print / Save PDF</button></div>
+</aside>
+
+<div class="main">
+
+<header class="topbar"><div class="top-brand"><img src="./mentoro_logo.svg" alt="MENTORO"></div><div class="crumb"><strong>MENTORO</strong> <span>/ Anesthesia & Critical Care / </span><span id="crumb">Overview</span></div><div class="top-actions"><button class="btn icon-btn theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button><div class="quick-add"><button class="btn primary" onclick="toggleQuickAdd()" aria-expanded="false">+ Log</button><div class="quick-menu" id="quickMenu"><button onclick="openExposureModal();closeQuickAdd()">Today's exposure</button><button onclick="quickOpen('session')">Detailed session</button><button onclick="quickOpen('case')">Detailed case</button><button onclick="quickOpen('procedure')">Procedure</button><button onclick="go('emergency');closeQuickAdd()">Emergency</button></div></div></div></header>
+
+<main class="content">
+<div class="sync-status" id="syncStatus" role="status" aria-live="polite">Preparing logbook…</div>
+<div class="readonly-banner" id="readonlyBanner" hidden>Read-only mentor review: the trainee logbook cannot be edited in this view.</div>
+
+<section id="dashboard" class="view active">
+  <div class="eyebrow">Clinical logbook</div><h1 class="title">Anesthesia & Critical Care</h1><p class="sub">A focused place to record clinical exposure, meaningful cases, procedures, and mentor teaching.</p>
+  <div class="grid cols4" style="margin-top:17px">
+    <div class="card stat"><div class="stat-top"><div><div class="num" id="statSessions">0</div><div class="lbl">Sessions</div></div></div><div class="mini" id="sessionMini">No sessions yet</div></div>
+    <div class="card stat"><div class="stat-top"><div><div class="num" id="statCases">0</div><div class="lbl">Clinical cases</div></div></div><div class="mini" id="caseMini">No cases yet</div></div>
+    <div class="card stat"><div class="stat-top"><div><div class="num" id="statProcedures">0</div><div class="lbl">Procedures</div></div></div><div class="mini" id="procMini">No procedures yet</div></div>
+    <div class="card stat"><div class="stat-top"><div><div class="num" id="statCoverage">0</div><div class="lbl">Roadmap coverage</div></div></div><div class="mini" id="coverageBarText">No roadmap items logged yet</div></div>
+  </div>
+  <div class="hero-grid" style="margin-top:12px">
+    <div class="hero"><small>MENTORO · Anesthesia & Critical Care</small><h2>Log what actually happened.</h2><p>One quick entry is enough. MENTORO keeps your roadmap, cases, procedures, and learning record connected.</p><div class="hero-actions"><button class="btn primary" onclick="openExposureModal()">+ Log today's exposure</button><button class="btn" onclick="go('roadmap')">View roadmap</button><button class="btn" onclick="toggleQuickAdd()">More options</button></div></div>
+    <div class="card pad"><div class="section-head" style="margin:0 0 9px"><div><h2>Recent activity</h2><p>Latest entries.</p></div></div><div class="today-list" id="recentList"></div></div>
+  </div>
+  <div class="section-head"><div><h2>Next focus</h2><p>A few useful Core exposures to look for next.</p></div><button class="btn" onclick="go('roadmap')">View roadmap</button></div>
+  <div class="grid cols2">
+    <div class="card pad"><div id="coreList" class="list"></div></div>
+    <div class="card pad progress-card"><div class="ring" id="ringA" style="--p:0%"><strong>0%</strong></div><div class="progress-copy"><h3>Roadmap coverage</h3><p id="coverageCopy">No roadmap items logged yet.</p><div class="progress-note">Coverage reflects documented exposure only — not competence or completion.</div></div></div>
+  </div>
+</section>
+
+
+
+<section id="roadmap" class="view">
+  <div class="eyebrow">Clinical curriculum</div><h1 class="title">Roadmap</h1><p class="sub">The curriculum is split into focused groups so you only see the part you are working on.</p>
+  <div class="card pad" style="margin-top:17px">
+    <div class="road-toolbar"><div><h2 class="road-section-title" id="roadGroupTitle">Clinical Presentations</h2><div class="road-section-meta" id="roadGroupMeta">0 items</div></div><div class="road-pickers"><div class="phase-tabs" id="roadPhases"></div><select id="roadGroupSelect" class="select group-select" aria-label="Roadmap section"></select><input id="roadSearch" class="input" placeholder="Search this section…" aria-label="Search roadmap"></div></div>
+    <div class="controls" style="justify-content:space-between;margin-bottom:9px;align-items:flex-start"><div class="filters" id="tierFilters"><button class="filter active" data-tier="">All tiers</button><button class="filter" data-tier="Core">Core</button><button class="filter" data-tier="Expanded">Expanded</button><button class="filter" data-tier="Advanced">Advanced</button></div><div class="status-filters" id="statusFilters"><button class="status-filter active" data-status="">All status</button><button class="status-filter" data-status="todo">Not logged</button><button class="status-filter" data-status="done">Logged</button></div></div>
+    <div class="table-wrap"><table class="table roadmap-table"><thead><tr><th style="width:50%">Item</th><th>Tier</th><th>Depth</th><th>Frequency</th><th>Status</th></tr></thead><tbody id="roadRows"></tbody></table></div>
+    <div class="footer-note">Status: ○ not logged · ✓ logged</div>
+  </div>
+</section>
+
+
+
+<section id="sessions" class="view">
+  <div class="eyebrow">Section 07</div><h1 class="title">Sessions</h1><p class="sub">Brief record of every session.</p>
+  <div class="card pad" style="margin-top:17px"><div class="toolbar"><div class="count" id="sessionCount">0 sessions</div><div class="controls"><input id="sessionSearch" class="input table-search" placeholder="Search sessions…"><button class="btn primary" onclick="openModal('session')">+ Add session</button></div></div><div class="table-wrap"><table class="table data-table sessions-table"><thead><tr><th>#</th><th>Date</th><th>Duration</th><th>Session Type</th><th>Main Focus</th><th>Confidence</th><th>Mentor</th><th></th></tr></thead><tbody id="sessionRows"></tbody></table></div></div>
+</section>
+
+
+
+<section id="cases" class="view">
+  <div class="eyebrow">Section 08</div><h1 class="title">Clinical Cases</h1><p class="sub">Detailed entry for a meaningful clinical encounter.</p>
+  <div class="card pad" style="margin-top:17px"><div class="toolbar"><div class="count" id="caseCount">0 cases</div><div class="controls"><input id="caseSearch" class="input table-search" placeholder="Search cases…"><button class="btn primary" onclick="openModal('case')">+ Add case</button></div></div><div class="table-wrap"><table class="table data-table cases-table"><thead><tr><th>#</th><th>Date</th><th>Setting</th><th>Clinical Presentation</th><th>Working Diagnosis</th><th>Decision Point</th><th>Mentor Teaching</th><th></th></tr></thead><tbody id="caseRows"></tbody></table></div></div>
+</section>
+
+
+
+<section id="procedures" class="view">
+  <div class="eyebrow">Section 09</div><h1 class="title">Procedures</h1><p class="sub">Separate full procedure entries from discussion-only entries.</p>
+  <div class="card pad" style="margin-top:17px">
+    <div class="subtabs"><button class="subtab active" id="procTabFull" onclick="setProcTab('full')">Full entries</button><button class="subtab" id="procTabDiscussion" onclick="setProcTab('discussion')">Discussion-only</button></div>
+    <div id="procFullPane"><div class="toolbar"><div class="count" id="procCount">0 procedures</div><div class="controls"><input id="procSearch" class="input table-search" placeholder="Search procedures…"><button class="btn primary" onclick="openModal('procedure')">+ Add procedure</button></div></div><div class="table-wrap"><table class="table data-table procedures-table"><thead><tr><th>#</th><th>Date</th><th>Procedure</th><th>Setting</th><th>My Role</th><th>Mentor initials</th><th></th></tr></thead><tbody id="procRows"></tbody></table></div></div>
+    <div id="procDiscussionPane" style="display:none"><div class="toolbar"><div class="count" id="discussionCount">0 entries</div><div class="controls"><input id="discussionSearch" class="input table-search" placeholder="Search discussions…"><button class="btn" onclick="openModal('discussion')">+ Add discussion</button></div></div><div class="table-wrap"><table class="table data-table discussion-table"><thead><tr><th>#</th><th>Date</th><th>Procedure / Topic</th><th>Why was it discussed?</th><th>Mentor initials</th><th></th></tr></thead><tbody id="discussionRows"></tbody></table></div></div>
+  </div>
+</section>
+
+
+
+<section id="emergency" class="view">
+  <div class="eyebrow">Section 10</div><h1 class="title">Emergency Learning Records</h1><p class="sub">Structured records for supervised exposure, clinical reasoning and mentor discussion — not emergency management algorithms.</p><div class="privacy-note" role="note"><strong>Training use only:</strong> These forms are for documenting learning, not real-time clinical decision support. In an actual emergency, activate the local emergency response, call for senior help and follow current institution-approved protocols. Never delay patient care to complete a form.</div>
+  <div class="template-grid" style="margin-top:17px">
+    <div class="template"><h3>Cardiac Arrest</h3><p>Red flags · Differential diagnosis · Investigations · Clinical decision · Initial management</p><button class="btn go" onclick="openEmergency('Cardiac Arrest')">Open</button></div>
+    <div class="template"><h3>Septic Shock</h3><p>Red flags · Differential diagnosis · Investigations · Clinical decision · Initial management</p><button class="btn go" onclick="openEmergency('Septic Shock')">Open</button></div>
+    <div class="template"><h3>Acute Respiratory Failure</h3><p>Red flags · Differential diagnosis · Investigations · Clinical decision · Initial management</p><button class="btn go" onclick="openEmergency('Acute Respiratory Failure')">Open</button></div>
+    <div class="template"><h3>Difficult / Failed Airway</h3><p>Red flags · Differential diagnosis · Investigations · Clinical decision · Initial management</p><button class="btn go" onclick="openEmergency('Difficult / Failed Airway')">Open</button></div>
+    <div class="template"><h3>Anaphylaxis</h3><p>Red flags · Differential diagnosis · Investigations · Clinical decision · Initial management</p><button class="btn go" onclick="openEmergency('Anaphylaxis')">Open</button></div>
+  </div>
+  <div class="section-head"><div><h2>Saved emergency entries</h2><p>Entries recorded from the templates.</p></div><input id="emergencySearch" class="input table-search" placeholder="Search saved entries…"></div>
+  <div class="card pad"><div class="table-wrap"><table class="table data-table emergency-table"><thead><tr><th>Date</th><th>Template</th><th>Chief Complaint</th><th>Clinical Decision</th><th>Mentor</th><th></th></tr></thead><tbody id="emergencyRows"></tbody></table></div></div>
+</section>
+
+
+<section id="progress" class="view">
+  <div class="eyebrow">Section 13</div><h1 class="title">Progress</h1><p class="sub">Manual end-of-period reflection.</p>
+  <div class="card pad progress-overview" style="margin-top:17px"><div class="ring" id="ringB" style="--p:0%"><strong>0%</strong></div><div class="progress-copy"><h3>Roadmap coverage</h3><p id="progressCopy">No roadmap items logged yet.</p><div class="progress-note">Coverage reflects documented exposure only — not a measure of competence. Core items are design priorities, not completion requirements.</div></div></div>
+  <div class="grid cols2" style="margin-top:12px">
+    <div class="card pad"><div class="section-head" style="margin:0 0 9px"><div><h2>1. Clinical Exposure — Breadth</h2><p>What have I been exposed to?</p></div></div><table class="snapshot-table"><thead><tr><th></th><th>Broad</th><th>Moderate</th><th>Limited</th></tr></thead><tbody><tr><td>Presentations</td><td><input type="radio" name="breadthPresentations" value="Broad"></td><td><input type="radio" name="breadthPresentations" value="Moderate"></td><td><input type="radio" name="breadthPresentations" value="Limited"></td></tr><tr><td>Conditions</td><td><input type="radio" name="breadthConditions" value="Broad"></td><td><input type="radio" name="breadthConditions" value="Moderate"></td><td><input type="radio" name="breadthConditions" value="Limited"></td></tr><tr><td>Examinations &amp; Skills</td><td><input type="radio" name="breadthSkills" value="Broad"></td><td><input type="radio" name="breadthSkills" value="Moderate"></td><td><input type="radio" name="breadthSkills" value="Limited"></td></tr><tr><td>Investigations</td><td><input type="radio" name="breadthInvestigations" value="Broad"></td><td><input type="radio" name="breadthInvestigations" value="Moderate"></td><td><input type="radio" name="breadthInvestigations" value="Limited"></td></tr></tbody></table><div class="form-grid" style="margin-top:10px"><div class="field"><label>Most represented areas</label><textarea id="refAreas"></textarea></div><div class="field"><label>Limited exposure</label><textarea id="refLimited"></textarea></div></div></div>
+    <div class="card pad"><div class="section-head" style="margin:0 0 9px"><div><h2>2. Core Gaps</h2><p>What Core areas are still missing?</p></div></div><div class="form-grid"><div class="field"><label>Presentations</label><textarea id="refPresentations"></textarea></div><div class="field"><label>Conditions</label><textarea id="refConditions"></textarea></div><div class="field"><label>Skills / Examinations</label><textarea id="refSkills"></textarea></div><div class="field"><label>Investigations</label><textarea id="refInvestigations"></textarea></div><div class="field full"><label>My priority for the next session</label><textarea id="refPriority"></textarea></div></div></div>
+  </div>
+  <div class="grid cols2" style="margin-top:12px">
+    <div class="card pad"><div class="section-head" style="margin:0 0 9px"><div><h2>3. Depth of Exposure</h2><p>How deep was my exposure, overall? (check the one that fits best)</p></div></div><div class="checks"><label><input type="radio" name="depthOverall" value="Discussion">Discussion</label><label><input type="radio" name="depthOverall" value="Observed">Observed</label><label><input type="radio" name="depthOverall" value="Assisted">Assisted</label><label><input type="radio" name="depthOverall" value="Performed under supervision">Performed under supervision</label></div><div class="form-grid" style="margin-top:10px"><div class="field full"><label>Most of my exposure was</label><textarea id="refMostDepth"></textarea></div><div class="field full"><label>A deeper exposure I had</label><textarea id="refDeeper"></textarea></div><div class="field full"><label>An area that remained mostly observational</label><textarea id="refMostlyObserved"></textarea></div></div></div>
+    <div class="card pad"><div class="section-head" style="margin:0 0 9px"><div><h2>4. Clinical Setting</h2><p>Most frequent setting and where I want more exposure</p></div></div><div class="checks"><label><input type="checkbox" name="settingOverall" value="OPD">OPD</label><label><input type="checkbox" name="settingOverall" value="Ward">Ward</label><label><input type="checkbox" name="settingOverall" value="ER">ER</label><label><input type="checkbox" name="settingOverall" value="OR">OR</label><label><input type="checkbox" name="settingOverall" value="Procedure">Procedure</label></div><div class="form-grid" style="margin-top:10px"><div class="field"><label>Most frequent setting</label><input id="refFrequentSetting"></div><div class="field"><label>Want more exposure to</label><input id="refWantExposure"></div></div><div class="field" style="margin-top:10px"><label>My Next-Step Plan</label><textarea id="refNext"></textarea></div><button class="btn primary" style="margin-top:10px" onclick="saveReflection()">Save reflection</button><span id="reflectionStatus" class="helper-save">Saved locally</span></div>
+  </div>
+</section>
+<section id="mentorReviewPanel" class="card pad mentor-review-panel" hidden></section>
+</main>
+</div>
+</div>
+<div class="mobile-nav" id="mobileNav"><button class="active" data-view="dashboard"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 1 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg></span><span class="mnav-label">Home</span></button><button data-view="roadmap"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/></svg></span><span class="mnav-label">Roadmap</span></button><button data-view="sessions"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span><span class="mnav-label">Sessions</span></button><button data-view="cases"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M8.5 13l2 2 4-4.5"/></svg></span><span class="mnav-label">Cases</span></button><button data-view="procedures"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 7 4-14 2 7h6"/></svg></span><span class="mnav-label">Procedures</span></button><button data-view="emergency"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 20h20L12 4Z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg></span><span class="mnav-label">Emergency</span></button><button data-view="progress"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-5 4 4 7-8"/><path d="M15 7h5v5"/></svg></span><span class="mnav-label">Progress</span></button></div>
+
+<div class="modal" id="modal"><div class="modal-card"><div class="modal-top"><h3 id="modalTitle">Add</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><form id="modalForm"></form></div></div></div>
+
+
+<script src="./shared/license-runtime.js" defer></script>
+<script src="./app.js" defer></script>
+</body>
+</html>

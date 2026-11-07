@@ -214,6 +214,30 @@ th{font-weight:650!important}
   document.documentElement.dataset.specialty = "pediatrics";
   try { document.documentElement.dataset.theme = localStorage.getItem("mentoro_theme") || "light"; } catch (_) { document.documentElement.dataset.theme = "light"; }
 </script>
+<style id="mentoro-license-styles">
+
+/* MENTORO standalone license activation and local-first status */
+.license-gate{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:20px;background:rgba(12,18,31,.76);backdrop-filter:blur(8px)}
+.license-gate[hidden]{display:none!important}
+.license-card{width:min(100%,460px);padding:30px;border:1px solid rgba(255,255,255,.12);border-radius:22px;background:#fff;color:#182235;box-shadow:0 26px 90px rgba(0,0,0,.35)}
+.license-brand{display:flex;align-items:center;gap:10px;color:#c91f33;font-size:15px;font-weight:900;letter-spacing:.12em}
+.license-brand span{padding-left:10px;border-left:1px solid #d8dde6;color:#657080;font-size:10px;letter-spacing:.08em}
+.license-card h1{margin:22px 0 6px;font-size:27px;line-height:1.15;letter-spacing:-.03em}
+.license-specialty{margin:0;color:#c91f33;font-weight:700}
+.license-intro{margin:16px 0 20px;color:#596579;font-size:14px;line-height:1.6}
+.license-label{display:block;margin-bottom:7px;font-size:13px;font-weight:750}
+.license-input{width:100%;min-height:50px;padding:0 13px;border:1px solid #cfd5df;border-radius:10px;background:#fff;color:#172235;font:600 15px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;text-transform:uppercase;outline:none}
+.license-input:focus{border-color:#c91f33;box-shadow:0 0 0 3px rgba(201,31,51,.12)}
+.license-error{min-height:20px;margin:8px 0;color:#b42318;font-size:12px;line-height:1.4}
+.license-submit{width:100%;min-height:48px;border:0;border-radius:10px;background:#c91f33;color:#fff;font-size:14px;font-weight:800;cursor:pointer}
+.license-submit:disabled{opacity:.6;cursor:wait}
+.license-foot{margin:18px 0 0;color:#566175;font-size:12px;line-height:1.5}
+.license-support{margin:10px 0 0;color:#8a5360;font-size:11px;line-height:1.5}
+.license-watermark{display:inline-flex;max-width:100%;margin:0 0 10px;padding:7px 10px;border:1px solid rgba(201,31,51,.18);border-radius:8px;background:rgba(201,31,51,.055);color:var(--muted,#657080);font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+@media(max-width:540px){.license-card{padding:23px 19px;border-radius:17px}.license-card h1{font-size:24px}.license-watermark{font-size:10px}}
+@media print{.license-gate,.license-watermark{display:none!important}}
+
+</style>
 </head>
 <body>
 <div class="app">
@@ -337,6 +361,478 @@ th{font-weight:650!important}
 
 <script>window.MENTORO_PEDIATRICS_CONTENT = {"specialty":"pediatrics","catalogueVersion":1,"sourceArchive":"mentoro-pediatrics-logbook-project-v1.1.zip","roadmap":[["Fever","Core","Observed","Repeated"],["Cough / difficulty breathing","Core","Observed","Repeated"],["Vomiting and diarrhea","Core","Observed","Repeated"],["Poor feeding / failure to thrive","Core","Observed","Repeated"],["Jaundice in a newborn","Core","Observed","Repeated"],["Skin rash","Core","Observed","Repeated"],["Convulsion","Core","Observed","Repeated"],["Abdominal pain","Core","Observed","Repeated"],["Pallor / anemia","Core","Observed","Single"],["Limp / joint pain","Expanded","Observed","Single"],["Developmental delay","Expanded","Observed","Single"],["Edema / hematuria","Expanded","Observed","Single"],["Heart murmur","Expanded","Observed","Single"],["Recurrent infections","Expanded","Observed","Single"],["Headache","Expanded","Observed","Single"],["Altered consciousness in a child","Advanced","Discussion","Single"],["Suspected child abuse or neglect","Advanced","Discussion","Single"],["Routine newborn care and breastfeeding support","Core","Observed","Repeated"],["Neonatal jaundice","Core","Observed","Repeated"],["Neonatal sepsis recognition","Core","Observed","Single"],["Prematurity and low birth weight","Core","Observed","Single"],["Respiratory distress in the newborn","Expanded","Observed","Single"],["Neonatal hypoglycemia","Expanded","Observed","Single"],["Birth asphyxia and HIE","Expanded","Discussion","Single"],["Congenital anomalies screening","Expanded","Observed","Single"],["Neonatal seizures","Advanced","Discussion","Single"],["Necrotizing enterocolitis","Advanced","Discussion","Single"],["Exchange transfusion indications","Advanced","Discussion","Single"],["Growth charts and interpretation","Core","Observed","Repeated"],["Developmental milestones","Core","Observed","Repeated"],["Immunization schedule","Core","Observed","Repeated"],["Malnutrition (SAM / MAM)","Core","Observed","Repeated"],["Iron-deficiency anemia","Core","Observed","Repeated"],["Failure to thrive evaluation","Expanded","Observed","Single"],["Vitamin D deficiency and rickets","Expanded","Observed","Single"],["Childhood obesity","Expanded","Observed","Single"],["Autism and developmental disorders","Advanced","Discussion","Single"],["Inborn errors of metabolism","Advanced","Discussion","Single"],["Acute gastroenteritis and dehydration","Core","Observed","Repeated"],["Febrile child approach","Core","Observed","Repeated"],["Upper respiratory tract infection and tonsillitis","Core","Observed","Repeated"],["Pneumonia","Core","Observed","Repeated"],["Otitis media","Core","Observed","Repeated"],["Urinary tract infection","Core","Observed","Single"],["Bronchiolitis","Expanded","Observed","Single"],["Meningitis","Expanded","Observed","Single"],["Typhoid and enteric fever","Expanded","Observed","Single"],["Viral hepatitis","Expanded","Observed","Single"],["Measles and common exanthems","Expanded","Observed","Single"],["Tuberculosis in children","Expanded","Discussion","Single"],["Congenital infections (TORCH)","Advanced","Discussion","Single"],["HIV in children","Advanced","Discussion","Single"],["Asthma and recurrent wheeze","Core","Observed","Repeated"],["Croup","Core","Observed","Single"],["Allergic rhinitis and atopic dermatitis","Expanded","Observed","Single"],["Foreign body aspiration","Expanded","Observed","Single"],["Chronic cough work-up","Expanded","Discussion","Single"],["Cystic fibrosis","Advanced","Discussion","Single"],["Bronchopulmonary dysplasia","Advanced","Discussion","Single"],["Innocent versus pathological murmur","Core","Observed","Single"],["Rheumatic fever","Core","Observed","Single"],["Congenital heart disease","Expanded","Observed","Single"],["Heart failure in infants","Expanded","Observed","Single"],["Thalassemia","Expanded","Observed","Single"],["G6PD deficiency","Expanded","Observed","Single"],["Sickle cell disease","Expanded","Discussion","Single"],["Kawasaki disease","Advanced","Discussion","Single"],["Leukemia presentation","Advanced","Discussion","Single"],["Hemophilia","Advanced","Discussion","Single"],["Constipation","Core","Observed","Repeated"],["Nephrotic syndrome","Core","Observed","Single"],["Acute glomerulonephritis","Core","Observed","Single"],["Type 1 diabetes and DKA","Core","Observed","Single"],["Congenital hypothyroidism","Expanded","Observed","Single"],["Hepatosplenomegaly work-up","Expanded","Observed","Single"],["Chronic diarrhea and celiac disease","Expanded","Discussion","Single"],["Chronic liver disease","Advanced","Discussion","Single"],["Congenital adrenal hyperplasia","Advanced","Discussion","Single"],["Growth hormone deficiency","Advanced","Discussion","Single"],["Febrile seizure","Core","Observed","Repeated"],["Epilepsy basics","Core","Observed","Single"],["Cerebral palsy","Expanded","Observed","Single"],["Hydrocephalus","Expanded","Observed","Single"],["Child abuse and neglect recognition","Expanded","Discussion","Single"],["Neuromuscular disease","Advanced","Discussion","Single"],["Pediatric assessment triangle and ABCDE","Core","Observed","Repeated"],["Dehydration assessment and fluid therapy","Core","Observed","Repeated"],["Recognition of shock","Core","Observed","Single"],["PALS algorithm","Expanded","Observed","Single"],["Status epilepticus","Expanded","Observed","Single"],["Anaphylaxis","Expanded","Observed","Single"],["Poisoning and toxic ingestion","Expanded","Observed","Single"],["Septic shock management","Advanced","Discussion","Single"],["Mechanical ventilation in children","Advanced","Discussion","Single"],["Drowning","Advanced","Discussion","Single"],["Pediatric history (complaint, feeding, development, immunization)","Core","Performed under supervision","Repeated"],["Collateral history from parent or caregiver","Core","Performed under supervision","Repeated"],["Birth and perinatal history","Core","Performed under supervision","Repeated"],["Immunization and nutritional history","Core","Performed under supervision","Repeated"],["Developmental history","Core","Performed under supervision","Repeated"],["Vital signs by age","Core","Performed under supervision","Repeated"],["Growth measurements (weight, length, head circumference)","Core","Performed under supervision","Repeated"],["General and hydration examination","Core","Performed under supervision","Repeated"],["Chest examination and work of breathing","Core","Performed under supervision","Repeated"],["Cardiovascular examination","Core","Performed under supervision","Repeated"],["Abdominal examination","Core","Performed under supervision","Repeated"],["ENT examination (otoscopy, throat)","Core","Performed under supervision","Repeated"],["Neurological and developmental assessment","Core","Performed under supervision","Repeated"],["Communicating with children and caregivers","Core","Performed under supervision","Repeated"],["Inhaler and spacer technique teaching","Core","Performed under supervision","Repeated"],["Pediatric BLS","Core","Performed under supervision","Repeated"],["Newborn examination","Core","Observed","Repeated"],["Genital and pubertal examination","Expanded","Observed","Single"],["Peripheral IV cannulation in children","Expanded","Observed","Single"],["Blood sampling and heel prick","Expanded","Observed","Single"],["Lumbar puncture","Expanded","Observed","Single"],["CBC and blood film","Core","Observed","Repeated"],["CRP","Core","Observed","Repeated"],["Blood glucose","Core","Observed","Repeated"],["Electrolytes, urea and creatinine","Core","Observed","Repeated"],["Urinalysis and urine culture","Core","Observed","Repeated"],["Stool examination","Core","Observed","Repeated"],["Neonatal bilirubin","Core","Observed","Repeated"],["Blood culture","Expanded","Observed","Single"],["Iron studies and hemoglobin electrophoresis","Expanded","Observed","Single"],["Liver function tests","Expanded","Observed","Single"],["Thyroid and metabolic screening","Expanded","Discussion","Single"],["Chest X-ray","Core","Observed","Repeated"],["Abdominal ultrasound","Expanded","Observed","Single"],["Cranial ultrasound (neonatal)","Expanded","Observed","Single"],["Echocardiography","Expanded","Observed","Single"],["CT / MRI brain","Advanced","Discussion","Single"],["Voiding cystourethrogram","Advanced","Discussion","Single"],["Pulse oximetry","Core","Observed","Repeated"],["Blood gas","Expanded","Observed","Single"],["ECG","Expanded","Observed","Single"],["EEG","Expanded","Observed","Single"]],"groups":[{"id":"presentations","label":"Clinical Presentations","start":"Fever","end":"Routine newborn care and breastfeeding support"},{"id":"neonatal","label":"Newborn & Neonatal Care","start":"Routine newborn care and breastfeeding support","end":"Growth charts and interpretation"},{"id":"growth","label":"Growth, Development & Nutrition","start":"Growth charts and interpretation","end":"Acute gastroenteritis and dehydration"},{"id":"infection","label":"Pediatric Infections","start":"Acute gastroenteritis and dehydration","end":"Asthma and recurrent wheeze"},{"id":"resp","label":"Respiratory & Allergy","start":"Asthma and recurrent wheeze","end":"Innocent versus pathological murmur"},{"id":"cardiohem","label":"Cardiology & Hematology","start":"Innocent versus pathological murmur","end":"Constipation"},{"id":"renalendo","label":"Renal, GI & Endocrine","start":"Constipation","end":"Febrile seizure"},{"id":"neuro","label":"Neurology & Child Protection","start":"Febrile seizure","end":"Pediatric assessment triangle and ABCDE"},{"id":"pedem","label":"Pediatric Emergencies & Critical Care","start":"Pediatric assessment triangle and ABCDE","end":"Pediatric history (complaint, feeding, development, immunization)"},{"id":"history","label":"History Taking","start":"Pediatric history (complaint, feeding, development, immunization)","end":"Vital signs by age"},{"id":"exam","label":"Examination & Procedural Skills","start":"Vital signs by age","end":"CBC and blood film"},{"id":"labs","label":"Laboratory Investigations","start":"CBC and blood film","end":"Chest X-ray"},{"id":"imaging","label":"Imaging","start":"Chest X-ray","end":"Pulse oximetry"},{"id":"bedside","label":"Bedside & Neurophysiology Tests","start":"Pulse oximetry","end":null}],"patientJourney":["Triage and initial assessment","History from child and caregiver","Examination and growth assessment","Investigations ordered and reviewed","Diagnosis and treatment plan","Admission or home-care decision","Caregiver counselling and education","Immunization and preventive care","Follow-up and growth monitoring"],"clinicalInterpretation":["Correlating clinical findings with investigation results","Recognizing when a result changes management vs. is confirmatory/incidental","Understanding indications/contraindications for common investigations","Recognizing when further investigation is needed vs. proceeding to intervention","Understanding the limits of a single test"],"emergencyTemplates":{"Febrile Child / Sepsis":{"redFlags":["Ill appearance, lethargy or poor perfusion","Non-blanching rash","Age under 3 months with fever","Tachycardia, tachypnea or prolonged capillary refill"],"ddx":["Bacterial sepsis","Meningitis","Pneumonia","Urinary tract infection","Viral illness","Typhoid fever"],"investigations":["Blood glucose","CBC and CRP","Blood culture before antibiotics","Urinalysis and urine culture","Chest X-ray / CSF as indicated"]},"Severe Dehydration / Shock":{"redFlags":["Lethargy or unable to drink","Sunken eyes and very slow skin pinch","Cold extremities and weak pulse","Persistent vomiting or severe diarrhea"],"ddx":["Acute gastroenteritis","Diabetic ketoacidosis","Sepsis","Malnutrition with diarrhea","Surgical abdomen"],"investigations":["Blood glucose","Electrolytes, urea and creatinine","Blood gas","Stool examination","Urinalysis"]},"Respiratory Distress / Severe Asthma":{"redFlags":["Cyanosis or SpO2 below 92%","Unable to speak or feed, exhaustion","Silent chest or poor air entry","Grunting, nasal flaring or chest retraction"],"ddx":["Asthma exacerbation","Bronchiolitis","Pneumonia","Croup","Foreign body aspiration","Heart failure"],"investigations":["Pulse oximetry","Blood gas if severe","Chest X-ray","Blood glucose","CBC and CRP"]},"Convulsion":{"redFlags":["Seizure lasting over 5 minutes or repeated","Fever with neck stiffness or rash","Head injury or suspected poisoning","Failure to regain consciousness"],"ddx":["Febrile seizure","Epilepsy","Meningitis / encephalitis","Hypoglycemia or electrolyte disturbance","Intracranial lesion or trauma"],"investigations":["Blood glucose","Electrolytes including calcium","CBC and CRP","Blood culture / CSF as indicated","CT head if focal signs"]},"Sick Newborn":{"redFlags":["Poor feeding, lethargy or hypotonia","Temperature instability","Respiratory distress, apnea or cyanosis","Jaundice within 24 hours or very deep jaundice"],"ddx":["Neonatal sepsis","Respiratory distress syndrome","Hypoglycemia","Hemolytic jaundice","Congenital heart disease","Birth asphyxia"],"investigations":["Blood glucose","CBC and CRP","Blood culture","Serum bilirubin","Chest X-ray"]}},"phaseDefs":[{"id":"04","label":"Clinical Roadmap","groups":["presentations","neonatal","growth","infection","resp","cardiohem","renalendo","neuro","pedem","patientJourney"]},{"id":"05","label":"Clinical Skills","groups":["history","exam"]},{"id":"06","label":"Investigations","groups":["labs","imaging","bedside","interpretation"]}],"clinicalGovernance":{"guardianConsentRequiredForExamination":true,"intimateAndPubertalExaminationRole":"Observed","clinicalReviewRequired":true}};</script>
 <script>
+(() => {
+  "use strict";
+
+  const DB_NAME = "mentoro-local-logbooks";
+  const DB_VERSION = 1;
+  const STORE_NAME = "records";
+  const LICENSE_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+  let dbPromise;
+  let configPromise;
+  let licenseRecord = null;
+  let stateKey = null;
+  let stateSaveQueue = Promise.resolve();
+  let statusNode = null;
+
+  function openDatabase() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      if (!("indexedDB" in window)) {
+        reject(new Error("Your browser does not support secure local logbook storage. Please use an updated browser."));
+        return;
+      }
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = () => {
+        const database = request.result;
+        if (!database.objectStoreNames.contains(STORE_NAME)) {
+          database.createObjectStore(STORE_NAME, { keyPath: "key" });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error("Local storage could not be opened."));
+      request.onblocked = () => reject(new Error("Local storage is busy in another tab. Close other MENTORO logbook tabs and retry."));
+    });
+    return dbPromise;
+  }
+
+  async function getRecord(key) {
+    const database = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const request = database.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).get(key);
+      request.onsuccess = () => resolve(request.result?.value ?? null);
+      request.onerror = () => reject(request.error || new Error("Local data could not be read."));
+    });
+  }
+
+  async function putRecord(key, value) {
+    const database = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(STORE_NAME, "readwrite");
+      transaction.objectStore(STORE_NAME).put({ key, value, updatedAt: new Date().toISOString() });
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error || new Error("Local data could not be saved."));
+      transaction.onabort = () => reject(transaction.error || new Error("Local save was interrupted."));
+    });
+  }
+
+  async function deleteRecord(key) {
+    const database = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const request = database.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).delete(key);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error || new Error("Local record could not be removed."));
+    });
+  }
+
+  function randomId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map((value) => value.toString(16).padStart(2, "0")).join("");
+    return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16) + "-" +
+      hex.slice(16, 20) + "-" + hex.slice(20);
+  }
+
+  async function sha256Hex(value) {
+    const digest = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function getInstallationId(specialtySlug) {
+    const key = "installation:" + specialtySlug;
+    let value = await getRecord(key);
+    if (typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value)) return value;
+    value = randomId();
+    await putRecord(key, value);
+    return value;
+  }
+
+  function loadConfig() {
+    if (!configPromise) {
+      configPromise = fetch("/api/license/config", { method: "GET", cache: "no-store", credentials: "same-origin" })
+        .then(async (response) => {
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload.supabaseUrl || !payload.publishableKey || !payload.functionName) {
+            throw new Error(payload.error || "License service configuration is unavailable.");
+          }
+          const base = new URL(payload.supabaseUrl);
+          if (base.protocol !== "https:" || !base.hostname.endsWith(".supabase.co")) {
+            throw new Error("License service configuration is invalid.");
+          }
+          return {
+            endpoint: base.origin + "/functions/v1/" + encodeURIComponent(payload.functionName),
+            publishableKey: payload.publishableKey
+          };
+        })
+        .catch((error) => {
+          configPromise = null;
+          throw error;
+        });
+    }
+    return configPromise;
+  }
+
+  async function invokeLicense(action, body) {
+    const config = await loadConfig();
+    const response = await fetch(config.endpoint, {
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": config.publishableKey
+      },
+      body: JSON.stringify({ action, ...body })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(payload.error || "license_request_failed");
+      error.status = response.status;
+      error.retryAfterSeconds = payload.retryAfterSeconds;
+      throw error;
+    }
+    return payload;
+  }
+
+  function showGate({ specialtyName, reason, onActivate }) {
+    let gate = document.getElementById("mentoroLicenseGate");
+    if (!gate) {
+      gate = document.createElement("div");
+      gate.id = "mentoroLicenseGate";
+      gate.className = "license-gate";
+      gate.innerHTML = `
+        <section class="license-card" role="dialog" aria-modal="true" aria-labelledby="licenseGateTitle">
+          <div class="license-brand">MENTORO <span>LICENSED LOGBOOK</span></div>
+          <h1 id="licenseGateTitle">Activate your logbook</h1>
+          <p class="license-specialty"></p>
+          <p class="license-intro">Enter the license code provided by MENTORO. Your progress will be saved on this device.</p>
+          <label class="license-label" for="licenseCodeInput">License key</label>
+          <input id="licenseCodeInput" class="license-input" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="MTR-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" maxlength="48">
+          <p class="license-error" id="licenseGateError" role="alert"></p>
+          <button class="license-submit" id="licenseActivateButton" type="button">Activate logbook</button>
+          <p class="license-foot">One license supports up to two devices. Each device keeps its own separate local data; there is no automatic sync.</p>
+          <p class="license-support">Never enter patient names, hospital IDs, phone numbers, or other identifying details.</p>
+        </section>`;
+      document.body.appendChild(gate);
+    }
+    gate.querySelector(".license-specialty").textContent = specialtyName;
+    gate.querySelector("#licenseGateError").textContent = reason || "";
+    gate.hidden = false;
+    const input = gate.querySelector("#licenseCodeInput");
+    const button = gate.querySelector("#licenseActivateButton");
+    const activate = async () => {
+      const licenseCode = input.value.trim();
+      if (!licenseCode) {
+        gate.querySelector("#licenseGateError").textContent = "Enter your license key to continue.";
+        input.focus();
+        return;
+      }
+      button.disabled = true;
+      button.textContent = "Checking license…";
+      gate.querySelector("#licenseGateError").textContent = "";
+      try {
+        await onActivate(licenseCode);
+      } catch (error) {
+        const errors = {
+          license_unavailable: "This license could not be verified. Check the code or contact MENTORO.",
+          device_limit_reached: "Both device activations are already in use. Contact MENTORO to reset a device.",
+          too_many_attempts: "Too many attempts. Please try again in 15 minutes.",
+          license_service_configuration_missing: "License service is not configured for this deployment.",
+          license_service_unavailable: "The license service is temporarily unavailable. Check your connection and retry."
+        };
+        gate.querySelector("#licenseGateError").textContent =
+          errors[error.message] || (error.message === "Failed to fetch"
+            ? "Could not reach the license service. Check your internet connection."
+            : "Activation failed. Please check your code and try again.");
+      } finally {
+        button.disabled = false;
+        button.textContent = "Activate logbook";
+      }
+    };
+    button.onclick = activate;
+    input.onkeydown = (event) => { if (event.key === "Enter") activate(); };
+    window.setTimeout(() => input.focus(), 0);
+    return gate;
+  }
+
+  function addWatermark(label, hint, validUntil, offline) {
+    let node = document.getElementById("mentoroLicenseWatermark");
+    if (!node) {
+      node = document.createElement("div");
+      node.id = "mentoroLicenseWatermark";
+      node.className = "license-watermark";
+      const sync = document.getElementById("syncStatus");
+      if (sync?.parentNode) sync.parentNode.insertBefore(node, sync.nextSibling);
+      else document.querySelector("main.content")?.prepend(node);
+    }
+    const validDate = validUntil ? new Date(validUntil) : null;
+    const dateLabel = validDate && Number.isFinite(validDate.getTime()) ? validDate.toLocaleDateString() : "—";
+    node.textContent = "Licensed to " + (label || "MENTORO trainee") + " · License " + (hint || "—") +
+      " · " + (offline ? "Offline access" : "Active") + " until " + dateLabel;
+    node.hidden = false;
+  }
+
+  function updateStatus(text, isError = false) {
+    statusNode = statusNode || document.getElementById("syncStatus");
+    if (!statusNode) return;
+    statusNode.textContent = text;
+    statusNode.classList.toggle("error", Boolean(isError));
+  }
+
+  function localStateKey(licenseId, specialtySlug) {
+    return "state:" + licenseId + ":" + specialtySlug;
+  }
+
+  async function loadLocalState(licenseId, specialtySlug, normalizeState, emptyState) {
+    const stored = await getRecord(localStateKey(licenseId, specialtySlug));
+    if (stored && typeof stored === "object") return normalizeState(stored).state;
+    return emptyState();
+  }
+
+  async function persistLocalState(state) {
+    if (!licenseRecord || !stateKey) throw new Error("No active license is available for local saving.");
+    stateSaveQueue = stateSaveQueue.catch(() => {}).then(() => putRecord(stateKey, state));
+    await stateSaveQueue;
+  }
+
+  function toContext(payload, installationId, offline = false) {
+    return {
+      licenseId: payload.license_id || payload.licenseId || licenseRecord?.licenseId,
+      deviceId: payload.device_id || payload.deviceId || licenseRecord?.deviceId,
+      deviceToken: licenseRecord?.deviceToken,
+      installationId,
+      traineeLabel: payload.trainee_label || payload.traineeLabel || licenseRecord?.traineeLabel || "",
+      licenseHint: payload.license_hint || payload.licenseHint || licenseRecord?.licenseHint || "",
+      expiresAt: payload.expires_at || payload.expiresAt || licenseRecord?.expiresAt || null,
+      validUntil: payload.valid_until || payload.validUntil || licenseRecord?.validUntil || null,
+      deviceLimit: payload.device_limit || payload.deviceLimit || 2,
+      deviceCount: payload.device_count || payload.deviceCount || null,
+      offline
+    };
+  }
+
+  async function begin({
+    specialtySlug,
+    specialtyName,
+    normalizeState,
+    emptyState
+  }) {
+    const installationId = await getInstallationId(specialtySlug);
+    const licenseStorageKey = "license:" + specialtySlug;
+    const cached = await getRecord(licenseStorageKey);
+    const stateStorageKey = cached?.licenseId ? localStateKey(cached.licenseId, specialtySlug) : null;
+
+    if (cached && typeof cached.deviceToken === "string" && cached.deviceToken) {
+      licenseRecord = cached;
+      stateKey = stateStorageKey;
+      try {
+        const payload = await invokeLicense("validate", {
+          specialtySlug,
+          installationId,
+          deviceToken: cached.deviceToken
+        });
+        if (payload.ok !== true) throw new Error("license_invalid");
+        licenseRecord = toContext(payload, installationId, false);
+        await putRecord(licenseStorageKey, licenseRecord);
+        stateKey = localStateKey(licenseRecord.licenseId, specialtySlug);
+        const state = await loadLocalState(licenseRecord.licenseId, specialtySlug, normalizeState, emptyState);
+        addWatermark(licenseRecord.traineeLabel, licenseRecord.licenseHint, licenseRecord.validUntil, false);
+        updateStatus("Active license · saved on this device");
+        return { state, context: licenseRecord };
+      } catch (error) {
+        const canUseOffline = error.status === undefined || error.status >= 500 || error.status === 429;
+        const deadline = Date.parse(cached.validUntil || "");
+        if (canUseOffline && Number.isFinite(deadline) && Date.now() < deadline &&
+            (!cached.expiresAt || Date.parse(cached.expiresAt) > Date.now())) {
+          licenseRecord = { ...cached, installationId, offline: true };
+          stateKey = localStateKey(cached.licenseId, specialtySlug);
+          const state = await loadLocalState(cached.licenseId, specialtySlug, normalizeState, emptyState);
+          addWatermark(cached.traineeLabel, cached.licenseHint, cached.validUntil, true);
+          updateStatus("Offline access · reconnect before " + new Date(cached.validUntil).toLocaleString());
+          return { state, context: licenseRecord };
+        }
+        licenseRecord = null;
+        stateKey = null;
+        const gate = showGate({
+          specialtyName,
+          reason: error.status === 403 ? "This device activation is no longer valid. Enter a current license key or contact MENTORO." :
+            "Connect to the internet to verify your license, or enter a new license key."
+        });
+        return await new Promise((resolve) => {
+          gate.querySelector("#licenseCodeInput").focus();
+          gate.querySelector("#licenseActivateButton").onclick = async () => {
+            // Re-bound below by showGate when activation is attached.
+          };
+          attachActivation(gate, resolve, specialtySlug, installationId, licenseStorageKey, normalizeState, emptyState);
+        });
+      }
+    }
+
+    const gate = showGate({ specialtyName, reason: "A valid MENTORO license is required to open this logbook." });
+    return await new Promise((resolve) => {
+      attachActivation(gate, resolve, specialtySlug, installationId, licenseStorageKey, normalizeState, emptyState);
+    });
+  }
+
+  function attachActivation(gate, resolve, specialtySlug, installationId, licenseStorageKey, normalizeState, emptyState) {
+    const input = gate.querySelector("#licenseCodeInput");
+    const button = gate.querySelector("#licenseActivateButton");
+    button.onclick = async () => {
+      const licenseCode = input.value.trim();
+      if (!licenseCode) {
+        gate.querySelector("#licenseGateError").textContent = "Enter your license key to continue.";
+        input.focus();
+        return;
+      }
+      button.disabled = true;
+      button.textContent = "Checking license…";
+      gate.querySelector("#licenseGateError").textContent = "";
+      try {
+        const payload = await invokeLicense("activate", {
+          specialtySlug,
+          installationId,
+          licenseCode
+        });
+        if (!payload.ok || !payload.deviceToken || !payload.licenseId) {
+          throw new Error(payload.error || "license_unavailable");
+        }
+        licenseRecord = {
+          licenseId: payload.licenseId,
+          deviceId: payload.deviceId,
+          deviceToken: payload.deviceToken,
+          installationId,
+          traineeLabel: payload.traineeLabel || "",
+          licenseHint: payload.licenseHint || "",
+          validUntil: payload.validUntil,
+          expiresAt: payload.expiresAt || null,
+          deviceLimit: 2,
+          deviceCount: payload.deviceCount || null,
+          offline: false
+        };
+        stateKey = localStateKey(licenseRecord.licenseId, specialtySlug);
+        await putRecord(licenseStorageKey, licenseRecord);
+        const state = await loadLocalState(licenseRecord.licenseId, specialtySlug, normalizeState, emptyState);
+        gate.remove();
+        addWatermark(licenseRecord.traineeLabel, licenseRecord.licenseHint, licenseRecord.validUntil, false);
+        updateStatus("License activated · saved on this device");
+        resolve({ state, context: licenseRecord });
+      } catch (error) {
+        const errors = {
+          license_unavailable: "This license could not be verified. Check the code or contact MENTORO.",
+          device_limit_reached: "Both device activations are already in use. Contact MENTORO to reset a device.",
+          too_many_attempts: "Too many attempts. Please try again in 15 minutes.",
+          license_service_unavailable: "The license service is temporarily unavailable. Check your connection and retry."
+        };
+        gate.querySelector("#licenseGateError").textContent = errors[error.message] ||
+          (error.message === "Failed to fetch" ? "Could not reach the license service. Check your connection." :
+            "Activation failed. Please check your code and try again.");
+      } finally {
+        button.disabled = false;
+        button.textContent = "Activate logbook";
+      }
+    };
+    input.onkeydown = (event) => { if (event.key === "Enter") button.click(); };
+    input.focus();
+  }
+
+  async function validateCachedGrant() {
+    if (!licenseRecord) return { valid: false };
+    try {
+      const result = await invokeLicense("validate", {
+        specialtySlug: licenseRecord.specialtySlug,
+        installationId: licenseRecord.installationId,
+        deviceToken: licenseRecord.deviceToken
+      });
+      return { valid: result.ok === true, result };
+    } catch (error) {
+      return { valid: false, offline: true, error };
+    }
+  }
+
+  let validationTimer = null;
+  let validationBusy = false;
+
+  async function revalidateActiveLicense(specialtySlug, specialtyName) {
+    if (!licenseRecord || validationBusy) return;
+    validationBusy = true;
+    try {
+      const result = await invokeLicense("validate", {
+        specialtySlug,
+        installationId: licenseRecord.installationId,
+        deviceToken: licenseRecord.deviceToken
+      });
+      if (result.ok !== true) throw Object.assign(new Error("license_invalid"), { status: 403 });
+      licenseRecord = toContext(result, licenseRecord.installationId, false);
+      licenseRecord.specialtySlug = specialtySlug;
+      await putRecord("license:" + specialtySlug, licenseRecord);
+      addWatermark(licenseRecord.traineeLabel, licenseRecord.licenseHint, licenseRecord.validUntil, false);
+      updateStatus("Active license · saved on this device");
+    } catch (error) {
+      const deadline = Date.parse(licenseRecord.validUntil || "");
+      const temporary = error.status === undefined || error.status >= 500 || error.status === 429;
+      if (temporary && Number.isFinite(deadline) && Date.now() < deadline) {
+        licenseRecord.offline = true;
+        addWatermark(licenseRecord.traineeLabel, licenseRecord.licenseHint, licenseRecord.validUntil, true);
+        updateStatus("Offline access · reconnect before " + new Date(licenseRecord.validUntil).toLocaleString());
+        return;
+      }
+      const main = document.querySelector("main.content");
+      if (main) main.inert = true;
+      if (validationTimer) window.clearInterval(validationTimer);
+      const gate = showGate({
+        specialtyName: specialtyName || "Clinical Logbook",
+        reason: error.status === 403
+          ? "This license or device activation is no longer valid. Enter a current license key or contact MENTORO."
+          : "Your offline access period has ended. Reconnect to verify your license."
+      });
+      attachActivation(gate, () => window.location.reload(), specialtySlug,
+        licenseRecord.installationId, "license:" + specialtySlug, (value) => ({ state: value }), () => ({}));
+    } finally {
+      validationBusy = false;
+    }
+  }
+
+  async function start(options) {
+    const result = await begin(options);
+    licenseRecord = { ...result.context, specialtySlug: options.specialtySlug };
+    stateKey = localStateKey(licenseRecord.licenseId, options.specialtySlug);
+    if (validationTimer) window.clearInterval(validationTimer);
+    validationTimer = window.setInterval(() => void revalidateActiveLicense(options.specialtySlug, options.specialtyName), 6 * 60 * 60 * 1000);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") void revalidateActiveLicense(options.specialtySlug, options.specialtyName);
+    });
+    return result;
+  }
+
+  async function saveState(state) {
+    await persistLocalState(state);
+  }
+
+  async function exportState() {
+    if (!licenseRecord || !stateKey) throw new Error("No active license is available.");
+    return {
+      format: "mentoro-logbook-backup",
+      version: 1,
+      specialty: licenseRecord.specialtySlug,
+      licenseHint: licenseRecord.licenseHint,
+      exportedAt: new Date().toISOString()
+    };
+  }
+
+  window.MentoroLicenseRuntime = Object.freeze({
+    start,
+    saveState,
+    validateCachedGrant,
+    get license() { return licenseRecord ? { ...licenseRecord } : null; },
+    get stateKey() { return stateKey; }
+  });
+})();
+
+</script>
+<script>
 
 const sourceCatalogue = window.MENTORO_PEDIATRICS_CONTENT;
 if (!sourceCatalogue || !Array.isArray(sourceCatalogue.roadmap) || sourceCatalogue.roadmap.length !== 137) {
@@ -367,7 +863,9 @@ const roadmapItems=makeRoadmapItems();
 const pageParams = new URLSearchParams(window.location.search);
 const requestedInstance = pageParams.get('instance') || '';
 const instanceId = /^[0-9a-f-]{36}$/i.test(requestedInstance) ? requestedInstance : '';
-const previewMode = !instanceId || !window.opener || pageParams.get('mode') === 'preview';
+const licensedMode = pageParams.get('mode') === 'licensed' && !window.opener;
+let licenseStarted = false;
+const previewMode = !licensedMode && (!instanceId || !window.opener || pageParams.get('mode') === 'preview');
 let readOnlyMode = pageParams.get('readonly') === '1';
 let cloudReady = !(instanceId && !previewMode);
 let cloudDirty = false;
@@ -397,7 +895,7 @@ function isIntimateExamText(value){return /genital|pubert|intimate/i.test(String
 function syncStatus(text,isError=false){const el=document.getElementById('syncStatus');if(!el)return;el.textContent=text;el.classList.toggle('error',Boolean(isError));}
 function setCloudLoading(loading){const el=document.querySelector('main.content');if(el){el.inert=Boolean(loading);if(loading)el.setAttribute('aria-busy','true');else el.removeAttribute('aria-busy');}}
 function postCloudState(flushNow=false){if(!instanceId||previewMode||!window.opener||!cloudReady||readOnlyMode)return;try{window.opener.postMessage({type:'MENTORO_LOGBOOK_STATE_CHANGED',instanceId,state:currentCloudState(),flushNow:flushNow===true},window.location.origin);cloudDirty=true;}catch(_){syncStatus('Cloud connection unavailable',true);}}
-function save(options={}){if(readOnlyMode)return;const snapshot=JSON.stringify(currentCloudState());store.set('state',snapshot);if(instanceId&&!previewMode&&window.opener&&cloudReady){if(saveTimer)clearTimeout(saveTimer);if(options.flushNow)postCloudState(true);else saveTimer=setTimeout(()=>postCloudState(false),500);}else syncStatus('Saved in this browser only');}
+function save(options={}){if(readOnlyMode)return;if(licensedMode){if(!licenseStarted)return;void window.MentoroLicenseRuntime.saveState(currentCloudState()).then(()=>syncStatus('Saved on this device')).catch(error=>syncStatus(error?.message||'Local save failed. Export a backup and retry.',true));return;}const snapshot=JSON.stringify(currentCloudState());store.set('state',snapshot);if(instanceId&&!previewMode&&window.opener&&cloudReady){if(saveTimer)clearTimeout(saveTimer);if(options.flushNow)postCloudState(true);else saveTimer=setTimeout(()=>postCloudState(false),500);}else syncStatus('Saved in this browser only');}
 var activeGroup='presentations',activeTier='',activeStatus='',procTab='full',activePhase='04';
 var sessionQuery='',caseQuery='',procQuery='',discQuery='',emergencyQuery='';
 const phaseDefs = sourcePhaseDefs;
@@ -584,8 +1082,12 @@ document.getElementById('mentorReviewPanel')?.addEventListener('click',event=>{
  if(!decision){status.textContent='Choose a decision first.';return;}if(decision!=='VERIFIED'&&feedback.length<5){status.textContent='Add at least 5 characters of feedback.';return;}if(feedback.length>2000){status.textContent='Feedback must be 2,000 characters or fewer.';return;}if(reviewPending.has(key)||!window.opener)return;
  reviewPending.add(key);button.disabled=true;status.textContent='Saving review securely…';window.opener.postMessage({type:'MENTORO_LOGBOOK_MENTOR_REVIEW',instanceId,itemId:id,itemType:type,decision,feedback},window.location.origin);
 });
-startCloudBridge();
-render();
+if(licensedMode){
+ setCloudLoading(true);
+ window.MentoroLicenseRuntime.start({specialtySlug:'pediatrics',specialtyName:'Pediatrics',normalizeState,emptyState})
+  .then(licensed=>{data=licensed.state;licenseStarted=true;cloudReady=true;setCloudLoading(false);save();render();})
+  .catch(error=>{setCloudLoading(false);syncStatus(error?.message||'Could not initialize licensed local storage.',true);});
+}else{startCloudBridge();render();}
 
 
 </script>

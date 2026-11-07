@@ -4,7 +4,9 @@
 const pageParams = new URLSearchParams(window.location.search);
 const requestedInstance = pageParams.get("instance") || "";
 const instanceId = /^[0-9a-f-]{36}$/i.test(requestedInstance) ? requestedInstance : "";
-const previewMode = !instanceId || pageParams.get("mode") === "preview";
+const licensedMode = pageParams.get("mode") === "licensed" && !window.opener;
+let licenseStarted = false;
+const previewMode = !licensedMode && (!instanceId || pageParams.get("mode") === "preview");
 let readOnlyMode = pageParams.get("readonly") === "1";
 let cloudReady = !(instanceId && window.opener);
 let cloudDirty = false;
@@ -111,6 +113,13 @@ function postCloudState(flushNow) {
 }
 function save(options) {
   if (readOnlyMode) return;
+  if (licensedMode) {
+    if (!licenseStarted) return;
+    void window.MentoroLicenseRuntime.saveState(currentCloudState())
+      .then(() => setStatus("Saved on this device"))
+      .catch((error) => setStatus(error?.message || "Local save failed. Export a backup and retry.", true));
+    return;
+  }
   store.set("state", JSON.stringify(currentCloudState()));
   if (instanceId && !previewMode && window.opener && cloudReady) {
     if (saveTimer) clearTimeout(saveTimer);
@@ -641,9 +650,23 @@ async function initialize() {
     roadmapItems = buildRoadmap();
     fillRoadGroups();
     bindEvents();
+    if (licensedMode) {
+      setCloudLoading(true);
+      const licensed = await window.MentoroLicenseRuntime.start({
+        specialtySlug: "cardiology",
+        specialtyName: "Cardiology",
+        normalizeState,
+        emptyState
+      });
+      data = licensed.state;
+      licenseStarted = true;
+      cloudReady = true;
+      setCloudLoading(false);
+      save();
+    }
     render();
     window.addEventListener("message", receiveParentMessage);
-    startCloudBridge();
+    if (!licensedMode) startCloudBridge();
     if (readOnlyMode) setStatus("Read-only review mode");
     document.getElementById("themeButton").textContent = document.documentElement.dataset.theme === "dark" ? "Light mode" : "Dark mode";
   } catch (error) {

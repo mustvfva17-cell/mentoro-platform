@@ -7,8 +7,18 @@ export default function handler(request, response) {
     return response.status(405).json({ error: 'method_not_allowed' });
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  // This one Preview branch is pinned to Supabase Development for the pilot.
+  // Production and all other branches must use their own server-side env vars.
+  const developmentPreview =
+    process.env.VERCEL_ENV === 'preview' &&
+    process.env.VERCEL_GIT_COMMIT_REF === 'fix/licensed-pilot-followups';
+
+  const supabaseUrl = developmentPreview
+    ? 'https://ocsgokwtfwhgeintsokr.supabase.co'
+    : process.env.SUPABASE_URL;
+  const publishableKey = developmentPreview
+    ? 'sb_publishable_9Za7C-wblrwqXIPPT2dT-w_2DWWg1nT'
+    : process.env.SUPABASE_PUBLISHABLE_KEY;
 
   if (!supabaseUrl || !publishableKey) {
     return response.status(503).json({ error: 'license_configuration_missing' });

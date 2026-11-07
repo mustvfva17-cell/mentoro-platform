@@ -6,8 +6,17 @@ import { startEnrollmentLifecycleMonitor } from './enrollment-lifecycle-monitor.
 import { listSpecialtyModules } from './logbooks/module-registry.js';
 
 const app = document.querySelector('#app');
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// The dedicated license-pilot Preview must authenticate against Development
+// as well as call the Development license Edge Function. This host check is
+// false on the Production domain and on every unrelated Preview deployment.
+const isLicensePilotPreview =
+  window.location.hostname === 'mentoro-platform-git-fix-licensed-pilot-142a3e-mustvfva17-3787.vercel.app';
+const supabaseUrl = isLicensePilotPreview
+  ? 'https://ocsgokwtfwhgeintsokr.supabase.co'
+  : import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = isLicensePilotPreview
+  ? 'sb_publishable_9Za7C-wblrwqXIPPT2dT-w_2DWWg1nT'
+  : import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 const REGISTERED_HTML_LOGBOOK_PATHS = new Set(
   listSpecialtyModules()
