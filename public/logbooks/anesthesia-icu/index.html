@@ -25,7 +25,7 @@
     <button data-view="emergency" title="Emergency"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 20h20L12 4Z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg></span><span class="nav-label">Emergency</span></button>
     <button data-view="progress" title="Progress"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-5 4 4 7-8"/><path d="M15 7h5v5"/></svg></span><span class="nav-label">Progress</span></button>
   </nav>
-  <div class="side-bottom"><div class="journey"><p class="journey-tag">Observe · Discuss · Participate · Reflect · Improve</p></div><button class="btn print-btn" onclick="exportLogbook()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="13" width="12" height="7" rx="1"/><path d="M6 13H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2"/></svg></span>Export backup</button><button class="btn print-btn" onclick="window.print()">Print / Save PDF</button></div>
+  <div class="side-bottom"><div class="journey"><p class="journey-tag">Observe · Discuss · Participate · Reflect · Improve</p></div><button class="btn print-btn" onclick="exportLogbook()"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="13" width="12" height="7" rx="1"/><path d="M6 13H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2"/></svg></span>Export backup</button><button class="btn print-btn" id="importBackupButton" type="button">Import backup</button><input id="importBackupInput" type="file" accept="application/json,.json" hidden><button class="btn print-btn" onclick="window.print()">Print / Save PDF</button></div>
 </aside>
 
 <div class="main">
@@ -129,6 +129,7 @@
 <div class="modal" id="modal"><div class="modal-card"><div class="modal-top"><h3 id="modalTitle">Add</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><form id="modalForm"></form></div></div></div>
 
 
+<script src="./license-runtime.js" defer></script>
 <script src="./app.js" defer></script>
 </body>
 </html>
