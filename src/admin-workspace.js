@@ -43,7 +43,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       supabase.from('mentor_profiles')
         .select('profile_id,display_name,professional_title,institution,is_public,profile_status')
         .eq('profile_status', 'APPROVED').order('display_name', { ascending: true }),
-      supabase.from('specialties').select('id,name_en,name_ar').eq('is_active', true).order('name_en', { ascending: true }),
+      supabase.from('specialties').select('id,slug,name_en,name_ar').eq('is_active', true).order('name_en', { ascending: true }),
       supabase.from('logbook_template_versions')
         .select('id,template_id,version_number,status,is_assignable,schema_definition,template_definition,source_notes,created_at,logbook_templates!inner(id,slug,title,description,specialty_id,is_active)')
         .order('version_number', { ascending: false }),
@@ -158,6 +158,23 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
               (actions ? '<div class="mentor-review-actions">' + actions + '</div>' : '') +
               '</div></article>';
           }).join('') + '</div>' : '<div class="empty-state"><strong>No confirmed enrollments yet</strong><p>Confirmed bookings appear here when an enrollment and its individual logbook instance are created.</p></div>') +
+        '</section>' +
+        '<section class="section-block" id="admin-license-management"><div class="section-heading"><div><p class="eyebrow">PRODUCT ACCESS</p><h2>Standalone logbook licenses</h2></div><span class="status-chip status-chip--neutral">2 devices per license</span></div>' +
+          '<p class="workspace-note">Issue a specialty-specific code for a trainee. The code is shown only once; keep it private and send it directly to the trainee. Each device stores its own local progress and must be backed up separately.</p>' +
+          '<form id="admin-license-issue-form" class="admin-form-card">' +
+            '<div class="admin-form-grid">' +
+              '<div class="field"><label for="license-trainee-label">Trainee / customer name</label><input id="license-trainee-label" name="traineeLabel" maxlength="120" required placeholder="Trainee full name"></div>' +
+              '<div class="field"><label for="license-trainee-email">Email (optional)</label><input id="license-trainee-email" name="traineeEmail" type="email" maxlength="254" placeholder="trainee@example.com"></div>' +
+              '<div class="field"><label for="license-specialty">Logbook specialty</label><select id="license-specialty" name="specialtySlug" required>' +
+                specialties.map((specialty) => '<option value="' + escape(specialty.slug || '') + '">' + escape(specialty.name_en || specialty.name_ar || 'Specialty') + '</option>').join('') +
+              '</select></div>' +
+              '<div class="field"><label for="license-expires-at">Expiry date (optional)</label><input id="license-expires-at" name="expiresAt" type="date"><small>Leave blank for a perpetual license.</small></div>' +
+              '<div class="field admin-form-wide"><label for="license-notes">Admin notes (optional)</label><textarea id="license-notes" name="notes" rows="2" maxlength="2000" placeholder="Order reference or private admin note"></textarea></div>' +
+            '</div><button class="button button--primary" type="submit">Generate license key</button>' +
+          '</form>' +
+          '<div id="admin-license-issued" class="empty-state" hidden><strong>New license key — shown once</strong><p>Copy this key and send it privately to the trainee. It cannot be recovered later.</p><code id="admin-license-code"></code><button class="button button--secondary button--small" id="admin-license-copy" type="button">Copy license key</button></div>' +
+          '<div class="section-heading" style="margin-top:18px"><h3>Issued licenses</h3><button class="button button--secondary button--small" id="admin-license-refresh" type="button">Refresh</button></div>' +
+          '<div id="admin-license-list"><div class="loading-panel"><span class="spinner"></span><p>Loading licenses…</p></div></div>' +
         '</section>' +
         '<section class="section-block"><div class="section-heading"><div><p class="eyebrow">IDENTITY & ACCESS</p><h2>Trainee verification</h2></div><span class="count-badge">' + verificationDocs.length + '</span></div>' +
           '<p class="workspace-note">Approving verification unlocks trainee applications. Review the private document in the authorized verification workflow before deciding.</p>' +
@@ -361,6 +378,174 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       '</main>',
       user
     );
+
+    const licenseSection = document.querySelector('#admin-license-management');
+    const licenseIssueForm = document.querySelector('#admin-license-issue-form');
+    const licenseList = document.querySelector('#admin-license-list');
+    const issuedPanel = document.querySelector('#admin-license-issued');
+    const issuedCode = document.querySelector('#admin-license-code');
+    const licenseCopyButton = document.querySelector('#admin-license-copy');
+
+    async function callLicenseAdmin(action, payload = {}) {
+      const [{ data: sessionData, error: sessionError }, configResponse] = await Promise.all([
+        supabase.auth.getSession(),
+        fetch('/api/license/config', { cache: 'no-store', credentials: 'same-origin' })
+      ]);
+      if (sessionError || !sessionData?.session?.access_token) {
+        throw new Error('Your administrator session has expired. Sign in again.');
+      }
+      const config = await configResponse.json().catch(() => ({}));
+      if (!configResponse.ok || !config.supabaseUrl || !config.publishableKey || !config.functionName) {
+        throw new Error(config.error || 'License service configuration is unavailable.');
+      }
+      const endpoint = new URL('/functions/v1/' + encodeURIComponent(config.functionName), config.supabaseUrl).toString();
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: config.publishableKey,
+          Authorization: 'Bearer ' + sessionData.session.access_token
+        },
+        body: JSON.stringify({ action, ...payload })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(result.error || 'License management request failed.');
+        error.status = response.status;
+        throw error;
+      }
+      return result;
+    }
+
+    function licenseDeviceRows(license) {
+      const devices = Array.isArray(license.logbook_license_devices) ? license.logbook_license_devices : [];
+      const active = devices.filter((device) => !device.revoked_at);
+      return {
+        activeCount: active.length,
+        rows: devices.map((device, index) =>
+          '<div class="license-device-row"><span>Device ' + (index + 1) + ' · ' + (device.revoked_at ? 'Released' : 'Active') +
+          '</span><small>Last checked: ' + escape(formatDate(device.last_validated_at)) + '</small>' +
+          (!device.revoked_at
+            ? '<button class="button button--secondary button--small" type="button" data-license-device-release="' + escape(device.id) + '" data-license-id="' + escape(license.id) + '">Release device</button>'
+            : '') + '</div>'
+        ).join('')
+      };
+    }
+
+    function renderLicenseList(licenses) {
+      if (!licenseList) return;
+      if (!licenses.length) {
+        licenseList.innerHTML = '<div class="empty-state"><strong>No licenses have been issued</strong><p>Generate a specialty license above to get started.</p></div>';
+        return;
+      }
+      licenseList.innerHTML = '<div class="mentor-queue-grid">' + licenses.map((license) => {
+        const devices = licenseDeviceRows(license);
+        const expired = license.expires_at && new Date(license.expires_at).getTime() <= Date.now();
+        const status = expired ? 'EXPIRED' : license.status;
+        return '<article class="activity-card admin-license-card" data-license-card="' + escape(license.id) + '">' +
+          '<div class="activity-main"><div class="training-card-heading"><span class="specialty-label">' + escape(license.specialty_slug) + '</span>' +
+          '<span class="status-chip status-chip--' + (status === 'ACTIVE' ? 'good' : 'neutral') + '">' + escape(status) + '</span></div>' +
+          '<h3>' + escape(license.trainee_label) + '</h3>' +
+          (license.trainee_email ? '<p>' + escape(license.trainee_email) + '</p>' : '') +
+          '<p><strong>Key:</strong> …' + escape(license.license_hint) + ' · <strong>Devices:</strong> ' + devices.activeCount + '/2</p>' +
+          '<p><strong>Issued:</strong> ' + escape(formatDate(license.created_at)) +
+          (license.expires_at ? ' · <strong>Expires:</strong> ' + escape(formatDate(license.expires_at)) : ' · No expiry') + '</p>' +
+          '<div class="license-device-list">' + devices.rows + '</div>' +
+          '<div class="mentor-review-actions">' +
+            (status === 'ACTIVE' ? '<button class="button button--secondary button--small" type="button" data-license-reset="' + escape(license.id) + '">Release all devices</button><button class="button button--secondary button--small" type="button" data-license-revoke="' + escape(license.id) + '">Revoke license</button>' : '') +
+          '</div></div></article>';
+      }).join('') + '</div>';
+    }
+
+    async function refreshLicenseList() {
+      if (!licenseList) return;
+      licenseList.innerHTML = '<div class="loading-panel"><span class="spinner"></span><p>Loading licenses…</p></div>';
+      try {
+        const result = await callLicenseAdmin('list');
+        renderLicenseList(Array.isArray(result.licenses) ? result.licenses : []);
+      } catch (error) {
+        licenseList.innerHTML = '<div class="empty-state empty-state--error"><strong>Could not load licenses</strong><p>' + escape(error?.message || 'License list request failed.') + '</p></div>';
+      }
+    }
+
+    licenseIssueForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(licenseIssueForm);
+      const button = licenseIssueForm.querySelector('button[type="submit"]');
+      busy(button, true, 'Generating key…');
+      try {
+        const result = await callLicenseAdmin('issue', {
+          traineeLabel: String(formData.get('traineeLabel') || '').trim(),
+          traineeEmail: String(formData.get('traineeEmail') || '').trim() || null,
+          specialtySlug: String(formData.get('specialtySlug') || ''),
+          expiresAt: String(formData.get('expiresAt') || '') || null,
+          notes: String(formData.get('notes') || '').trim() || null
+        });
+        if (!result.licenseCode) throw new Error('The license was created but the one-time key was not returned. Check the admin audit log before issuing another.');
+        issuedCode.textContent = result.licenseCode;
+        issuedPanel.hidden = false;
+        licenseIssueForm.reset();
+        await refreshLicenseList();
+        showMessage('License created. Copy the key now; it will not be displayed again.', 'success');
+        issuedPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (error) {
+        showMessage(error?.message || 'Could not issue license.', 'error');
+      } finally {
+        busy(button, false);
+      }
+    });
+
+    licenseCopyButton?.addEventListener('click', async () => {
+      const code = issuedCode?.textContent || '';
+      if (!code) return;
+      try {
+        await navigator.clipboard.writeText(code);
+        showMessage('License key copied.', 'success');
+      } catch {
+        showMessage('Clipboard access was blocked. Select and copy the key manually.', 'error');
+      }
+    });
+
+    document.getElementById('admin-license-refresh')?.addEventListener('click', refreshLicenseList);
+    licenseList?.addEventListener('click', async (event) => {
+      const releaseButton = event.target.closest('[data-license-device-release]');
+      const resetButton = event.target.closest('[data-license-reset]');
+      const revokeButton = event.target.closest('[data-license-revoke]');
+      if (!releaseButton && !resetButton && !revokeButton) return;
+      const licenseId = (releaseButton || resetButton || revokeButton).dataset.licenseId ||
+        (resetButton || revokeButton)?.dataset.licenseReset || (resetButton || revokeButton)?.dataset.licenseRevoke;
+      const deviceId = releaseButton?.dataset.licenseDeviceRelease;
+      const reason = window.prompt(
+        releaseButton ? 'Why are you releasing this device? (3–500 characters)' :
+          resetButton ? 'Why are you releasing all devices? (3–500 characters)' :
+            'Why are you revoking this license? (3–500 characters)'
+      );
+      if (reason === null) return;
+      if (reason.trim().length < 3 || reason.trim().length > 500) {
+        showMessage('Enter a reason between 3 and 500 characters.', 'error');
+        return;
+      }
+      const button = releaseButton || resetButton || revokeButton;
+      busy(button, true, 'Saving…');
+      try {
+        await callLicenseAdmin(
+          releaseButton ? 'revoke-device' : resetButton ? 'reset-devices' : 'revoke',
+          { licenseId, ...(deviceId ? { deviceId } : {}), reason: reason.trim() }
+        );
+        await refreshLicenseList();
+        showMessage(releaseButton ? 'Device released. The trainee can activate a replacement device.' :
+          resetButton ? 'All devices released. The trainee can activate up to two devices again.' :
+            'License revoked. Existing devices will be blocked on their next validation.', 'success');
+      } catch (error) {
+        showMessage(error?.message || 'Could not update this license.', 'error');
+        busy(button, false);
+      }
+    });
+
+    if (licenseSection) void refreshLicenseList();
 
     const templateVersionForm = document.querySelector('#admin-template-version-form');
     if (templateVersionForm) {
