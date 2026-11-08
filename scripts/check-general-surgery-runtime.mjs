@@ -38,7 +38,7 @@ console.log('General Surgery runtime contract passed: backup export and cloud br
 // The standalone Vercel deployment has its own HTML copy and inline scripts.
 // Keep it in syntax validation; the public/ runtime check alone does not cover it.
 const standaloneHtml = readFileSync(new URL('../vercel-logbooks/general-surgery/index.html', import.meta.url), 'utf8');
-const standaloneScripts = [...standaloneHtml.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+const standaloneScripts = [...standaloneHtml.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
 assert.equal(standaloneScripts.length, 2,
   'The standalone General Surgery page must keep its license runtime and app scripts.');
 standaloneScripts.forEach((match, index) => {
