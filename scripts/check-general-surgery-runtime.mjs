@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 
 const html = readFileSync(new URL('../public/logbooks/general-surgery/index.html', import.meta.url), 'utf8');
 
@@ -32,3 +33,23 @@ assert.match(html, /if\(readonlyMode\)return;/,
   'Read-only mode must continue to block local save mutations.');
 
 console.log('General Surgery runtime contract passed: backup export and cloud bridge are present.');
+
+
+// The standalone Vercel deployment has its own HTML copy and inline scripts.
+// Keep it in syntax validation; the public/ runtime check alone does not cover it.
+const standaloneHtml = readFileSync(new URL('../vercel-logbooks/general-surgery/index.html', import.meta.url), 'utf8');
+const standaloneScripts = [...standaloneHtml.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
+assert.equal(standaloneScripts.length, 2,
+  'The standalone General Surgery page must keep its license runtime and app scripts.');
+standaloneScripts.forEach((match, index) => {
+  assert.ok(match[1].trim(), `Standalone script ${index + 1} must not be empty.`);
+  new vm.Script(match[1], { filename: `general-surgery-inline-${index + 1}.js` });
+});
+assert.doesNotMatch(standaloneHtml, /onclick=&quot;openModal/,
+  'Standalone Add buttons must use executable, unescaped inline handlers.');
+const standaloneMenuStart = standaloneHtml.indexOf('id="moreSheet"');
+assert.ok(standaloneMenuStart >= 0 &&
+  standaloneHtml.indexOf('data-view="roadmap"', standaloneMenuStart) > standaloneMenuStart,
+  'The standalone mobile menu must provide a Roadmap shortcut.');
+
+console.log('Standalone General Surgery scripts passed syntax validation.');
