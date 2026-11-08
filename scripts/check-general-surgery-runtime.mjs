@@ -47,7 +47,9 @@ standaloneScripts.forEach((match, index) => {
 });
 assert.doesNotMatch(standaloneHtml, /onclick=&quot;openModal/,
   'Standalone Add buttons must use executable, unescaped inline handlers.');
-assert.match(standaloneHtml, /id="moreSheet"[\\s\\S]*?data-view="roadmap"/,
+const standaloneMenuStart = standaloneHtml.indexOf('id="moreSheet"');
+assert.ok(standaloneMenuStart >= 0 &&
+  standaloneHtml.indexOf('data-view="roadmap"', standaloneMenuStart) > standaloneMenuStart,
   'The standalone mobile menu must provide a Roadmap shortcut.');
 
 console.log('Standalone General Surgery scripts passed syntax validation.');
