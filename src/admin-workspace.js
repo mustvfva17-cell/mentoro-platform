@@ -172,7 +172,7 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
               '<div class="field admin-form-wide"><label for="license-notes">Admin notes (optional)</label><textarea id="license-notes" name="notes" rows="2" maxlength="2000" placeholder="Order reference or private admin note"></textarea></div>' +
             '</div><button class="button button--primary" type="submit">Generate license key</button>' +
           '</form>' +
-          '<div id="admin-license-issued" class="empty-state" hidden><strong>New license key — shown once</strong><p>Copy this key and send it privately to the trainee. It cannot be recovered later.</p><code id="admin-license-code"></code><button class="button button--secondary button--small" id="admin-license-copy" type="button">Copy license key</button></div>' +
+          '<div id="admin-license-issued" class="empty-state" hidden><strong>New license key — shown once</strong><p>Send the student the logbook link below and share the license key privately. The key cannot be recovered later.</p><code id="admin-license-code"></code><button class="button button--secondary button--small" id="admin-license-copy" type="button">Copy license key</button><div id="admin-license-student-link-wrap" hidden><p><strong>Student logbook link</strong></p><a id="admin-license-student-link" target="_blank" rel="noopener noreferrer"></a><button class="button button--secondary button--small" id="admin-license-copy-link" type="button">Copy student link</button></div><p id="admin-license-link-unavailable" hidden>There is no confirmed standalone student URL configured for this specialty yet.</p></div>' +
           '<div class="section-heading" style="margin-top:18px"><h3>Issued licenses</h3><button class="button button--secondary button--small" id="admin-license-refresh" type="button">Refresh</button></div>' +
           '<div id="admin-license-list"><div class="loading-panel"><span class="spinner"></span><p>Loading licenses…</p></div></div>' +
         '</section>' +
@@ -385,6 +385,14 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
     const issuedPanel = document.querySelector('#admin-license-issued');
     const issuedCode = document.querySelector('#admin-license-code');
     const licenseCopyButton = document.querySelector('#admin-license-copy');
+    const licenseStudentLinkWrap = document.querySelector('#admin-license-student-link-wrap');
+    const licenseStudentLink = document.querySelector('#admin-license-student-link');
+    const licenseStudentLinkUnavailable = document.querySelector('#admin-license-link-unavailable');
+    const licenseStudentLinkCopyButton = document.querySelector('#admin-license-copy-link');
+    const STANDALONE_LOGBOOK_URLS = Object.freeze({
+      'general-surgery': 'https://mentoro-surgery.vercel.app/',
+      ophthalmology: 'https://mentoro-ophthalmology.vercel.app/'
+    });
 
     async function callLicenseAdmin(action, payload = {}) {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -467,15 +475,28 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
       const button = licenseIssueForm.querySelector('button[type="submit"]');
       busy(button, true, 'Generating key…');
       try {
+        const specialtySlug = String(formData.get('specialtySlug') || '');
         const result = await callLicenseAdmin('issue', {
           traineeLabel: String(formData.get('traineeLabel') || '').trim(),
           traineeEmail: String(formData.get('traineeEmail') || '').trim() || null,
-          specialtySlug: String(formData.get('specialtySlug') || ''),
+          specialtySlug,
           expiresAt: String(formData.get('expiresAt') || '') || null,
           notes: String(formData.get('notes') || '').trim() || null
         });
         if (!result.licenseCode) throw new Error('The license was created but the one-time key was not returned. Check the admin audit log before issuing another.');
         issuedCode.textContent = result.licenseCode;
+        const studentUrl = STANDALONE_LOGBOOK_URLS[specialtySlug] || '';
+        if (licenseStudentLinkWrap && licenseStudentLink && licenseStudentLinkUnavailable) {
+          licenseStudentLinkWrap.hidden = !studentUrl;
+          licenseStudentLinkUnavailable.hidden = Boolean(studentUrl);
+          if (studentUrl) {
+            licenseStudentLink.href = studentUrl;
+            licenseStudentLink.textContent = studentUrl;
+          } else {
+            licenseStudentLink.removeAttribute('href');
+            licenseStudentLink.textContent = '';
+          }
+        }
         issuedPanel.hidden = false;
         licenseIssueForm.reset();
         await refreshLicenseList();
@@ -496,6 +517,17 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
         showMessage('License key copied.', 'success');
       } catch {
         showMessage('Clipboard access was blocked. Select and copy the key manually.', 'error');
+      }
+    });
+
+    licenseStudentLinkCopyButton?.addEventListener('click', async () => {
+      const url = licenseStudentLink?.href || '';
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        showMessage('Student logbook link copied.', 'success');
+      } catch {
+        showMessage('Clipboard access was blocked. Select and copy the student link manually.', 'error');
       }
     });
 
