@@ -89,8 +89,47 @@ html.dark .mobile-brand span{border-color:var(--line)}html.dark .progress-track-
 .license-submit:disabled{opacity:.6;cursor:wait}
 .license-foot{margin:18px 0 0;color:#566175;font-size:12px;line-height:1.5}
 .license-support{margin:10px 0 0;color:#8a5360;font-size:11px;line-height:1.5}
-.license-watermark{display:inline-flex;max-width:100%;margin:0 0 10px;padding:7px 10px;border:1px solid rgba(201,31,51,.18);border-radius:8px;background:rgba(201,31,51,.055);color:var(--muted,#657080);font-size:11px;line-height:1.4;overflow-wrap:anywhere}
-@media(max-width:540px){.license-card{padding:23px 19px;border-radius:17px}.license-card h1{font-size:24px}.license-watermark{font-size:10px}}
+.license-watermark{
+  display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;
+  width:100%;max-width:100%;margin:0 0 14px;padding:12px 15px;
+  border:1px solid rgba(201,31,51,.14);border-radius:14px;
+  background:linear-gradient(110deg,#fff 0%,#fff8f9 100%);
+  color:#30343b;box-shadow:0 5px 18px rgba(30,24,26,.045);
+  line-height:1.35;overflow:hidden;
+}
+.license-watermark__mark{
+  width:42px;height:42px;display:grid;place-items:center;border-radius:12px;
+  background:linear-gradient(145deg,rgba(201,31,51,.13),rgba(201,31,51,.06));
+  color:var(--red);font-size:20px;font-weight:900;flex:0 0 auto;
+}
+.license-watermark__details{display:grid;gap:3px;min-width:0}
+.license-watermark__eyebrow{font-size:8px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:var(--red)}
+.license-watermark__identity{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;min-width:0}
+.license-watermark__label{font-size:10px;color:#858991}
+.license-watermark__name{font-size:14px;font-weight:850;color:#252a31;unicode-bidi:plaintext;overflow-wrap:anywhere}
+.license-watermark__key{font-size:10px;color:#777d85}
+.license-watermark__key code{font:750 10px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;color:#444a52}
+.license-watermark__meta{display:grid;justify-items:end;gap:5px;white-space:nowrap}
+.license-watermark__status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid rgba(29,127,93,.16);border-radius:999px;background:#eff8f3;color:#267351;font-size:9px;font-weight:850}
+.license-watermark__status i{width:6px;height:6px;border-radius:50%;background:#29966b;box-shadow:0 0 0 3px rgba(41,150,107,.12)}
+.license-watermark__expiry{font-size:9px;color:#777d85}
+.license-watermark[data-offline="true"] .license-watermark__status{background:#fff6e6;border-color:#f0dfbb;color:#916313}
+.license-watermark[data-offline="true"] .license-watermark__status i{background:#c28b24;box-shadow:0 0 0 3px rgba(194,139,36,.12)}
+html.dark .license-watermark{background:linear-gradient(110deg,#191c21 0%,#21191d 100%);border-color:#513039;color:var(--ink);box-shadow:0 6px 20px rgba(0,0,0,.16)}
+html.dark .license-watermark__name{color:#f5f3f4}
+html.dark .license-watermark__label,html.dark .license-watermark__key,html.dark .license-watermark__expiry{color:#aeb3ba}
+html.dark .license-watermark__key code{color:#e2e4e7}
+html.dark .license-watermark__status{background:#172a22;border-color:#294b3b;color:#82d1ae}
+html.dark .license-watermark[data-offline="true"] .license-watermark__status{background:#302718;border-color:#604b24;color:#e3bd70}
+@media(max-width:540px){
+  .license-card{padding:23px 19px;border-radius:17px}.license-card h1{font-size:24px}
+  .license-watermark{grid-template-columns:36px minmax(0,1fr);gap:9px;padding:10px 11px;border-radius:12px;margin-bottom:12px}
+  .license-watermark__mark{width:36px;height:36px;border-radius:10px;font-size:17px}
+  .license-watermark__name{font-size:12px}
+  .license-watermark__meta{grid-column:2;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;white-space:normal}
+  .license-watermark__status{padding:4px 8px;font-size:8px}
+  .license-watermark__expiry{font-size:8px}
+}
 @media print{.license-gate,.license-watermark{display:none!important}}
 
 </style>
@@ -429,17 +468,38 @@ html.dark .mobile-brand span{border-color:var(--line)}html.dark .progress-track-
   function addWatermark(label, hint, validUntil, offline) {
     let node = document.getElementById("mentoroLicenseWatermark");
     if (!node) {
-      node = document.createElement("div");
+      node = document.createElement("section");
       node.id = "mentoroLicenseWatermark";
       node.className = "license-watermark";
+      node.setAttribute("role", "status");
+      node.innerHTML = `
+        <span class="license-watermark__mark" aria-hidden="true">✓</span>
+        <span class="license-watermark__details">
+          <span class="license-watermark__eyebrow">MENTORO · Licensed logbook</span>
+          <span class="license-watermark__identity">
+            <span class="license-watermark__label">Licensed to</span>
+            <strong class="license-watermark__name"></strong>
+          </span>
+          <span class="license-watermark__key">License <code></code></span>
+        </span>
+        <span class="license-watermark__meta">
+          <span class="license-watermark__status"><i aria-hidden="true"></i><span></span></span>
+          <span class="license-watermark__expiry"></span>
+        </span>`;
       const sync = document.getElementById("syncStatus");
       if (sync?.parentNode) sync.parentNode.insertBefore(node, sync.nextSibling);
       else document.querySelector("main.content")?.prepend(node);
     }
     const validDate = validUntil ? new Date(validUntil) : null;
     const dateLabel = validDate && Number.isFinite(validDate.getTime()) ? validDate.toLocaleDateString() : "—";
-    node.textContent = "Licensed to " + (label || "MENTORO trainee") + " · License " + (hint || "—") +
-      " · " + (offline ? "Offline access" : "Active") + " until " + dateLabel;
+    const traineeName = label || "MENTORO trainee";
+    const statusLabel = offline ? "Offline access" : "Active";
+    node.querySelector(".license-watermark__name").textContent = traineeName;
+    node.querySelector(".license-watermark__key code").textContent = hint || "—";
+    node.querySelector(".license-watermark__status span").textContent = statusLabel;
+    node.querySelector(".license-watermark__expiry").textContent = (offline ? "Last valid until " : "Active until ") + dateLabel;
+    node.dataset.offline = offline ? "true" : "false";
+    node.setAttribute("aria-label", "Licensed to " + traineeName + ". License " + (hint || "—") + ". " + statusLabel + " until " + dateLabel);
     node.hidden = false;
   }
 
