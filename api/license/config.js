@@ -15,10 +15,10 @@ export default function handler(request, response) {
 
   const supabaseUrl = developmentPreview
     ? 'https://ocsgokwtfwhgeintsokr.supabase.co'
-    : process.env.SUPABASE_URL;
+    : (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL);
   const publishableKey = developmentPreview
     ? 'sb_publishable_9Za7C-wblrwqXIPPT2dT-w_2DWWg1nT'
-    : process.env.SUPABASE_PUBLISHABLE_KEY;
+    : (process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY);
 
   if (!supabaseUrl || !publishableKey) {
     return response.status(503).json({ error: 'license_configuration_missing' });
