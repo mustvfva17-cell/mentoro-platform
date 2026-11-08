@@ -387,26 +387,16 @@ export async function renderAdminWorkspace({ user, supabase, shell, esc, dateTim
     const licenseCopyButton = document.querySelector('#admin-license-copy');
 
     async function callLicenseAdmin(action, payload = {}) {
-      const [{ data: sessionData, error: sessionError }, configResponse] = await Promise.all([
-        supabase.auth.getSession(),
-        fetch('/api/license/config', { cache: 'no-store', credentials: 'same-origin' })
-      ]);
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !sessionData?.session?.access_token) {
         throw new Error('Your administrator session has expired. Sign in again.');
       }
-      const config = await configResponse.json().catch(() => ({}));
-      if (!configResponse.ok || !config.supabaseUrl || !config.publishableKey || !config.functionName) {
-        throw new Error(config.error || 'License service configuration is unavailable.');
-      }
-      const endpoint = new URL('/functions/v1/' + encodeURIComponent(config.functionName), config.supabaseUrl).toString();
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/license/admin', {
         method: 'POST',
-        mode: 'cors',
-        credentials: 'omit',
+        credentials: 'same-origin',
         cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
-          apikey: config.publishableKey,
           Authorization: 'Bearer ' + sessionData.session.access_token
         },
         body: JSON.stringify({ action, ...payload })
