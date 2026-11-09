@@ -14,6 +14,16 @@ assert.match(migration, /'device_limit', 1/);
 assert.match(edge, /deviceLimit: 1/);
 assert.doesNotMatch(edge, /deviceLimit: 2/);
 
+const generalSurgery = await read('vercel-logbooks/general-surgery/index.html');
+assert.match(generalSurgery, /const DB_NAME = ["']mentoro-local-logbooks["']/,
+  'General Surgery must retain its established IndexedDB database name.');
+assert.match(generalSurgery, /const DB_VERSION = 1/,
+  'A UI-only or licensing policy update must not silently recreate the existing IndexedDB schema.');
+assert.match(generalSurgery, /function localStateKey\(licenseId, specialtySlug\)/,
+  'Saved progress must remain scoped to the same license and specialty.');
+assert.match(generalSurgery, /return ["']state:["'] \+ licenseId \+ [":"] \+ specialtySlug/,
+  'The license-scoped progress key must remain stable across releases.');
+
 const paths = [
   'vercel-logbooks/general-surgery/index.html',
   'vercel-logbooks/medical-oncology/index.html',
