@@ -44,3 +44,5 @@ jobs:
         run: npm run build
       - name: Verify HTML logbook read-only behavior in Chromium
         run: node scripts/test-logbook-readonly-browser.mjs
+      - name: Verify General Surgery local data survives app updates in Chromium
+        run: node scripts/test-general-surgery-data-preservation.mjs
