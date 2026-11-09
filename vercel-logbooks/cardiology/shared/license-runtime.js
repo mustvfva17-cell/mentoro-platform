@@ -150,7 +150,7 @@
           <input id="licenseCodeInput" class="license-input" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="MTR-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" maxlength="48">
           <p class="license-error" id="licenseGateError" role="alert"></p>
           <button class="license-submit" id="licenseActivateButton" type="button">Activate logbook</button>
-          <p class="license-foot">One license supports up to two devices. Each device keeps its own separate local data; there is no automatic sync.</p>
+          <p class="license-foot">One license activates on one phone at a time. Your logbook stays on that phone and does not automatically sync to another device. Contact MENTORO before switching phones.</p>
           <p class="license-support">Never enter patient names, hospital IDs, phone numbers, or other identifying details.</p>
         </section>`;
       document.body.appendChild(gate);
@@ -175,7 +175,7 @@
       } catch (error) {
         const errors = {
           license_unavailable: "This license could not be verified. Check the code or contact MENTORO.",
-          device_limit_reached: "Both device activations are already in use. Contact MENTORO to reset a device.",
+          device_limit_reached: "This license is already active on another phone. Contact MENTORO if you need to move it to a new phone.",
           too_many_attempts: "Too many attempts. Please try again in 15 minutes.",
           license_service_configuration_missing: "License service is not configured for this deployment.",
           license_service_unavailable: "The license service is temporarily unavailable. Check your connection and retry."
@@ -245,7 +245,7 @@
       licenseHint: payload.license_hint || payload.licenseHint || licenseRecord?.licenseHint || "",
       expiresAt: payload.expires_at || payload.expiresAt || licenseRecord?.expiresAt || null,
       validUntil: payload.valid_until || payload.validUntil || licenseRecord?.validUntil || null,
-      deviceLimit: payload.device_limit || payload.deviceLimit || 2,
+      deviceLimit: payload.device_limit || payload.deviceLimit || 1,
       deviceCount: payload.device_count || payload.deviceCount || null,
       offline
     };
@@ -345,7 +345,7 @@
           licenseHint: payload.licenseHint || "",
           validUntil: payload.validUntil,
           expiresAt: payload.expiresAt || null,
-          deviceLimit: 2,
+          deviceLimit: 1,
           deviceCount: payload.deviceCount || null,
           offline: false
         };
@@ -359,7 +359,7 @@
       } catch (error) {
         const errors = {
           license_unavailable: "This license could not be verified. Check the code or contact MENTORO.",
-          device_limit_reached: "Both device activations are already in use. Contact MENTORO to reset a device.",
+          device_limit_reached: "This license is already active on another phone. Contact MENTORO if you need to move it to a new phone.",
           too_many_attempts: "Too many attempts. Please try again in 15 minutes.",
           license_service_unavailable: "The license service is temporarily unavailable. Check your connection and retry."
         };
