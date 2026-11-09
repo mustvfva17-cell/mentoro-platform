@@ -154,7 +154,7 @@ async function handleAdminAction(action: string, body: JsonRecord, request: Requ
         traineeEmail,
         specialtySlug,
         expiresAt: expiresAt ? expiresAt.toISOString() : null,
-        deviceLimit: 2,
+        deviceLimit: 1,
       },
       licenseCode,
       displayOnce: true,
