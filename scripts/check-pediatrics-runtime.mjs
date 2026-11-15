@@ -174,4 +174,28 @@ assert.match(manifest, /htmlPath: "\/logbooks\/pediatrics\/index\.html"/);
 assert.match(manifest, /supportsMentorReview: true/);
 assert.match(manifest, /readOnlyMentorReview: true/);
 
+
+// Mobile UI parity: keep both platform and standalone Pediatrics pages aligned
+// with the General Surgery log-entry sheet without weakening Pediatrics safeguards.
+const standaloneHtml = read("../vercel-logbooks/pediatrics/index.html");
+for (const [label, source] of [["central", html], ["standalone", standaloneHtml]]) {
+  assert.ok(source.includes("MENTORO · PEDIATRICS"),
+    `${label} Pediatrics modal must carry the specialty heading.`);
+  assert.ok(source.includes(".modal-body input[type=\"checkbox\"]") &&
+    source.includes(".modal-body input[type=\"radio\"]"),
+    `${label} Pediatrics modal must size choice controls independently from text fields.`);
+  assert.ok(source.includes("grid-template-columns:repeat(2,minmax(0,1fr))"),
+    `${label} Pediatrics choices must fit a two-column mobile layout.`);
+  assert.ok(source.includes("grid-template-columns:minmax(108px,.72fr) minmax(0,1.7fr)"),
+    `${label} Pediatrics Save and Cancel actions must remain visible within the mobile sheet.`);
+  assert.ok(source.includes("height:min(92dvh,860px)") &&
+    source.includes("overflow-y:auto"),
+    `${label} Pediatrics modal must use a bounded bottom sheet with internal scrolling.`);
+}
+assert.match(standaloneHtml, /guardianConsentStatus/,
+  "The standalone Pediatrics runtime must retain guardian-consent capture.");
+assert.match(standaloneHtml, /intimateAndPubertalExaminationRole/,
+  "The standalone Pediatrics runtime must retain intimate-examination governance.");
+
 console.log("Pediatrics runtime contract passed: 137 roadmap rows, 14 groups, five emergency templates, cloud bridge, and safeguarding checks.");
+console.log("Pediatrics mobile UI contract passed for central and standalone pages.");
