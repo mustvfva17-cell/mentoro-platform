@@ -53,3 +53,17 @@ assert.ok(standaloneMenuStart >= 0 &&
   'The standalone mobile menu must provide a Roadmap shortcut.');
 
 console.log('Standalone General Surgery scripts passed syntax validation.');
+
+for (const [label, source] of [['central', html], ['standalone', standaloneHtml]]) {
+  assert.match(source, /\.modal-body input\\?\[type=["']checkbox["']\\?\]/,
+    `${label} General Surgery forms must size checkbox controls independently from text inputs.`);
+  assert.match(source, /\.modal-body input\\?\[type=["']radio["']\\?\]/,
+    `${label} General Surgery forms must size radio controls independently from text inputs.`);
+  assert.match(source, /min-width:18px;[\s\S]*?min-height:18px;/,
+    `${label} General Surgery choices must retain compact, touch-friendly control dimensions.`);
+  assert.match(source, /grid-template-columns:minmax\(108px,.72fr\) minmax\(0,1\.7fr\)/,
+    `${label} General Surgery mobile forms must keep Save and Cancel actions inside the sheet.`);
+}
+
+console.log('General Surgery mobile form layout contract passed for both HTML runtimes.');
+
