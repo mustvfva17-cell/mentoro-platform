@@ -1027,9 +1027,16 @@ function makeRoadmapItems(){
 const roadmapItems=makeRoadmapItems();
 
 const pageParams = new URLSearchParams(window.location.search);
-const licensedMode = true;
+// A local-only preview bypass is allowed only on this General Surgery PR preview
+// alias. The production hostname and other Vercel deployments always require a license.
+const previewHost = window.location.hostname.toLowerCase();
+const isGeneralSurgeryUiPreview =
+  previewHost.endsWith(".vercel.app") &&
+  previewHost.startsWith("mentoro-surgery-git-fix-general-surgery-") &&
+  previewHost !== "mentoro-surgery.vercel.app";
+const previewMode = isGeneralSurgeryUiPreview && pageParams.get("mode") === "preview";
+const licensedMode = !previewMode;
 let licenseStarted = false;
-const previewMode = !licensedMode && pageParams.get('mode') === 'preview';
 let readonlyMode = pageParams.get('readonly') === '1';
 const requestedInstanceId = pageParams.get('instance') || '';
 const instanceId = /^[0-9a-f-]{36}$/i.test(requestedInstanceId) ? requestedInstanceId : '';
