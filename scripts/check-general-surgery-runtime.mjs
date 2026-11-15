@@ -53,3 +53,27 @@ assert.ok(standaloneMenuStart >= 0 &&
   'The standalone mobile menu must provide a Roadmap shortcut.');
 
 console.log('Standalone General Surgery scripts passed syntax validation.');
+
+for (const [label, source] of [['central', html], ['standalone', standaloneHtml]]) {
+  assert.ok(source.includes('.modal-body input[type="checkbox"]'),
+    `${label} General Surgery forms must size checkbox controls independently from text inputs.`);
+  assert.ok(source.includes('.modal-body input[type="radio"]'),
+    `${label} General Surgery forms must size radio controls independently from text inputs.`);
+  assert.ok(source.includes('min-width:18px;') && source.includes('min-height:18px;'),
+    `${label} General Surgery choices must retain compact, touch-friendly control dimensions.`);
+  assert.ok(source.includes('grid-template-columns:minmax(108px,.72fr) minmax(0,1.7fr)'),
+    `${label} General Surgery mobile forms must keep Save and Cancel actions inside the sheet.`);
+}
+
+
+assert.match(standaloneHtml, /startsWith\(["']mentoro-surgery-git-fix-general-surgery-["']\)/,
+  'The standalone license-free preview must be restricted to this General Surgery PR preview hostname.');
+assert.match(standaloneHtml, /const previewMode = isGeneralSurgeryUiPreview && pageParams\.get\(["']mode["']\) === ["']preview["']/,
+  'The standalone local-only preview must require an explicit preview mode query on its allowed host.');
+assert.match(standaloneHtml, /const licensedMode = !previewMode;/,
+  'All standalone hosts outside the allowlisted preview must keep license activation enabled.');
+assert.doesNotMatch(standaloneHtml, /const licensedMode = true;/,
+  'The standalone runtime must not hard-code license activation in the preview build.');
+
+console.log('General Surgery mobile form layout contract passed for both HTML runtimes.');
+
