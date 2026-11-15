@@ -209,6 +209,155 @@ th{font-weight:650!important}
 /* MENTORO central cloud bridge and mentor review additions. */
 .sync-status{font-size:12px;color:var(--muted,#657080);padding:4px 2px 10px}.sync-status.error{color:#b42318}.mentor-review-panel{margin-top:22px}.mentor-review-panel[hidden]{display:none}.mentor-review-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.mentor-review-card{border:1px solid var(--line,#d9dee7);border-radius:14px;padding:14px;background:var(--surface,#fff)}.mentor-review-card h3{margin:0 0 5px;font-size:15px}.mentor-review-card small,.mentor-review-card p{color:var(--muted,#657080)}.mentor-review-card label{display:block;margin:10px 0 5px;font-size:13px}.mentor-review-card select,.mentor-review-card textarea{width:100%;min-height:42px;border:1px solid var(--line,#d9dee7);border-radius:8px;padding:8px;background:var(--surface,#fff);color:inherit}.mentor-review-card textarea{min-height:76px}.review-prior{padding:9px;background:var(--surface-soft,#f5f7fa);border-radius:9px;margin:10px 0}.readonly-banner{padding:12px 14px;margin:8px 0 16px;border-radius:10px;background:#fff3cd;color:#7a4b00;border:1px solid #f0d98b}.guardian-consent-field{grid-column:1/-1;padding:10px 12px;border-radius:10px;background:var(--surface-soft,#f5f7fa)}
 
+
+/* MENTORO Pediatrics — aligned mobile log-entry experience */
+.modal-heading{min-width:0}
+.modal-heading>span{display:block;margin-bottom:4px;color:var(--red);font-size:8px;font-weight:900;letter-spacing:.14em}
+.modal-top h3{font-size:17px;line-height:1.25}
+.modal-top{gap:12px}
+.close{width:36px;height:36px;flex:0 0 auto;border-radius:10px}
+@media(max-width:720px){
+  .modal{
+    align-items:flex-end;
+    justify-content:center;
+    padding:0;
+  }
+  .modal-card{
+    display:flex;
+    flex-direction:column;
+    width:100%;
+    max-width:none;
+    height:min(92vh,860px);
+    height:min(92dvh,860px);
+    max-height:calc(100vh - 8px);
+    max-height:calc(100dvh - env(safe-area-inset-top) - 8px);
+    overflow:hidden;
+    border-radius:20px 20px 0 0;
+  }
+  .modal-top{
+    flex:0 0 auto;
+    padding:18px 16px 13px;
+    background:var(--surface);
+  }
+  .modal-body{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    padding:14px 15px calc(16px + env(safe-area-inset-bottom));
+  }
+  .modal-body form,.modal-body .field,.modal-body .quick-exposure{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  .modal-body .field input:not([type="checkbox"]):not([type="radio"]),
+  .modal-body .field textarea,
+  .modal-body .field select{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
+  .modal-body input[type="checkbox"],
+  .modal-body input[type="radio"]{
+    -webkit-appearance:auto;
+    appearance:auto;
+    flex:0 0 18px;
+    width:18px;
+    height:18px;
+    min-width:18px;
+    min-height:18px;
+    max-width:18px;
+    max-height:18px;
+    margin:0;
+    padding:0;
+    border:0;
+    border-radius:initial;
+    background:transparent;
+    box-shadow:none;
+    accent-color:var(--red);
+  }
+  .modal-body input[type="radio"]{border-radius:50%}
+  .modal-body .checks{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:stretch;
+    gap:8px;
+    width:100%;
+    min-width:0;
+  }
+  .modal-body .checks label{
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:9px;
+    width:100%;
+    min-width:0;
+    min-height:44px;
+    padding:10px 11px;
+    border-radius:11px;
+    font-size:11px;
+    line-height:1.35;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    text-align:left;
+  }
+  .modal-body .checks input[type="checkbox"],
+  .modal-body .checks input[type="radio"]{flex:0 0 18px}
+  .quick-exposure .exposure-type{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    width:100%;
+    min-width:0;
+  }
+  .quick-exposure .type-choice{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:3px;
+    width:100%;
+    min-width:0;
+    min-height:76px;
+    padding:11px;
+    text-align:left;
+    overflow-wrap:anywhere;
+  }
+  .quick-exposure .type-choice strong{font-size:11px;line-height:1.3}
+  .quick-exposure .type-choice span{font-size:9px;line-height:1.4}
+  .modal-actions{
+    position:sticky;
+    bottom:0;
+    z-index:4;
+    display:grid;
+    grid-template-columns:minmax(108px,.72fr) minmax(0,1.7fr);
+    gap:10px;
+    margin:14px -15px calc(-14px - env(safe-area-inset-bottom));
+    padding:11px 15px calc(11px + env(safe-area-inset-bottom));
+    background:var(--surface);
+    border-top:1px solid var(--line);
+    box-shadow:0 -6px 18px rgba(20,23,28,.055);
+  }
+  .modal-actions .btn,.modal-actions .btn.primary{
+    width:100%;
+    min-width:0;
+    min-height:48px;
+    padding:10px 12px;
+    border-radius:11px;
+    font-size:13px;
+  }
+  .exposure-pick,.pick-list,.pick-item{min-width:0;max-width:100%}
+  .pick-item{align-items:flex-start;gap:9px;padding:9px 10px}
+  .pick-item input[type="checkbox"]{margin-top:2px}
+}
+@media(max-width:360px){
+  .modal-body .checks{grid-template-columns:1fr}
+  .modal-actions{grid-template-columns:minmax(96px,.72fr) minmax(0,1.7fr);gap:8px}
+  .quick-exposure .type-choice{padding:9px}
+}
+
 </style>
 <script>
   document.documentElement.dataset.specialty = "pediatrics";
@@ -357,7 +506,7 @@ th{font-weight:650!important}
 </div>
 <div class="mobile-nav" id="mobileNav"><button class="active" data-view="dashboard"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg></span><span class="mnav-label">Home</span></button><button data-view="roadmap"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/></svg></span><span class="mnav-label">Roadmap</span></button><button data-view="sessions"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span><span class="mnav-label">Sessions</span></button><button data-view="cases"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M8.5 13l2 2 4-4.5"/></svg></span><span class="mnav-label">Cases</span></button><button data-view="procedures"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 7 4-14 2 7h6"/></svg></span><span class="mnav-label">Procedures</span></button><button data-view="emergency"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2 20h20L12 4Z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg></span><span class="mnav-label">Emergency</span></button><button data-view="progress"><span class="mnav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-5 4 4 7-8"/><path d="M15 7h5v5"/></svg></span><span class="mnav-label">Progress</span></button></div>
 
-<div class="modal" id="modal"><div class="modal-card"><div class="modal-top"><h3 id="modalTitle">Add</h3><button class="close" onclick="closeModal()">×</button></div><div class="modal-body"><form id="modalForm"></form></div></div></div>
+<div class="modal" id="modal"><div class="modal-card"><div class="modal-top"><div class="modal-heading"><span>MENTORO · PEDIATRICS</span><h3 id="modalTitle">Add</h3></div><button class="close" onclick="closeModal()" aria-label="Close dialog">×</button></div><div class="modal-body"><form id="modalForm"></form></div></div></div>
 
 <script>window.MENTORO_PEDIATRICS_CONTENT = {"specialty":"pediatrics","catalogueVersion":1,"sourceArchive":"mentoro-pediatrics-logbook-project-v1.1.zip","roadmap":[["Fever","Core","Observed","Repeated"],["Cough / difficulty breathing","Core","Observed","Repeated"],["Vomiting and diarrhea","Core","Observed","Repeated"],["Poor feeding / failure to thrive","Core","Observed","Repeated"],["Jaundice in a newborn","Core","Observed","Repeated"],["Skin rash","Core","Observed","Repeated"],["Convulsion","Core","Observed","Repeated"],["Abdominal pain","Core","Observed","Repeated"],["Pallor / anemia","Core","Observed","Single"],["Limp / joint pain","Expanded","Observed","Single"],["Developmental delay","Expanded","Observed","Single"],["Edema / hematuria","Expanded","Observed","Single"],["Heart murmur","Expanded","Observed","Single"],["Recurrent infections","Expanded","Observed","Single"],["Headache","Expanded","Observed","Single"],["Altered consciousness in a child","Advanced","Discussion","Single"],["Suspected child abuse or neglect","Advanced","Discussion","Single"],["Routine newborn care and breastfeeding support","Core","Observed","Repeated"],["Neonatal jaundice","Core","Observed","Repeated"],["Neonatal sepsis recognition","Core","Observed","Single"],["Prematurity and low birth weight","Core","Observed","Single"],["Respiratory distress in the newborn","Expanded","Observed","Single"],["Neonatal hypoglycemia","Expanded","Observed","Single"],["Birth asphyxia and HIE","Expanded","Discussion","Single"],["Congenital anomalies screening","Expanded","Observed","Single"],["Neonatal seizures","Advanced","Discussion","Single"],["Necrotizing enterocolitis","Advanced","Discussion","Single"],["Exchange transfusion indications","Advanced","Discussion","Single"],["Growth charts and interpretation","Core","Observed","Repeated"],["Developmental milestones","Core","Observed","Repeated"],["Immunization schedule","Core","Observed","Repeated"],["Malnutrition (SAM / MAM)","Core","Observed","Repeated"],["Iron-deficiency anemia","Core","Observed","Repeated"],["Failure to thrive evaluation","Expanded","Observed","Single"],["Vitamin D deficiency and rickets","Expanded","Observed","Single"],["Childhood obesity","Expanded","Observed","Single"],["Autism and developmental disorders","Advanced","Discussion","Single"],["Inborn errors of metabolism","Advanced","Discussion","Single"],["Acute gastroenteritis and dehydration","Core","Observed","Repeated"],["Febrile child approach","Core","Observed","Repeated"],["Upper respiratory tract infection and tonsillitis","Core","Observed","Repeated"],["Pneumonia","Core","Observed","Repeated"],["Otitis media","Core","Observed","Repeated"],["Urinary tract infection","Core","Observed","Single"],["Bronchiolitis","Expanded","Observed","Single"],["Meningitis","Expanded","Observed","Single"],["Typhoid and enteric fever","Expanded","Observed","Single"],["Viral hepatitis","Expanded","Observed","Single"],["Measles and common exanthems","Expanded","Observed","Single"],["Tuberculosis in children","Expanded","Discussion","Single"],["Congenital infections (TORCH)","Advanced","Discussion","Single"],["HIV in children","Advanced","Discussion","Single"],["Asthma and recurrent wheeze","Core","Observed","Repeated"],["Croup","Core","Observed","Single"],["Allergic rhinitis and atopic dermatitis","Expanded","Observed","Single"],["Foreign body aspiration","Expanded","Observed","Single"],["Chronic cough work-up","Expanded","Discussion","Single"],["Cystic fibrosis","Advanced","Discussion","Single"],["Bronchopulmonary dysplasia","Advanced","Discussion","Single"],["Innocent versus pathological murmur","Core","Observed","Single"],["Rheumatic fever","Core","Observed","Single"],["Congenital heart disease","Expanded","Observed","Single"],["Heart failure in infants","Expanded","Observed","Single"],["Thalassemia","Expanded","Observed","Single"],["G6PD deficiency","Expanded","Observed","Single"],["Sickle cell disease","Expanded","Discussion","Single"],["Kawasaki disease","Advanced","Discussion","Single"],["Leukemia presentation","Advanced","Discussion","Single"],["Hemophilia","Advanced","Discussion","Single"],["Constipation","Core","Observed","Repeated"],["Nephrotic syndrome","Core","Observed","Single"],["Acute glomerulonephritis","Core","Observed","Single"],["Type 1 diabetes and DKA","Core","Observed","Single"],["Congenital hypothyroidism","Expanded","Observed","Single"],["Hepatosplenomegaly work-up","Expanded","Observed","Single"],["Chronic diarrhea and celiac disease","Expanded","Discussion","Single"],["Chronic liver disease","Advanced","Discussion","Single"],["Congenital adrenal hyperplasia","Advanced","Discussion","Single"],["Growth hormone deficiency","Advanced","Discussion","Single"],["Febrile seizure","Core","Observed","Repeated"],["Epilepsy basics","Core","Observed","Single"],["Cerebral palsy","Expanded","Observed","Single"],["Hydrocephalus","Expanded","Observed","Single"],["Child abuse and neglect recognition","Expanded","Discussion","Single"],["Neuromuscular disease","Advanced","Discussion","Single"],["Pediatric assessment triangle and ABCDE","Core","Observed","Repeated"],["Dehydration assessment and fluid therapy","Core","Observed","Repeated"],["Recognition of shock","Core","Observed","Single"],["PALS algorithm","Expanded","Observed","Single"],["Status epilepticus","Expanded","Observed","Single"],["Anaphylaxis","Expanded","Observed","Single"],["Poisoning and toxic ingestion","Expanded","Observed","Single"],["Septic shock management","Advanced","Discussion","Single"],["Mechanical ventilation in children","Advanced","Discussion","Single"],["Drowning","Advanced","Discussion","Single"],["Pediatric history (complaint, feeding, development, immunization)","Core","Performed under supervision","Repeated"],["Collateral history from parent or caregiver","Core","Performed under supervision","Repeated"],["Birth and perinatal history","Core","Performed under supervision","Repeated"],["Immunization and nutritional history","Core","Performed under supervision","Repeated"],["Developmental history","Core","Performed under supervision","Repeated"],["Vital signs by age","Core","Performed under supervision","Repeated"],["Growth measurements (weight, length, head circumference)","Core","Performed under supervision","Repeated"],["General and hydration examination","Core","Performed under supervision","Repeated"],["Chest examination and work of breathing","Core","Performed under supervision","Repeated"],["Cardiovascular examination","Core","Performed under supervision","Repeated"],["Abdominal examination","Core","Performed under supervision","Repeated"],["ENT examination (otoscopy, throat)","Core","Performed under supervision","Repeated"],["Neurological and developmental assessment","Core","Performed under supervision","Repeated"],["Communicating with children and caregivers","Core","Performed under supervision","Repeated"],["Inhaler and spacer technique teaching","Core","Performed under supervision","Repeated"],["Pediatric BLS","Core","Performed under supervision","Repeated"],["Newborn examination","Core","Observed","Repeated"],["Genital and pubertal examination","Expanded","Observed","Single"],["Peripheral IV cannulation in children","Expanded","Observed","Single"],["Blood sampling and heel prick","Expanded","Observed","Single"],["Lumbar puncture","Expanded","Observed","Single"],["CBC and blood film","Core","Observed","Repeated"],["CRP","Core","Observed","Repeated"],["Blood glucose","Core","Observed","Repeated"],["Electrolytes, urea and creatinine","Core","Observed","Repeated"],["Urinalysis and urine culture","Core","Observed","Repeated"],["Stool examination","Core","Observed","Repeated"],["Neonatal bilirubin","Core","Observed","Repeated"],["Blood culture","Expanded","Observed","Single"],["Iron studies and hemoglobin electrophoresis","Expanded","Observed","Single"],["Liver function tests","Expanded","Observed","Single"],["Thyroid and metabolic screening","Expanded","Discussion","Single"],["Chest X-ray","Core","Observed","Repeated"],["Abdominal ultrasound","Expanded","Observed","Single"],["Cranial ultrasound (neonatal)","Expanded","Observed","Single"],["Echocardiography","Expanded","Observed","Single"],["CT / MRI brain","Advanced","Discussion","Single"],["Voiding cystourethrogram","Advanced","Discussion","Single"],["Pulse oximetry","Core","Observed","Repeated"],["Blood gas","Expanded","Observed","Single"],["ECG","Expanded","Observed","Single"],["EEG","Expanded","Observed","Single"]],"groups":[{"id":"presentations","label":"Clinical Presentations","start":"Fever","end":"Routine newborn care and breastfeeding support"},{"id":"neonatal","label":"Newborn & Neonatal Care","start":"Routine newborn care and breastfeeding support","end":"Growth charts and interpretation"},{"id":"growth","label":"Growth, Development & Nutrition","start":"Growth charts and interpretation","end":"Acute gastroenteritis and dehydration"},{"id":"infection","label":"Pediatric Infections","start":"Acute gastroenteritis and dehydration","end":"Asthma and recurrent wheeze"},{"id":"resp","label":"Respiratory & Allergy","start":"Asthma and recurrent wheeze","end":"Innocent versus pathological murmur"},{"id":"cardiohem","label":"Cardiology & Hematology","start":"Innocent versus pathological murmur","end":"Constipation"},{"id":"renalendo","label":"Renal, GI & Endocrine","start":"Constipation","end":"Febrile seizure"},{"id":"neuro","label":"Neurology & Child Protection","start":"Febrile seizure","end":"Pediatric assessment triangle and ABCDE"},{"id":"pedem","label":"Pediatric Emergencies & Critical Care","start":"Pediatric assessment triangle and ABCDE","end":"Pediatric history (complaint, feeding, development, immunization)"},{"id":"history","label":"History Taking","start":"Pediatric history (complaint, feeding, development, immunization)","end":"Vital signs by age"},{"id":"exam","label":"Examination & Procedural Skills","start":"Vital signs by age","end":"CBC and blood film"},{"id":"labs","label":"Laboratory Investigations","start":"CBC and blood film","end":"Chest X-ray"},{"id":"imaging","label":"Imaging","start":"Chest X-ray","end":"Pulse oximetry"},{"id":"bedside","label":"Bedside & Neurophysiology Tests","start":"Pulse oximetry","end":null}],"patientJourney":["Triage and initial assessment","History from child and caregiver","Examination and growth assessment","Investigations ordered and reviewed","Diagnosis and treatment plan","Admission or home-care decision","Caregiver counselling and education","Immunization and preventive care","Follow-up and growth monitoring"],"clinicalInterpretation":["Correlating clinical findings with investigation results","Recognizing when a result changes management vs. is confirmatory/incidental","Understanding indications/contraindications for common investigations","Recognizing when further investigation is needed vs. proceeding to intervention","Understanding the limits of a single test"],"emergencyTemplates":{"Febrile Child / Sepsis":{"redFlags":["Ill appearance, lethargy or poor perfusion","Non-blanching rash","Age under 3 months with fever","Tachycardia, tachypnea or prolonged capillary refill"],"ddx":["Bacterial sepsis","Meningitis","Pneumonia","Urinary tract infection","Viral illness","Typhoid fever"],"investigations":["Blood glucose","CBC and CRP","Blood culture before antibiotics","Urinalysis and urine culture","Chest X-ray / CSF as indicated"]},"Severe Dehydration / Shock":{"redFlags":["Lethargy or unable to drink","Sunken eyes and very slow skin pinch","Cold extremities and weak pulse","Persistent vomiting or severe diarrhea"],"ddx":["Acute gastroenteritis","Diabetic ketoacidosis","Sepsis","Malnutrition with diarrhea","Surgical abdomen"],"investigations":["Blood glucose","Electrolytes, urea and creatinine","Blood gas","Stool examination","Urinalysis"]},"Respiratory Distress / Severe Asthma":{"redFlags":["Cyanosis or SpO2 below 92%","Unable to speak or feed, exhaustion","Silent chest or poor air entry","Grunting, nasal flaring or chest retraction"],"ddx":["Asthma exacerbation","Bronchiolitis","Pneumonia","Croup","Foreign body aspiration","Heart failure"],"investigations":["Pulse oximetry","Blood gas if severe","Chest X-ray","Blood glucose","CBC and CRP"]},"Convulsion":{"redFlags":["Seizure lasting over 5 minutes or repeated","Fever with neck stiffness or rash","Head injury or suspected poisoning","Failure to regain consciousness"],"ddx":["Febrile seizure","Epilepsy","Meningitis / encephalitis","Hypoglycemia or electrolyte disturbance","Intracranial lesion or trauma"],"investigations":["Blood glucose","Electrolytes including calcium","CBC and CRP","Blood culture / CSF as indicated","CT head if focal signs"]},"Sick Newborn":{"redFlags":["Poor feeding, lethargy or hypotonia","Temperature instability","Respiratory distress, apnea or cyanosis","Jaundice within 24 hours or very deep jaundice"],"ddx":["Neonatal sepsis","Respiratory distress syndrome","Hypoglycemia","Hemolytic jaundice","Congenital heart disease","Birth asphyxia"],"investigations":["Blood glucose","CBC and CRP","Blood culture","Serum bilirubin","Chest X-ray"]}},"phaseDefs":[{"id":"04","label":"Clinical Roadmap","groups":["presentations","neonatal","growth","infection","resp","cardiohem","renalendo","neuro","pedem","patientJourney"]},{"id":"05","label":"Clinical Skills","groups":["history","exam"]},{"id":"06","label":"Investigations","groups":["labs","imaging","bedside","interpretation"]}],"clinicalGovernance":{"guardianConsentRequiredForExamination":true,"intimateAndPubertalExaminationRole":"Observed","clinicalReviewRequired":true}};</script>
 <script>
