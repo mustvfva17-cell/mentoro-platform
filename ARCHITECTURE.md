@@ -1,42 +1,53 @@
 # MENTORO Platform Architecture
 
-## Project Vision
-MENTORO is a centralized medical training platform. Specialty logbooks are modules/templates inside this single repository and are deployed with the central platform, not as separate Vercel projects.
+> **Document status.** This file began as the design-phase baseline (ADR-01 was accepted as design-only on 2026-10-11). Parts of it describe decisions that were later superseded or built differently. Superseded statements are kept for decision history and are marked **Superseded** or **As built**. Where this file and the repository disagree, the repository (`supabase/migrations/`, `src/`, `api/`, `supabase/functions/`) and the [README](README.md) win. The review that produced these annotations is [docs/SYSTEM_REVIEW.md](docs/SYSTEM_REVIEW.md).
+>
+> | Topic | Design baseline (this file) | As built in the repository |
+> | --- | --- | --- |
+> | Logbook cardinality | One logbook per trainee and specialty (L-42) | **One independent logbook per training enrollment (L-43)** — `supabase/migrations/20261102100000_restore_enrollment_owned_logbooks.sql` |
+> | Trusted backend | Vercel Node.js API for protected writes | `api/` holds only `auth/me.js`, `health.js` and `license/{admin,config}.js`. Protected workflows are `SECURITY DEFINER` RPCs behind `public.*` wrappers; licensing runs in the `mentoro-license` Supabase Edge Function |
+> | Payload validation | Ajv 8 / JSON Schema in the backend | No Ajv dependency. Entry payloads are validated in PostgreSQL (`validate_logbook_entry_payload`); HTML-logbook state is validated by shape and size limits in `save_my_logbook_html_state` |
+> | Deployment | Logbooks only inside the central deployment | Integrated runtimes in `public/logbooks/` **and** licensed standalone, local-first logbooks in `vercel-logbooks/` (each directory is its own project root) |
+> | Specialties | Six source modules | Seven registered modules (adds Ophthalmology) |
 
-The current source set received for consolidation contains:
+## Project Vision
+MENTORO is a centralized medical training platform. Specialty logbooks are modules/templates inside this single repository. The integrated runtimes are deployed with the central platform; the licensed standalone logbooks under `vercel-logbooks/` are separate project roots (**As built**; the original design deployed everything with the central platform).
+
+The source set originally received for consolidation contained six modules; the central registry now holds seven:
 1. General Surgery
 2. Medical Oncology
 3. Cardiology
 4. Neurology
 5. Pediatrics
 6. Anaesthesia & Critical Care
+7. Ophthalmology
 
-Standalone ZIP archives are source material for audit and controlled porting. They are not independent runtime deployments and must not be copied blindly: each module must be adapted to the central authentication, storage, authorization, review, and build contracts.
+Standalone ZIP archives were source material for audit and controlled porting. They are not runtime deployments and must not be copied blindly: each module must be adapted to the central authentication, storage, authorization, review, and build contracts.
 
 ## Technology Stack
 - Frontend: Vite, Vanilla JavaScript, and CSS.
-- Trusted application backend: Vercel-hosted Node.js API for protected writes and server-side authorization/validation.
+- Trusted application backend (design baseline): Vercel-hosted Node.js API for protected writes and server-side authorization/validation. **As built:** see the status table above.
 - Identity and sessions: Supabase Auth.
 - Database: Supabase PostgreSQL with RLS, explicit grants/constraints, and narrowly scoped RPC/database functions for atomic multi-row workflows.
-- Specialty payload validation: Ajv 8 with JSON Schema Draft 2020-12 in the trusted backend.
+- Specialty payload validation (design baseline): Ajv 8 with JSON Schema Draft 2020-12 in the trusted backend. **As built:** validation lives in PostgreSQL; Ajv is not a dependency.
 - Hosting/version control: Vercel, Git, and GitHub.
 
 The approved security and atomicity boundaries are defined in ADR-01 in the decisions register. This stack decision is design-only; it does not authorize implementation or migrations.
 
 ## Roles, Identity, and Enrollment Flow
 - One central identity per user.
-- A trainee may have one persistent logbook per specialty over the entire training journey in that specialty.
-- Only platform administration may provision/activate the trainee's specialty logbook. The catalogue is centrally available to administrators, not as a trainee template picker.
-- Training enrollments and mentor bookings remain separate records. Additional mentors or training periods in the same specialty reuse the same logbook instance and its history.
+- **Superseded by L-43:** ~~A trainee may have one persistent logbook per specialty over the entire training journey in that specialty.~~ Each confirmed training enrollment has its own independent logbook. A repeat booking in the same specialty starts a fresh logbook and earlier logbooks remain in the trainee's history.
+- Only platform administration may provision/activate a logbook. The catalogue is centrally available to administrators, not as a trainee template picker. **As built:** the logbook is created atomically with the enrollment, either when an administrator confirms an application or through direct administrative assignment.
+- **Superseded by L-43:** ~~Training enrollments and mentor bookings remain separate records. Additional mentors or training periods in the same specialty reuse the same logbook instance and its history.~~ A new enrollment never reuses a previous enrollment's logbook.
 - A different specialty may have a separate logbook, but it must also be provisioned by administration.
 - Template-version changes are explicit administrative transitions on the existing logbook; they do not create a second logbook.
-- Activation codes must be single-use, securely stored as hashes, and must not grant Admin privileges.
+- Activation codes must be single-use, securely stored as hashes, and must not grant Admin privileges. (The licensed standalone logbooks use separate license codes, hashed at rest, that activate one phone per license.)
 - Subsequent access uses authenticated sessions.
 
-The cardinality and lifecycle rule is recorded in L-42 of the decision register.
+The original cardinality and lifecycle rule was recorded in L-42 of the decision register and was superseded by L-43 (see [docs/LOGBOOK_PER_ENROLLMENT_LIFECYCLE.md](docs/LOGBOOK_PER_ENROLLMENT_LIFECYCLE.md)).
 
 ## Preliminary Core Entities
-This is a preliminary list of core entities. (No columns, finalized relationships, or migrations are defined yet):
+*Historical.* The implemented schema lives in `supabase/migrations/`; start with `20261028061628_core_independent_enrollment_schema_v1.sql`. The original preliminary list (no columns, finalized relationships, or migrations were defined at the time):
 - `profiles`
 - `specialties`
 - `logbook_templates`
@@ -50,6 +61,8 @@ This is a preliminary list of core entities. (No columns, finalized relationship
 - `audit_logs`
 
 ## Trusted Backend, Security, and Atomicity (ADR-01)
+**As built:** the Node.js API holds only identity, health and licensing endpoints. Authorization for protected writes is enforced in PostgreSQL (RLS plus `SECURITY DEFINER` RPCs with `search_path = ''` behind `public` wrappers that derive the actor from `auth.uid()`). The text below is the accepted design.
+
 - Protected write workflows pass through a Vercel-hosted Node.js API that verifies the Supabase Auth session and derives the actor from verified authentication state.
 - The backend performs object-level authorization and checks trainee, mentor, assignment, specialty, template-version, and lifecycle scope as applicable. Client-supplied IDs, role labels, ownership claims, or permission assertions are not authoritative.
 - PostgreSQL RLS remains enabled for protected data and is designed together with explicit grants and constraints. Backend checks supplement, not replace, RLS.
@@ -65,7 +78,9 @@ Activation/enrollment, assignment transitions, correction application, and templ
 ### Implementation boundary
 Exact SQL types, constraints, grants, RLS policies, RPC signatures, locking/isolation choices, API routing, error contracts, and audit-write failure handling remain implementation-design work. No migrations, code, secrets, deployment, or tests are created or approved by ADR-01.
 
-## Logbook Lifecycle and Cardinality (L-42)
+## Logbook Lifecycle and Cardinality (L-42) — Superseded by L-43
+*This section is retained as decision history. It must not be implemented; see the README and [docs/LOGBOOK_PER_ENROLLMENT_LIFECYCLE.md](docs/LOGBOOK_PER_ENROLLMENT_LIFECYCLE.md).*
+
 - The persistent logbook owner is the trainee-specialty pair, not an individual booking, mentor, slot, or enrollment.
 - PostgreSQL must enforce at most one logbook instance for each trainee and specialty.
 - Training enrollments associate with the existing specialty logbook. A new enrollment in an already provisioned specialty must reuse that logbook and must not create or reset another instance.
@@ -75,7 +90,7 @@ Exact SQL types, constraints, grants, RLS policies, RPC signatures, locking/isol
 
 ## Specialty Modules
 - Each specialty retains its own roadmap, log types, validation rules, and presentation requirements.
-- The six source modules are to be consolidated beneath the same central application and Vercel deployment.
+- The seven registered modules live beneath the same central application (`public/logbooks/`), with licensed standalone copies under `vercel-logbooks/`.
 - Shared platform services manage identity, authorization, logbook provisioning, enrollments, and common infrastructure.
 
 ## Coverage Semantics
@@ -123,3 +138,6 @@ All architectural changes must be recorded, reviewed, and approved via Architect
 - Vercel Node.js is the selected trusted API runtime; exact API routing/layout, session propagation, error contracts, deployment configuration, and privileged-operation policy remain implementation-design tasks.
 - Exact SQL types, keys, indexes, RLS policies, grants, RPC signatures, transaction isolation/locking choices, and migration sequencing remain open until the executable database/security design is reviewed.
 - This ADR does not approve any SQL migration, schema change, backend/frontend implementation, secret provisioning, deployment, or test-completion claim.
+
+### Implementation status (added during the stage-1 review)
+The repository implements the database half of this ADR (RLS, grants, `SECURITY DEFINER` RPCs behind wrappers, row locks and idempotency keys for atomic workflows). It does not implement the Node.js write backend or Ajv validation; the licensing Edge Function (`supabase/functions/mentoro-license`) uses the Supabase secret key server-side. If the ADR's backend and Ajv decisions are still intended, record a follow-up ADR; otherwise record the as-built decision so this file stops contradicting the code.
