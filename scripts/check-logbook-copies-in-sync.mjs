@@ -24,6 +24,16 @@ function assertIdentical(canonical, copies, label) {
   }
 }
 
+const standaloneProjects = [
+  'anesthesia-icu',
+  'cardiology',
+  'general-surgery',
+  'medical-oncology',
+  'neurology',
+  'ophthalmology',
+  'pediatrics'
+];
+
 // 1. Licensing runtime (activation, device binding, offline grace). The standalone copies carry the
 //    one-phone policy that the database enforces; every other copy must match them exactly.
 assertIdentical(
@@ -71,16 +81,18 @@ for (const [specialty, files] of Object.entries(mirrored)) {
 // 4. Baseline response headers: the platform and every standalone logbook project use the same set.
 assertIdentical(
   'vercel.json',
-  [
-    'anesthesia-icu',
-    'cardiology',
-    'general-surgery',
-    'medical-oncology',
-    'neurology',
-    'ophthalmology',
-    'pediatrics'
-  ].map((specialty) => `vercel-logbooks/${specialty}/vercel.json`),
+  standaloneProjects.map((specialty) => `vercel-logbooks/${specialty}/vercel.json`),
   'Baseline security headers'
+);
+
+// 5. License service configuration endpoint. Each standalone project ships its own copy of the function;
+//    a change (for example removing an environment override) must reach all of them.
+assertIdentical(
+  'vercel-logbooks/cardiology/api/license/config.mjs',
+  standaloneProjects
+    .filter((specialty) => specialty !== 'cardiology')
+    .map((specialty) => `vercel-logbooks/${specialty}/api/license/config.mjs`),
+  'License configuration endpoint'
 );
 
 console.log('Logbook copy synchronisation contract passed.');
