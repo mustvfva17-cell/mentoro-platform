@@ -11,6 +11,9 @@ let readOnlyMode = pageParams.get("readonly") === "1";
 let cloudReady = !(instanceId && window.opener);
 let cloudDirty = false;
 let lastQueuedSnapshot = "";
+let ackTimer = null;
+let ackedFingerprint = null;
+const ACK_TIMEOUT_MS = 8000;
 let saveTimer = null;
 let roadmapItems = [];
 let content = null;
@@ -95,6 +98,133 @@ function setCloudLoading(loading) {
     else workspace.removeAttribute("aria-busy");
   }
 }
+function canonical(value) {
+  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
+  if (value && typeof value === "object") {
+    return "{" + Object.keys(value).filter(function (key) { return value[key] !== undefined; }).sort().map(function (key) {
+      return JSON.stringify(key) + ":" + canonical(value[key]);
+    }).join(",") + "}";
+  }
+  return JSON.stringify(value);
+}
+// Key-order independent fingerprint: PostgreSQL jsonb does not preserve object key order.
+function fingerprint(stateObject) {
+  const text = canonical(stateObject);
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ code, 2654435761);
+    h2 = Math.imul(h2 ^ code, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36) + ":" + text.length;
+}
+function readSyncMeta() {
+  try {
+    const meta = JSON.parse(store.get("sync_meta", "null"));
+    return meta && typeof meta === "object" ? meta : null;
+  } catch (_) { return null; }
+}
+function markSyncMeta(dirty, knownCloudFingerprint) {
+  if (knownCloudFingerprint !== undefined) ackedFingerprint = knownCloudFingerprint;
+  store.set("sync_meta", JSON.stringify({
+    dirty: Boolean(dirty),
+    ackedFingerprint: ackedFingerprint,
+    updatedAt: new Date().toISOString()
+  }));
+}
+function armAckTimer() {
+  if (ackTimer) clearTimeout(ackTimer);
+  ackTimer = setTimeout(function () {
+    ackTimer = null;
+    if (cloudDirty) {
+      setStatus("Not saved to the cloud. Your edits are kept on this device — close this window and reopen the logbook from the MENTORO workspace to sync them.", true);
+    }
+  }, ACK_TIMEOUT_MS);
+}
+function readBackups() {
+  try {
+    const list = JSON.parse(store.get("unsynced_backups", "[]"));
+    return Array.isArray(list) ? list : [];
+  } catch (_) { return []; }
+}
+function keepUnsyncedBackup(stateObject) {
+  const list = readBackups();
+  list.push({ savedAt: new Date().toISOString(), state: stateObject });
+  store.set("unsynced_backups", JSON.stringify(list.slice(-3)));
+}
+function planRecovery(localObject, cloudObject) {
+  const meta = readSyncMeta();
+  if (!meta || meta.dirty !== true) return null;
+  const cloudFp = fingerprint(cloudObject);
+  // The save landed even though its acknowledgement never arrived.
+  if (fingerprint(localObject) === cloudFp) return null;
+  // The cloud still holds what this device last synced, so the local edits are strictly newer.
+  return { action: meta.ackedFingerprint && meta.ackedFingerprint === cloudFp ? "adopt" : "conflict" };
+}
+function showNotice(id, text, buttons) {
+  let node = document.getElementById(id);
+  if (!node) {
+    node = document.createElement("div");
+    node.id = id;
+    node.setAttribute("role", "status");
+    node.style.cssText = "margin:12px 0;padding:12px 14px;border:1px solid currentColor;border-radius:10px;font-size:14px;line-height:1.45";
+    const header = document.querySelector("#workspace > .topbar");
+    if (header && header.parentNode) header.parentNode.insertBefore(node, header.nextSibling);
+    else if (document.getElementById("workspace")) document.getElementById("workspace").prepend(node);
+  }
+  node.textContent = "";
+  const message = document.createElement("p");
+  message.style.margin = "0 0 8px";
+  message.textContent = text;
+  node.appendChild(message);
+  (buttons || []).forEach(function (spec) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "button secondary";
+    button.id = spec.id;
+    button.textContent = spec.label;
+    button.style.marginRight = "8px";
+    button.addEventListener("click", spec.onClick);
+    node.appendChild(button);
+  });
+}
+function removeNotice(id) {
+  const node = document.getElementById(id);
+  if (node) node.remove();
+}
+function finishRecoveryNotice() {
+  const node = document.getElementById("recoveryNotice");
+  if (!node) return;
+  node.textContent = "Edits from your previous session were restored and saved to the cloud.";
+  setTimeout(function () { removeNotice("recoveryNotice"); }, 10000);
+}
+function offerBackupRestore() {
+  if (readOnlyMode || !readBackups().length) return;
+  showNotice("conflictNotice", "Edits from an earlier session never reached the cloud, and the cloud version changed in the meantime. They are kept on this device.", [
+    { id: "restoreDeviceEdits", label: "Restore my device edits", onClick: restoreBackup },
+    { id: "keepCloudVersion", label: "Keep the cloud version", onClick: discardBackup }
+  ]);
+}
+function restoreBackup() {
+  const list = readBackups();
+  const latest = list[list.length - 1];
+  removeNotice("conflictNotice");
+  if (!latest) return;
+  data = normalizeState(latest.state).state;
+  store.set("unsynced_backups", JSON.stringify(list.slice(0, -1)));
+  render();
+  save({ flushNow: true });
+  offerBackupRestore();
+}
+function discardBackup() {
+  if (!window.confirm("Discard the edits kept on this device? This cannot be undone.")) return;
+  store.set("unsynced_backups", JSON.stringify(readBackups().slice(0, -1)));
+  removeNotice("conflictNotice");
+  offerBackupRestore();
+}
 function postCloudState(flushNow) {
   if (!instanceId || previewMode || !window.opener || !cloudReady || readOnlyMode) return;
   const snapshot = JSON.stringify(currentCloudState());
@@ -107,6 +237,8 @@ function postCloudState(flushNow) {
       state: JSON.parse(snapshot),
       flushNow: flushNow === true
     }, window.location.origin);
+    setStatus("Saving to cloud…");
+    armAckTimer();
   } catch (_) {
     setStatus("Cloud sync connection unavailable", true);
   }
@@ -122,6 +254,7 @@ function save(options) {
   }
   store.set("state", JSON.stringify(currentCloudState()));
   if (instanceId && !previewMode && window.opener && cloudReady) {
+    markSyncMeta(true);
     if (saveTimer) clearTimeout(saveTimer);
     if (options && options.flushNow) postCloudState(true);
     else saveTimer = setTimeout(function () { postCloudState(false); }, 500);
@@ -593,10 +726,15 @@ function receiveParentMessage(event) {
   } else if (message.type === "MENTORO_LOGBOOK_LOAD_STATE") {
     readOnlyMode = readOnlyMode || message.readOnly === true;
     let changed = false;
+    let recovery = null;
+    let cloudFingerprint = null;
+    const localBefore = JSON.parse(JSON.stringify(currentCloudState()));
     if (message.hasCloudState && message.state && typeof message.state === "object") {
       const normalized = normalizeState(message.state);
       data = normalized.state;
       changed = normalized.changed;
+      cloudFingerprint = fingerprint(currentCloudState());
+      if (!readOnlyMode) recovery = planRecovery(localBefore, currentCloudState());
     } else if (readOnlyMode) {
       // Never expose browser-local trainee data in a mentor review view.
       data = emptyState();
@@ -606,13 +744,26 @@ function receiveParentMessage(event) {
       // interrupted. Cloud state remains authoritative whenever it exists.
       changed = true;
     }
+    if (recovery && recovery.action === "adopt") {
+      data = normalizeState(localBefore).state;
+      changed = true;
+    } else if (recovery && recovery.action === "conflict") {
+      keepUnsyncedBackup(localBefore);
+    }
     cloudReady = true;
     cloudDirty = false;
     lastQueuedSnapshot = JSON.stringify(currentCloudState());
-    if (!readOnlyMode) store.set("state", lastQueuedSnapshot);
+    if (!readOnlyMode) {
+      store.set("state", lastQueuedSnapshot);
+      markSyncMeta(Boolean(recovery && recovery.action === "adopt"), cloudFingerprint);
+    }
     setCloudLoading(false);
     render();
     setStatus(readOnlyMode ? "Read-only mentor review loaded" : "Secure cloud logbook connected");
+    if (!readOnlyMode && recovery && recovery.action === "adopt") {
+      showNotice("recoveryNotice", "Edits from your previous session were found on this device and are being saved to the cloud.");
+    }
+    offerBackupRestore();
     if (!readOnlyMode && (changed || !message.hasCloudState)) postCloudState(true);
   } else if (message.type === "MENTORO_LOGBOOK_LOAD_ERROR") {
     cloudReady = false;
@@ -620,9 +771,18 @@ function receiveParentMessage(event) {
     setStatus("Cloud connection failed — editing is disabled until reopened", true);
     document.getElementById("workspace").inert = true;
   } else if (message.type === "MENTORO_LOGBOOK_SAVE_RESULT") {
+    if (ackTimer) { clearTimeout(ackTimer); ackTimer = null; }
     if (message.ok) {
-      if (JSON.stringify(currentCloudState()) === lastQueuedSnapshot) cloudDirty = false;
-      setStatus("Saved to secure cloud logbook");
+      if (JSON.stringify(currentCloudState()) === lastQueuedSnapshot) {
+        cloudDirty = false;
+        markSyncMeta(false, fingerprint(JSON.parse(lastQueuedSnapshot)));
+        finishRecoveryNotice();
+        setStatus("Saved to secure cloud logbook");
+      } else {
+        // A newer edit is still waiting for its own acknowledgement.
+        setStatus("Saving to cloud…");
+        armAckTimer();
+      }
     } else {
       cloudDirty = true;
       setStatus(String(message.error || "Cloud save failed"), true);

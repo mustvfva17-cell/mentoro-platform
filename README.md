@@ -90,7 +90,7 @@ The target flow under accepted decision L-43 is:
 
 ## Current validation and outstanding checks
 
-The `Validate platform` workflow (`.github/workflows/validate.yml`) runs on pull requests to `main`: install from the lockfile, `npm run check:migrations`, `npm run check:contracts`, the enrollment-lifecycle monitor test, the production build, and Chromium tests for HTML-logbook read-only behaviour and General Surgery local-data preservation. Many contract checks assert source text (regular expressions) rather than runtime behaviour. The SQL scripts in `supabase/tests/` are rollback-only checks that need an existing disposable database with an active administrator and trainee; they are not run in CI. None of this substitutes for browser testing with separate trainee, mentor, and administrator identities.
+The `Validate platform` workflow (`.github/workflows/validate.yml`) runs on pull requests to `main`: install from the lockfile, `npm run check:migrations`, `npm run check:contracts`, the enrollment-lifecycle monitor test, the production build, and Chromium tests for HTML-logbook read-only behaviour, General Surgery local-data preservation and the Cardiology logbook's recovery after a workspace reload. Many contract checks assert source text (regular expressions) rather than runtime behaviour. The SQL scripts in `supabase/tests/` are rollback-only checks that need an existing disposable database with an active administrator and trainee; they are not run in CI. None of this substitutes for browser testing with separate trainee, mentor, and administrator identities.
 
 Outstanding before treating the platform as production-ready:
 
