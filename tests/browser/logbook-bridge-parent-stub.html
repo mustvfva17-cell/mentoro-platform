@@ -1,0 +1,101 @@
+<!doctype html>
+<!--
+  Test fixture for scripts/test-logbook-bridge-reload.mjs. Not shipped: it lives under tests/ and is served only by that test.
+
+  It stands in for the MENTORO workspace (src/main.js) and replicates its logbook bridge: in-memory
+  htmlLogbookWindows / htmlLogbookSync maps, 700 ms debounce, revision-checked save, SAVE_RESULT acknowledgement and
+  the silent `if (!sync) return;` that happens after the workspace tab is reloaded. Keep it in step with src/main.js.
+  The "cloud" is simulated in this page's localStorage so it survives a reload like the real database does.
+
+  Origin: reproduction supplied with the bridge-reload report (mentoro-bridge-repro).
+-->
+<html>
+<head><meta charset="utf-8"><title>Workspace stub (src/main.js bridge semantics)</title></head>
+<body>
+<h1>MENTORO workspace stub</h1>
+<p>This page replicates the exact bridge logic of src/main.js: in-memory htmlLogbookWindows/htmlLogbookSync maps,
+700ms debounce, revision-checked cloud write, SAVE_RESULT ack, and the verbatim silent drop `if (!sync) return;`.</p>
+<p>"Cloud" is simulated in this page's localStorage (key cloud_&lt;instanceId&gt;), so it survives a page reload
+exactly like Supabase data survives a workspace reload. The sync map is in-memory, exactly like the real app.</p>
+<button id="openBtn">Open logbook</button>
+<button id="reopenBtn">Open logbook again (after reload)</button>
+<pre id="log"></pre>
+<script>
+const INSTANCE_ID = "11111111-2222-4333-8444-555555555555";
+const htmlLogbookWindows = new Map();
+const htmlLogbookSync = new Map();
+const log = (m) => { document.getElementById("log").textContent += m + "\n"; };
+
+function cloudLoad() {
+  try { return JSON.parse(localStorage.getItem("cloud_" + INSTANCE_ID)) || { state: null, revision: 0 }; }
+  catch (_) { return { state: null, revision: 0 }; }
+}
+function cloudSave(state, expectedRevision) {
+  const cloud = cloudLoad();
+  if (cloud.revision !== expectedRevision) throw new Error("LOGBOOK_STATE_CONFLICT");
+  cloud.state = state; cloud.revision += 1;
+  localStorage.setItem("cloud_" + INSTANCE_ID, JSON.stringify(cloud));
+  return cloud.revision;
+}
+function postHTMLLogbookMessage(instanceId, payload) {
+  const child = htmlLogbookWindows.get(instanceId);
+  if (child && !child.closed) child.postMessage({ ...payload, instanceId }, window.location.origin);
+}
+function flushHTMLLogbookState(instanceId) {
+  const sync = htmlLogbookSync.get(instanceId);
+  if (!sync || sync.readOnly || !sync.cloudStateLoaded || sync.saving || !sync.state || !Number.isInteger(sync.revision)) return;
+  sync.saving = true;
+  const stateToSave = sync.state;
+  try {
+    const rev = cloudSave(stateToSave, sync.revision);
+    sync.revision = rev;
+    postHTMLLogbookMessage(instanceId, { type: "MENTORO_LOGBOOK_SAVE_RESULT", ok: true, revision: rev });
+    log("parent: cloud saved, revision " + rev + ", ack sent");
+  } catch (e) {
+    postHTMLLogbookMessage(instanceId, { type: "MENTORO_LOGBOOK_SAVE_RESULT", ok: false, error: e.message });
+  } finally { sync.saving = false; }
+}
+function openHTMLLogbook(instanceId) {
+  const existing = htmlLogbookWindows.get(instanceId);
+  if (existing && !existing.closed) { existing.focus(); return; }
+  const child = window.open("/logbooks/cardiology/index.html?instance=" + instanceId, "_blank");
+  htmlLogbookWindows.set(instanceId, child);
+  htmlLogbookSync.set(instanceId, { revision: null, timer: null, saving: false, state: null, readOnly: false, cloudStateLoaded: false });
+  log("parent: opened logbook, sync entry created (in-memory)");
+}
+document.getElementById("openBtn").addEventListener("click", () => openHTMLLogbook(INSTANCE_ID));
+document.getElementById("reopenBtn").addEventListener("click", () => openHTMLLogbook(INSTANCE_ID));
+
+window.addEventListener("message", (event) => {
+  if (event.origin !== window.location.origin || !event.data) return;
+  const instanceId = event.data.instanceId;
+  const type = event.data.type;
+  if (type === "MENTORO_LOGBOOK_READY") {
+    const sync = htmlLogbookSync.get(instanceId);
+    if (!sync) { log("parent: READY ignored, no sync entry"); return; }
+    const cloud = cloudLoad();
+    sync.revision = cloud.revision;
+    sync.state = cloud.state;
+    sync.cloudStateLoaded = true;
+    postHTMLLogbookMessage(instanceId, {
+      type: "MENTORO_LOGBOOK_LOAD_STATE",
+      state: cloud.state, revision: cloud.revision,
+      hasCloudState: cloud.revision > 0, readOnly: false
+    });
+    postHTMLLogbookMessage(instanceId, { type: "MENTORO_LOGBOOK_LOAD_REVIEWS", reviews: [], error: null });
+    log("parent: LOAD_STATE sent, revision " + cloud.revision);
+    return;
+  }
+  if (type === "MENTORO_LOGBOOK_STATE_CHANGED" && event.data.state && typeof event.data.state === "object") {
+    const sync = htmlLogbookSync.get(instanceId);
+    if (!sync) return; // <-- verbatim silent drop from src/main.js
+    if (!sync.cloudStateLoaded) return;
+    sync.state = event.data.state;
+    clearTimeout(sync.timer);
+    sync.timer = setTimeout(() => flushHTMLLogbookState(instanceId), event.data.flushNow === true ? 0 : 700);
+  }
+});
+log("parent: loaded, sync map has " + htmlLogbookSync.size + " entries");
+</script>
+</body>
+</html>
